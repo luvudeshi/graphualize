@@ -1,0 +1,250 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --gz-bg: #f4f4f2;
+  --gz-canvas: #fcfcfb;
+  --gz-panel: #ffffff;
+  --gz-elevated: #ffffff;
+  --gz-border: #e3e3df;
+  --gz-border-strong: #cfcfc9;
+  --gz-text: #17171a;
+  --gz-muted: #6c6c74;
+  --gz-faint: #9a9aa2;
+  --gz-accent: #4f46e5;
+  --gz-accent-contrast: #ffffff;
+  --gz-accent-soft: #eceafe;
+  --gz-success: #0f7a58;
+  --gz-warning: #a55a06;
+  --gz-danger: #be123c;
+  --gz-shadow: 0 1px 2px rgb(17 17 26 / 0.04), 0 8px 24px rgb(17 17 26 / 0.06);
+  color-scheme: light;
+}
+
+.dark {
+  --gz-bg: #0b0b0e;
+  --gz-canvas: #101014;
+  --gz-panel: #141419;
+  --gz-elevated: #1b1b22;
+  --gz-border: #26262e;
+  --gz-border-strong: #383843;
+  --gz-text: #eceaf2;
+  --gz-muted: #9d9dab;
+  --gz-faint: #6e6e7c;
+  --gz-accent: #8d88ff;
+  --gz-accent-contrast: #12121a;
+  --gz-accent-soft: #211f42;
+  --gz-success: #34d399;
+  --gz-warning: #fbbf24;
+  --gz-danger: #fb7185;
+  --gz-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--gz-bg);
+  --color-canvas: var(--gz-canvas);
+  --color-panel: var(--gz-panel);
+  --color-elevated: var(--gz-elevated);
+  --color-edge: var(--gz-border);
+  --color-edge-strong: var(--gz-border-strong);
+  --color-ink: var(--gz-text);
+  --color-muted: var(--gz-muted);
+  --color-faint: var(--gz-faint);
+  --color-accent: var(--gz-accent);
+  --color-accent-contrast: var(--gz-accent-contrast);
+  --color-accent-soft: var(--gz-accent-soft);
+  --color-ok: var(--gz-success);
+  --color-warn: var(--gz-warning);
+  --color-bad: var(--gz-danger);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--gz-border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  /* The editor is a fixed-viewport app; the home page is a document that
+     scrolls normally, so the browser's own scrolling and scroll restoration
+     work rather than an inner overflow container. */
+  html[data-route='home'],
+  html[data-route='home'] body,
+  html[data-route='home'] #root {
+    height: auto;
+    min-height: 100%;
+  }
+
+  body {
+    background: var(--gz-bg);
+    color: var(--gz-text);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--gz-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--gz-border-strong) 70%, transparent);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--gz-border-strong);
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  .gz-panel {
+    background: var(--gz-panel);
+    border-color: var(--gz-border);
+  }
+
+  .gz-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8125rem;
+    letter-spacing: -0.01em;
+  }
+
+  .gz-label {
+    font-size: 0.6875rem;
+    font-weight: 550;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gz-faint);
+  }
+
+  .gz-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 0.4rem;
+    padding: 0.3125rem 0.625rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gz-text);
+    transition:
+      background-color 120ms ease,
+      color 120ms ease,
+      border-color 120ms ease;
+  }
+
+  .gz-btn:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--gz-border) 55%, transparent);
+  }
+
+  .gz-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .gz-btn-primary {
+    background: var(--gz-accent);
+    color: var(--gz-accent-contrast);
+  }
+
+  .gz-btn-primary:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--gz-accent) 88%, black);
+  }
+
+  .gz-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--gz-border);
+    padding: 0.0625rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--gz-muted);
+    white-space: nowrap;
+  }
+
+  .gz-input {
+    background: var(--gz-bg);
+    border: 1px solid var(--gz-border);
+    border-radius: 0.4rem;
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--gz-text);
+    width: 100%;
+  }
+
+  .gz-input:focus {
+    outline: none;
+    border-color: var(--gz-accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--gz-accent) 22%, transparent);
+  }
+
+  .gz-scroll {
+    scrollbar-gutter: stable;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@keyframes gz-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gz-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.gz-anim-in {
+  animation: gz-fade-up 140ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.gz-anim-pop {
+  animation: gz-pop 130ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gz-anim-in,
+  .gz-anim-pop {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}

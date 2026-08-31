@@ -1,0 +1,34 @@
+node_modules
+dist
+dist-ssr
+coverage
+*.local
+.DS_Store
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Single-file build output
+dist-single
+Graphualize.html
+
+# Secrets and local environment. Only `.env.example` is tracked; it holds
+# placeholders. Never commit OAuth client secrets, Supabase service-role keys
+# or personal access tokens.
+.env
+.env.*
+!.env.example
+supabase/.temp/
