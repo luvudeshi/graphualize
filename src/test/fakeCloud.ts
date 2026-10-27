@@ -34,6 +34,8 @@ let failNext: string | null = null
 let offline = false
 /** While true a save finds no session, as when the refresh token has expired. */
 let sessionGone = false
+/** While set, saves wait for it — so a test can act while a save is in flight. */
+let saveGate: Promise<void> | null = null
 
 export const __fake = {
   reset() {
@@ -43,6 +45,18 @@ export const __fake = {
     failNext = null
     offline = false
     sessionGone = false
+    saveGate = null
+  },
+  /** Holds every save until the returned function is called. */
+  holdSaves(): () => void {
+    let release = () => {}
+    saveGate = new Promise((resolve) => {
+      release = () => {
+        saveGate = null
+        resolve()
+      }
+    })
+    return release
   },
   /** Every live row, for assertions. */
   rows: () => [...rows.values()].filter((row) => !row.deleted),
@@ -157,6 +171,7 @@ export const saveCloudDocument = async (input: {
   graph: GraphDocument
   expectedVersion: number | null
 }) => {
+  if (saveGate) await saveGate
   const failure = takeFailure()
   if (failure) return failure
   if (sessionGone) {
@@ -202,6 +217,20 @@ export const saveCloudDocument = async (input: {
       conflictWith: { name: existing?.name ?? input.name, device: 'another device' },
     },
   }
+}
+
+export const restoreCloudDocument = async (id: string) => {
+  const failure = takeFailure()
+  if (failure) return failure
+  const row = rows.get(id)
+  if (!row || !row.deleted) {
+    return {
+      ok: false,
+      message: 'That graph is no longer in your account, so it could not be put back.',
+    }
+  }
+  row.deleted = false
+  return { ok: true, message: null, data: null }
 }
 
 export const deleteCloudDocument = async (id: string) => {

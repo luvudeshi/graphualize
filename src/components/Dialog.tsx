@@ -13,6 +13,11 @@ export interface DialogProps {
   footer?: ReactNode
   /** Tailwind max-width class; defaults to a comfortable reading measure. */
   width?: string
+  /**
+   * Called on Escape before the dialog closes. Returning true means the
+   * content handled it — backing out of an inline step — and the dialog stays.
+   */
+  onEscape?: () => boolean
 }
 
 /** Modal dialog with a real focus trap and restored focus on close. */
@@ -24,6 +29,7 @@ export const Dialog = ({
   children,
   footer,
   width = 'max-w-xl',
+  onEscape,
 }: DialogProps) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -47,6 +53,7 @@ export const Dialog = ({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
+        if (onEscape?.()) return
         onClose()
         return
       }
@@ -71,7 +78,7 @@ export const Dialog = ({
 
     document.addEventListener('keydown', onKeyDown, true)
     return () => document.removeEventListener('keydown', onKeyDown, true)
-  }, [open, onClose])
+  }, [open, onClose, onEscape])
 
   if (!open) return null
 

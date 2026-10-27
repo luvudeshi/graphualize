@@ -10,6 +10,7 @@ import { formatShortcut } from '../utils/platform'
 import { navigate } from '../app/router'
 import { AccountMenu } from '../auth/AccountMenu'
 import { useTheme } from '../hooks/useTheme'
+import { replaceWorkingGraph } from '../state/replace'
 
 export const MenuBar = () => {
   const openDialog = useUi((s) => s.openDialog)
@@ -36,7 +37,7 @@ export const MenuBar = () => {
       id: 'new',
       label: 'New graph',
       shortcut: formatShortcut('mod+N'),
-      onSelect: act((s) => s.newDocument()),
+      onSelect: () => replaceWorkingGraph({ kind: 'new' }),
     },
     {
       id: 'open',

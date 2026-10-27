@@ -6,6 +6,7 @@ import { Dialog } from '../components/Dialog'
 import { TrashIcon, GoogleIcon } from '../components/Icons'
 import { useAuth } from '../auth/store'
 import { pendingLocalGraphCount } from '../sync/adopt'
+import { preapproveReplacement } from '../state/replace'
 
 /**
  * The graphs saved to the account — or, signed out, to this browser — listed
@@ -117,8 +118,11 @@ export const SavedGraphs = () => {
     if (!pending) return
     const target = pending
     setPending(null)
-    if (target.kind === 'open') openEditor(openCommand(target.id, target.source))
-    else void removeDocument(target.id, target.source)
+    if (target.kind === 'open') {
+      // Already confirmed here, so the workbench must not ask the same thing again.
+      preapproveReplacement({ kind: 'open', id: target.id, source: target.source })
+      openEditor(openCommand(target.id, target.source))
+    } else void removeDocument(target.id, target.source)
   }
 
   // Until the session is restored, and then until the account's list has

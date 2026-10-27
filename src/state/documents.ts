@@ -116,6 +116,32 @@ export const saveDocument = (input: SaveInput): DocumentSummary | null => {
   return summary
 }
 
+/**
+ * Puts a deleted graph back exactly as it was — same id, same timestamps — so
+ * undoing a delete is indistinguishable from never having deleted it. Returns
+ * false when the browser refuses the write.
+ */
+export const restoreDocument = (saved: SavedGraph): boolean => {
+  const store = safeLocalStorage()
+  if (!store) return false
+  try {
+    store.setItem(DOC_PREFIX + saved.id, toJsonString(saved))
+    const index = readIndex().filter((entry) => entry.id !== saved.id)
+    index.push({
+      id: saved.id,
+      name: saved.name,
+      createdAt: saved.createdAt,
+      updatedAt: saved.updatedAt,
+      vertexCount: saved.graph.vertices.length,
+      edgeCount: saved.graph.edges.length,
+    })
+    writeIndex(index)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export const deleteDocument = (id: string): void => {
   const store = safeLocalStorage()
   if (store) store.removeItem(DOC_PREFIX + id)

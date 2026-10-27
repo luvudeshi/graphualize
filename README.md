@@ -270,7 +270,14 @@ without activity. A paused project's hostname stops resolving, so sign-in and
 account saves fail while local saving keeps working; the sign-in button says the
 service is unavailable instead of redirecting into an error page. Resume the
 project from its Supabase dashboard (data is kept) and everything comes back
-without a redeploy.
+without a redeploy. `npm run verify:auth` reports a paused project first.
+
+To stop it happening, `vercel.json` schedules Vercel Cron to call
+`/api/keepalive` (`api/keepalive.ts`) twice a day, and each call makes one read
+with the publishable key, so the project never sits idle for a week. Crons run on production
+deployments only, and the run log is under the project's Settings → Cron Jobs.
+The endpoint reads nothing private, but setting a `CRON_SECRET` environment
+variable in Vercel restricts it to Vercel Cron.
 
 **Setting it up.** One command does everything that can be scripted:
 

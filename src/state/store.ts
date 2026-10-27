@@ -10,13 +10,16 @@ import {
   deleteDocument,
   listDocuments,
   loadDocument,
+  restoreDocument,
   saveDocument,
   type DocumentSummary,
 } from './documents'
+import type { SavedGraph } from '../graph/serialization'
 import {
   deleteCloudDocument,
   listCloudDocuments,
   loadCloudDocument,
+  restoreCloudDocument,
   saveCloudDocument,
 } from '../sync/cloud'
 import {
@@ -26,6 +29,7 @@ import {
   forgetCloudLink,
   recordCloudLink,
   unlinkCloudEntry,
+  type CloudLink,
 } from '../sync/adopt'
 
 export type Tool = 'select' | 'vertex' | 'edge' | 'erase'
@@ -69,6 +73,26 @@ const cloneDoc = (doc: GraphDocument): GraphDocument => ({
 })
 
 const newDocId = () => `doc-${Date.now().toString(36)}-${nextVertexId()}`
+
+/**
+ * What a delete removed, kept so it can be undone exactly: the document itself
+ * for one saved in this browser, the links that pointed at it, and — when it
+ * was the graph on screen — how the editor was tied to it.
+ */
+export interface DeletedGraph {
+  id: string
+  source: SaveLocation
+  name: string
+  /** The full document, for a graph saved in this browser. Null for the account's. */
+  saved: SavedGraph | null
+  links: Array<{ localId: string; link: CloudLink }>
+  wasOpen: {
+    doc: GraphDocument
+    savedVersion: number | null
+    localStamp: number | null
+    dirty: boolean
+  } | null
+}
 
 export interface EditorState {
   docId: string
@@ -127,6 +151,8 @@ export interface EditorState {
    * first call that gets through copies them across.
    */
   accountUnreachable: boolean
+  /** The most recent delete, while it can still be undone. */
+  lastDeleted: DeletedGraph | null
 
   /* actions */
   setTool: (tool: Tool) => void
@@ -177,7 +203,19 @@ export interface EditorState {
   saveCurrent: (name?: string) => Promise<void>
   /** `source` defaults to the account when signed in and this browser otherwise. */
   openDocument: (id: string, source?: SaveLocation) => Promise<void>
-  removeDocument: (id: string, source?: SaveLocation) => Promise<void>
+  /**
+   * `offerUndo` is for the Open dialog, the one place an Undo is shown. Other
+   * callers (the home page's list) confirm up front and say there is no undo.
+   */
+  removeDocument: (
+    id: string,
+    source?: SaveLocation,
+    options?: { offerUndo?: boolean },
+  ) => Promise<void>
+  /** Puts the most recently deleted graph back, exactly as it was. */
+  undoDelete: () => Promise<void>
+  /** Forgets the most recent delete, once undoing it is no longer on offer. */
+  dismissDeleted: () => void
   refreshDocuments: () => Promise<void>
   /** Drops what came from the account when the user signs out. */
   forgetDocuments: () => void
@@ -208,6 +246,15 @@ export const setSignedInProbe = (probe: () => boolean): void => {
   signedInProbe = probe
 }
 const isSignedIn = () => signedInProbe()
+
+/**
+ * Bumped whenever an Undo offer is withdrawn, so a delete that finishes after
+ * its dialog closed does not quietly bring the offer back.
+ */
+let undoOfferGeneration = 0
+/** Deletes in flight, by `source:id`, so a repeated click cannot delete twice. */
+const deleting = new Set<string>()
+let undoing = false
 
 /**
  * Every session starts empty.
@@ -345,6 +392,129 @@ export const useEditor = create<EditorState>((set, get) => {
     return { name: finalName, forked }
   }
 
+  const removeOnce = async (id: string, source: SaveLocation, offerUndo: boolean) => {
+    const generation = undoOfferGeneration
+    const before = get()
+    const listedName = before.documents.find((entry) => entry.id === id)?.name
+    const wasOpen =
+      before.savedId === id && before.savedWhere === source
+        ? {
+            doc: before.doc,
+            savedVersion: before.savedVersion,
+            localStamp: before.localStamp,
+            dirty: before.dirty,
+          }
+        : null
+
+    let deleted: DeletedGraph | null
+    if (source === 'local') {
+      const saved = loadDocument(id)
+      const link = cloudLinkFor(id)
+      deleteDocument(id)
+      forgetCloudLink(id)
+      // An entry whose document had already gone missing cannot be put back.
+      deleted = saved
+        ? {
+            id,
+            source,
+            name: saved.name,
+            saved,
+            links: link ? [{ localId: id, link }] : [],
+            wasOpen,
+          }
+        : null
+    } else {
+      const result = await deleteCloudDocument(id)
+      // Signed out while the request was out: the editor now belongs to the
+      // signed-out state, so leave it — and the offer to undo — alone.
+      if (!isSignedIn()) return
+      if (!result.ok) {
+        if (result.unreachable) set({ accountUnreachable: true })
+        get().notify(result.message ?? 'That graph could not be deleted.', 'error')
+        return
+      }
+      // Local copies of it must not later be uploaded into the tombstone.
+      const links = unlinkCloudEntry(id)
+      accountAnswered()
+      deleted = {
+        id,
+        source,
+        name: listedName ?? 'Untitled graph',
+        saved: null,
+        links,
+        wasOpen,
+      }
+    }
+    const state = get()
+    if (state.savedId === id && state.savedWhere === source) {
+      set({ ...UNSAVED, dirty: true })
+    }
+    if (offerUndo && generation === undoOfferGeneration) set({ lastDeleted: deleted })
+    await get().refreshDocuments()
+  }
+
+  const undoOnce = async () => {
+    const deleted = get().lastDeleted
+    if (!deleted) return
+    let restoredAs = deleted.id
+    let restoredName = deleted.name
+    if (deleted.source === 'local') {
+      if (!deleted.saved) return
+      // Something has been saved under this id since (another tab, most
+      // likely). Putting the old graph back on top would destroy that, so it
+      // comes back as a separate entry instead.
+      const clash = loadDocument(deleted.id) !== null
+      const copy = clash
+        ? {
+            ...deleted.saved,
+            id: newDocId(),
+            name: `${deleted.saved.name} (restored)`.slice(0, 200),
+          }
+        : deleted.saved
+      if (!restoreDocument(copy)) {
+        get().notify(`“${deleted.name}” could not be put back in this browser.`, 'error')
+        return
+      }
+      restoredAs = copy.id
+      restoredName = copy.name
+    } else {
+      const result = await restoreCloudDocument(deleted.id)
+      if (!isSignedIn()) return
+      if (!result.ok) {
+        if (result.unreachable) set({ accountUnreachable: true })
+        get().notify(result.message ?? `“${deleted.name}” could not be put back.`, 'error')
+        return
+      }
+      accountAnswered()
+    }
+    if (restoredAs === deleted.id) {
+      for (const { localId, link } of deleted.links) recordCloudLink(localId, link)
+    }
+
+    // If it was the graph on screen and nothing has been edited since, it is
+    // that saved graph again — clean, and saving updates it as before. Any
+    // edit since leaves the editor as an unsaved graph, which is the truth.
+    const state = get()
+    const open = deleted.wasOpen
+    if (open && restoredAs === deleted.id && state.savedId === null && state.doc === open.doc) {
+      set({
+        savedId: deleted.id,
+        savedWhere: deleted.source,
+        savedVersion: open.savedVersion,
+        localStamp: open.localStamp,
+        dirty: open.dirty,
+      })
+    }
+    set({ lastDeleted: null })
+    get().notify(
+      restoredAs === deleted.id
+        ? `Restored “${restoredName}”`
+        : `Restored as “${restoredName}”, because a graph was saved under the old one since.`,
+      'success',
+    )
+    await get().refreshDocuments()
+  }
+
   /** The account answered: if it had not been, carry across what piled up here. */
   const accountAnswered = () => {
     if (!get().accountUnreachable) return
@@ -388,6 +558,7 @@ export const useEditor = create<EditorState>((set, get) => {
     documents: [],
     documentsSource: 'local',
     accountUnreachable: false,
+    lastDeleted: null,
 
     setTool: (tool) => set({ tool, pendingEdgeSource: null }),
 
@@ -822,7 +993,10 @@ export const useEditor = create<EditorState>((set, get) => {
         savedId: result.data.id,
         savedWhere: 'cloud',
         savedVersion: result.data.version,
-        dirty: false,
+        // What was saved is the document as it was when Save was pressed. An
+        // edit made while the request was out is not in the account, so the
+        // graph is still unsaved — and New, Open and leaving must still ask.
+        dirty: get().doc !== doc,
       })
       // A conflict still counts as saved — both versions are in the account —
       // so it reports as a warning rather than a failure.
@@ -841,9 +1015,20 @@ export const useEditor = create<EditorState>((set, get) => {
         }
         opened = { name: saved.name, graph: saved.graph, version: null, stamp: saved.updatedAt }
       } else {
+        const before = get().doc
         set({ syncing: true })
         const result = await loadCloudDocument(id)
         set({ syncing: false })
+        // The canvas stays usable while a graph loads. Work drawn in that time
+        // was not covered by any "discard?" question, so it is not discarded.
+        const now = get()
+        if (result.ok && now.doc !== before && now.dirty && now.doc.vertices.length > 0) {
+          get().notify(
+            `You edited the graph while “${result.data?.name ?? 'that graph'}” was loading, so it was not opened. Open it again to replace your changes.`,
+            'error',
+          )
+          return
+        }
 
         if (!result.ok || !result.data) {
           if (result.unreachable) set({ accountUnreachable: true })
@@ -879,26 +1064,30 @@ export const useEditor = create<EditorState>((set, get) => {
       get().notify(`Opened "${name}"`, 'success')
     },
 
-    removeDocument: async (id, source = get().documentsSource) => {
-      if (source === 'local') {
-        deleteDocument(id)
-        forgetCloudLink(id)
-      } else {
-        const result = await deleteCloudDocument(id)
-        if (!result.ok) {
-          if (result.unreachable) set({ accountUnreachable: true })
-          get().notify(result.message ?? 'That graph could not be deleted.', 'error')
-          return
-        }
-        // Local copies of it must not later be uploaded into the tombstone.
-        unlinkCloudEntry(id)
-        accountAnswered()
+    removeDocument: async (id, source = get().documentsSource, options = {}) => {
+      const key = `${source}:${id}`
+      if (deleting.has(key)) return
+      deleting.add(key)
+      try {
+        await removeOnce(id, source, options.offerUndo === true)
+      } finally {
+        deleting.delete(key)
       }
-      const state = get()
-      if (state.savedId === id && state.savedWhere === source) {
-        set({ ...UNSAVED, dirty: true })
+    },
+
+    undoDelete: async () => {
+      if (undoing) return
+      undoing = true
+      try {
+        await undoOnce()
+      } finally {
+        undoing = false
       }
-      await get().refreshDocuments()
+    },
+
+    dismissDeleted: () => {
+      undoOfferGeneration += 1
+      set({ lastDeleted: null })
     },
 
     refreshDocuments: async () => {
@@ -935,6 +1124,8 @@ export const useEditor = create<EditorState>((set, get) => {
       set({
         ...(state.documentsSource === 'cloud' ? { documents: [] } : {}),
         accountUnreachable: false,
+        // An account delete can only be undone while signed in to that account.
+        ...(state.lastDeleted?.source === 'cloud' ? { lastDeleted: null } : {}),
         // A graph opened from this browser is still saved here. One opened from
         // the account can no longer be saved there, but where it came from is
         // kept, so saving it now links the local copy back to that entry.

@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "build:single": "vite build --config vite.config.singlefile.ts && node scripts/inline.mjs",
     "typecheck": "tsc -b && tsc -p tsconfig.test.json --noEmit",
-    "lint": "oxlint src e2e",
+    "lint": "oxlint src e2e api",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

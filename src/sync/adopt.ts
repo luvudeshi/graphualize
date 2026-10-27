@@ -140,15 +140,20 @@ export const forgetCloudLink = (localId: string): void =>
  * edited one is uploaded as a new, visible entry rather than into the deleted
  * one.
  */
-export const unlinkCloudEntry = (cloudId: string): void =>
+export const unlinkCloudEntry = (cloudId: string): Array<{ localId: string; link: CloudLink }> => {
+  const before: Array<{ localId: string; link: CloudLink }> = []
   updateLinks((links) => {
-    for (const link of Object.values(links)) {
+    for (const [localId, link] of Object.entries(links)) {
       if (link.cloudId === cloudId) {
+        before.push({ localId, link: { ...link } })
         link.cloudId = null
         link.version = null
       }
     }
   })
+  // Returned so an undone delete can put the links back as they were.
+  return before
+}
 
 const needsUpload = (link: CloudLink | undefined, updatedAt: number): boolean =>
   !link || link.updatedAt < updatedAt

@@ -175,6 +175,40 @@ try {
 /* 3. The live project                                                 */
 /* ------------------------------------------------------------------ */
 
+section('Project reachability')
+
+// Needs no token, so it runs for everyone. A free-tier project that sat idle
+// for a week is paused, and a paused project's hostname stops resolving —
+// sign-in then fails with nothing more helpful than "Failed to fetch".
+if (!projectUrl) {
+  warn('No project URL, so reachability was not checked.')
+} else {
+  const dashboard = `https://supabase.com/dashboard/project/${/^https:\/\/([a-z0-9-]+)\./.exec(projectUrl)?.[1] ?? ''}`
+  try {
+    const response = await fetch(`${projectUrl}/auth/v1/health`, {
+      headers: anonKey ? { apikey: anonKey } : {},
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (response.status === 540) {
+      fail('The project is PAUSED.', `Resume it at ${dashboard} (data is kept).`)
+    } else if (response.ok) {
+      pass('The project answers.')
+    } else {
+      warn(`The project answered ${response.status} on /auth/v1/health.`)
+    }
+  } catch (error) {
+    const code = error?.cause?.code
+    if (code === 'ENOTFOUND') {
+      fail(
+        'The project hostname does not resolve: it is paused (free tier, after a week idle) or deleted.',
+        `Resume it at ${dashboard}. The keep-alive cron in vercel.json stops this recurring.`,
+      )
+    } else {
+      fail(`Could not reach the project (${code ?? error.message}).`)
+    }
+  }
+}
+
 section('Supabase project')
 
 const token = process.env.SUPABASE_ACCESS_TOKEN
@@ -200,6 +234,24 @@ if (!token) {
   }
 
   try {
+    // Only a healthy project passes. `INACTIVE` is how the Management API
+    // reports a paused one; the transitional states are worth a warning,
+    // since sign-in may not work until they settle.
+    const project = await api('')
+    const TRANSITIONAL = ['COMING_UP', 'RESTORING', 'RESTARTING', 'UPGRADING', 'RESIZING']
+    if (project.status === 'ACTIVE_HEALTHY') {
+      pass('Project status: ACTIVE_HEALTHY.')
+    } else if (TRANSITIONAL.includes(project.status)) {
+      warn(`Project status: ${project.status}. Sign-in may not work until it is ACTIVE_HEALTHY.`)
+    } else {
+      fail(
+        `Project status: ${project.status ?? 'unknown'}.`,
+        project.status === 'INACTIVE' || project.status === 'PAUSING'
+          ? 'The project is paused. Resume it from the Supabase dashboard.'
+          : 'Check the project in the Supabase dashboard.',
+      )
+    }
+
     const auth = await api('/config/auth')
 
     if (auth.external_google_enabled) pass('Google provider is enabled.')
