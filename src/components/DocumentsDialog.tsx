@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Dialog } from './Dialog'
 import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
+import { useAuth } from '../auth/store'
 
 const formatDate = (ms: number) =>
   new Date(ms).toLocaleString(undefined, {
@@ -14,6 +15,9 @@ const formatDate = (ms: number) =>
 export const DocumentsDialog = ({ open }: { open: boolean }) => {
   const close = useUi((s) => s.closeDialog)
   const documents = useEditor((s) => s.documents)
+  const source = useEditor((s) => s.documentsSource)
+  const savedWhere = useEditor((s) => s.savedWhere)
+  const canSignIn = useAuth((s) => s.status === 'signedOut')
   const refresh = useEditor((s) => s.refreshDocuments)
   const openDocument = useEditor((s) => s.openDocument)
   const removeDocument = useEditor((s) => s.removeDocument)
@@ -28,13 +32,19 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
       open={open}
       onClose={close}
       title="Saved graphs"
-      description="Graphs are saved to your Google account, so they follow you between devices."
+      description={
+        source === 'cloud'
+          ? 'Graphs are saved to your Google account, so they follow you between devices.'
+          : canSignIn
+            ? 'Graphs are saved in this browser. Sign in with Google to keep them in your account instead.'
+            : 'Graphs are saved in this browser.'
+      }
       width="max-w-xl"
     >
       {documents.length === 0 ? (
         <p className="py-6 text-center text-[0.8125rem] text-[var(--gz-muted)]">
-          Nothing saved to your account yet. Use File → Save to keep the graph you are working
-          on.
+          Nothing saved {source === 'cloud' ? 'to your account' : 'in this browser'} yet. Use File
+          → Save to keep the graph you are working on.
         </p>
       ) : (
         <ul className="divide-y">
@@ -43,14 +53,14 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
               <button
                 type="button"
                 onClick={() => {
-                  void openDocument(entry.id)
+                  void openDocument(entry.id, source)
                   close()
                 }}
                 className="min-w-0 flex-1 text-left"
               >
                 <span className="block truncate text-[0.875rem] font-medium">
                   {entry.name}
-                  {entry.id === savedId && (
+                  {entry.id === savedId && savedWhere === source && (
                     <span className="ml-2 gz-chip border-[var(--gz-accent)] text-[var(--gz-accent)]">
                       open
                     </span>
@@ -63,7 +73,7 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
               <button
                 type="button"
                 className="gz-btn px-2 text-[var(--gz-danger)]"
-                onClick={() => void removeDocument(entry.id)}
+                onClick={() => void removeDocument(entry.id, source)}
                 aria-label={`Delete ${entry.name}`}
               >
                 Delete

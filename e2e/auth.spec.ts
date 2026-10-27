@@ -55,10 +55,9 @@ test('the full anonymous workflow is untouched by the auth layer', async ({ page
   await expect(page.getByText(/Undo generate c5/i)).toBeVisible()
 })
 
-test('the tool works fully without an account — it just keeps nothing', async ({ page }) => {
-  // "Anonymous usage keeps working" now means the workbench is fully usable,
-  // not that it persists. Drawing, analysing and exporting all work signed
-  // out; only saving requires an account.
+test('the tool works fully without an account', async ({ page }) => {
+  // "Anonymous usage keeps working" means the whole workbench: drawing,
+  // analysing, exporting and saving (to this browser) all work signed out.
   await page.goto('/#/graph')
   await page.getByLabel('Quick graph command').fill('K4')
   await page.getByLabel('Quick graph command').press('Enter')

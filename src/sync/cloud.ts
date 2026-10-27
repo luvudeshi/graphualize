@@ -21,10 +21,68 @@ export interface CloudResult<T> {
   data?: T
   /** A sentence to show the user. Null when everything worked. */
   message: string | null
+  /**
+   * True when the account could not be reached at all — no network, or the
+   * Supabase project is down — as opposed to the account refusing the request.
+   * The caller can then keep the user's work somewhere else instead.
+   */
+  unreachable?: boolean
+  /** True when the stored session is gone (expired or revoked) by the time of the call. */
+  noSession?: boolean
 }
 
 const ok = <T>(data: T): CloudResult<T> => ({ ok: true, data, message: null })
 const fail = <T>(message: string): CloudResult<T> => ({ ok: false, message })
+
+const UNREACHABLE = 'Could not reach your account. Check your connection and try again.'
+
+/** supabase-js reports a failed `fetch` as an error whose message names it. */
+export const isNetworkFailure = (
+  error: { message?: string; name?: string } | null | undefined,
+): boolean =>
+  !!error &&
+  (/fetch|network|load failed/i.test(error.message ?? '') ||
+    error.name === 'AuthRetryableFetchError')
+
+/**
+ * HTTP statuses that mean "nothing usable answered", as opposed to the
+ * database refusing the request: 0 for a fetch that never completed, the
+ * gateway errors, Cloudflare's 52x, and 540, which Supabase returns for a
+ * paused project.
+ */
+const isOutageStatus = (status: number | undefined): boolean =>
+  status === 0 ||
+  status === 502 ||
+  status === 503 ||
+  status === 504 ||
+  status === 540 ||
+  (status !== undefined && status >= 520 && status <= 530)
+
+const unreachable = <T>(): CloudResult<T> => ({
+  ok: false,
+  message: UNREACHABLE,
+  unreachable: true,
+})
+
+/** Turns a Postgres error into a result, keeping "could not connect" distinguishable. */
+const failWith = <T>(error: { code?: string; message: string }, status?: number): CloudResult<T> =>
+  isNetworkFailure(error) || isOutageStatus(status) ? unreachable() : fail(explain(error))
+
+/**
+ * The calls below are written to return results, but supabase-js can still
+ * throw (a DNS failure surfaces as a rejected `fetch` in some paths). This
+ * keeps the promise of "never throws" true regardless.
+ */
+const guarded =
+  <A extends unknown[], T>(call: (...args: A) => Promise<CloudResult<T>>) =>
+  async (...args: A): Promise<CloudResult<T>> => {
+    try {
+      return await call(...args)
+    } catch (error) {
+      if (isNetworkFailure(error as Error)) return unreachable()
+      return fail(error instanceof Error ? error.message : 'Something went wrong talking to your account.')
+    }
+  }
 
 /**
  * Turns a Postgres error into something worth reading.
@@ -34,7 +92,7 @@ const fail = <T>(message: string): CloudResult<T> => ({ ok: false, message })
  * what to do is possible.
  */
 const explain = (error: { code?: string; message: string }): string => {
-  if (error.code === '42P01') {
+  if (error.code === '42P01' || error.code === 'PGRST205') {
     return 'The graphs table does not exist yet. Run the migration in supabase/migrations/0001_graphs.sql.'
   }
   if (error.code === '42501' || error.code === 'PGRST301') {
@@ -43,9 +101,7 @@ const explain = (error: { code?: string; message: string }): string => {
   if (error.code === '23514') {
     return 'That graph is too large to save.'
   }
-  if (/fetch|network|Failed to fetch/i.test(error.message)) {
-    return 'Could not reach your account. Check your connection and try again.'
-  }
+  if (isNetworkFailure(error)) return UNREACHABLE
   return error.message
 }
 
@@ -92,34 +148,34 @@ const summaryOf = (row: GraphRow): DocumentSummary => ({
 })
 
 /** Every graph in this account, newest first. Tombstones are excluded. */
-export const listCloudDocuments = async (): Promise<CloudResult<DocumentSummary[]>> => {
+export const listCloudDocuments = guarded(async (): Promise<CloudResult<DocumentSummary[]>> => {
   const supabase = getSupabase()
   if (!supabase) return fail('Sign-in is not configured in this build.')
 
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from('graphs')
     .select('id,name,vertex_count,edge_count,version,origin_device,created_at,updated_at')
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
 
-  if (error) return fail(explain(error))
+  if (error) return failWith(error, status)
   return ok((data as GraphRow[]).map(summaryOf))
-}
+})
 
-export const loadCloudDocument = async (
+export const loadCloudDocument = guarded(async (
   id: string,
 ): Promise<CloudResult<{ name: string; graph: GraphDocument; version: number }>> => {
   const supabase = getSupabase()
   if (!supabase) return fail('Sign-in is not configured in this build.')
 
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from('graphs')
     .select('id,name,document,version')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle()
 
-  if (error) return fail(explain(error))
+  if (error) return failWith(error, status)
   if (!data) return fail('That graph is no longer in your account.')
 
   try {
@@ -131,7 +187,7 @@ export const loadCloudDocument = async (
   } catch {
     return fail('That graph could not be read. It may have been saved by a newer version.')
   }
-}
+})
 
 export interface SaveOutcome {
   id: string
@@ -149,7 +205,7 @@ export interface SaveOutcome {
  * entry naming where it came from, and the user decides which to keep. A
  * machine never silently discards someone's work.
  */
-export const saveCloudDocument = async (input: {
+export const saveCloudDocument = guarded(async (input: {
   id: string | null
   name: string
   graph: GraphDocument
@@ -158,9 +214,13 @@ export const saveCloudDocument = async (input: {
   const supabase = getSupabase()
   if (!supabase) return fail('Sign-in is not configured in this build.')
 
-  const { data: session } = await supabase.auth.getSession()
+  // Reading the session can need a token refresh, which is a network call.
+  const { data: session, error: sessionError } = await supabase.auth.getSession()
+  if (isNetworkFailure(sessionError)) return unreachable()
   const userId = session.session?.user?.id
-  if (!userId) return fail('Sign in to save this graph to your account.')
+  if (!userId) {
+    return { ok: false, message: 'Sign in to save this graph to your account.', noSession: true }
+  }
 
   const document = JSON.parse(
     JSON.stringify(serializeGraph({ id: input.id ?? 'graph', name: input.name, graph: input.graph })),
@@ -176,24 +236,28 @@ export const saveCloudDocument = async (input: {
   }
 
   if (input.id === null || input.expectedVersion === null) {
-    const { data, error } = await supabase
+    const { data, error, status } = await supabase
       .from('graphs')
       .insert({ ...row, version: 1 })
       .select('id,version')
       .single()
-    if (error) return fail(explain(error))
+    if (error) return failWith(error, status)
     return ok({ id: data.id as string, version: data.version as number })
   }
 
-  const { data, error } = await supabase
+  // `deleted_at is null` matters: a delete only sets the tombstone and leaves
+  // the version alone, so without it a stale write would "succeed" into a
+  // deleted graph that no list ever shows again.
+  const { data, error, status } = await supabase
     .from('graphs')
     .update({ ...row, version: input.expectedVersion + 1 })
     .eq('id', input.id)
     .eq('version', input.expectedVersion)
+    .is('deleted_at', null)
     .select('id,version')
     .maybeSingle()
 
-  if (error) return fail(explain(error))
+  if (error) return failWith(error, status)
   if (data) return ok({ id: data.id as string, version: data.version as number })
 
   // Zero rows matched: the row moved on, or was deleted, since this device last
@@ -205,13 +269,17 @@ export const saveCloudDocument = async (input: {
     .maybeSingle()
 
   const copyName = `${input.name} (${deviceName()})`.slice(0, 200)
-  const { data: copy, error: copyError } = await supabase
+  const {
+    data: copy,
+    error: copyError,
+    status: copyStatus,
+  } = await supabase
     .from('graphs')
     .insert({ ...row, name: copyName, version: 1 })
     .select('id,version')
     .single()
 
-  if (copyError) return fail(explain(copyError))
+  if (copyError) return failWith(copyError, copyStatus)
   return {
     ok: true,
     data: {
@@ -224,18 +292,18 @@ export const saveCloudDocument = async (input: {
     },
     message: `“${input.name}” had newer changes from elsewhere, so this version was saved as “${copyName}”. Both are in your account.`,
   }
-}
+})
 
 /** Soft delete, so the removal reaches every device instead of bouncing back. */
-export const deleteCloudDocument = async (id: string): Promise<CloudResult<null>> => {
+export const deleteCloudDocument = guarded(async (id: string): Promise<CloudResult<null>> => {
   const supabase = getSupabase()
   if (!supabase) return fail('Sign-in is not configured in this build.')
 
-  const { error } = await supabase
+  const { error, status } = await supabase
     .from('graphs')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
 
-  if (error) return fail(explain(error))
+  if (error) return failWith(error, status)
   return ok(null)
-}
+})

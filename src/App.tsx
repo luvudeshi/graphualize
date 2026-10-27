@@ -66,7 +66,8 @@ const Dialogs = () => {
  *
  *   `#/graph?g=K5`               a generator command
  *   `#/graph?g=example:petersen` one of the built-in examples
- *   `#/graph?g=doc:doc-1a2b3c`   a graph saved in this browser
+ *   `#/graph?g=doc:<uuid>`       a graph saved to the signed-in account
+ *   `#/graph?g=local:doc-1a2b3c` a graph saved in this browser
  */
 const useArrivalCommand = (command: string | null) => {
   const handled = useRef(false)
@@ -74,10 +75,13 @@ const useArrivalCommand = (command: string | null) => {
     if (handled.current || !command) return
     handled.current = true
 
-    if (command.startsWith('doc:')) {
+    if (command.startsWith('doc:') || command.startsWith('local:')) {
       // openDocument reports both success and failure itself, so this branch
       // deliberately says nothing more.
-      void useEditor.getState().openDocument(command.slice('doc:'.length))
+      const local = command.startsWith('local:')
+      void useEditor
+        .getState()
+        .openDocument(command.slice(local ? 'local:'.length : 'doc:'.length), local ? 'local' : 'cloud')
     } else {
       const example = command.startsWith('example:') ? command.slice('example:'.length) : null
       const ok = example ? loadExample(example) : runGraphCommand(command)

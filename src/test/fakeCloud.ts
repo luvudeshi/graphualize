@@ -30,6 +30,10 @@ let nextId = 1
 let clock = 1_000
 /** Set by a test to make the next call fail, as a dropped connection would. */
 let failNext: string | null = null
+/** While true every call fails as if the project could not be reached at all. */
+let offline = false
+/** While true a save finds no session, as when the refresh token has expired. */
+let sessionGone = false
 
 export const __fake = {
   reset() {
@@ -37,6 +41,8 @@ export const __fake = {
     nextId = 1
     clock = 1_000
     failNext = null
+    offline = false
+    sessionGone = false
   },
   /** Every live row, for assertions. */
   rows: () => [...rows.values()].filter((row) => !row.deleted),
@@ -44,6 +50,19 @@ export const __fake = {
   allRows: () => [...rows.values()],
   failNextCall(message: string) {
     failNext = message
+  },
+  /** Every call fails as `unreachable` until switched back, like a paused project. */
+  setOffline(value: boolean) {
+    offline = value
+  },
+  /** The next saves find no session, until switched back. */
+  setSessionGone(value: boolean) {
+    sessionGone = value
+  },
+  /** Soft-deletes a row, as deleting it on another device would. */
+  deleteElsewhere(id: string) {
+    const row = rows.get(id)
+    if (row) row.deleted = true
   },
   /** Simulates another device writing, so the next save sees a stale version. */
   bumpElsewhere(id: string) {
@@ -70,10 +89,17 @@ export const __fake = {
   },
 }
 
-const takeFailure = (): string | null => {
+const UNREACHABLE = {
+  ok: false,
+  message: 'Could not reach your account. Check your connection and try again.',
+  unreachable: true,
+} as const
+
+const takeFailure = (): { ok: false; message: string; unreachable?: boolean } | null => {
+  if (offline) return UNREACHABLE
   const message = failNext
   failNext = null
-  return message
+  return message === null ? null : { ok: false, message }
 }
 
 const summary = (row: Row): DocumentSummary => ({
@@ -87,9 +113,14 @@ const summary = (row: Row): DocumentSummary => ({
 
 export const deviceName = () => 'test device'
 
+export const isNetworkFailure = (error: { message?: string; name?: string } | null | undefined) =>
+  !!error &&
+  (/fetch|network|load failed/i.test(error.message ?? '') ||
+    error.name === 'AuthRetryableFetchError')
+
 export const listCloudDocuments = async () => {
   const failure = takeFailure()
-  if (failure) return { ok: false, message: failure }
+  if (failure) return failure
   return {
     ok: true,
     message: null,
@@ -102,7 +133,7 @@ export const listCloudDocuments = async () => {
 
 export const loadCloudDocument = async (id: string) => {
   const failure = takeFailure()
-  if (failure) return { ok: false, message: failure }
+  if (failure) return failure
   const row = rows.get(id)
   if (!row || row.deleted) {
     return { ok: false, message: 'That graph is no longer in your account.' }
@@ -127,7 +158,10 @@ export const saveCloudDocument = async (input: {
   expectedVersion: number | null
 }) => {
   const failure = takeFailure()
-  if (failure) return { ok: false, message: failure }
+  if (failure) return failure
+  if (sessionGone) {
+    return { ok: false, message: 'Sign in to save this graph to your account.', noSession: true }
+  }
 
   const write = (id: string, version: number, name: string) => {
     rows.set(id, {
@@ -172,7 +206,7 @@ export const saveCloudDocument = async (input: {
 
 export const deleteCloudDocument = async (id: string) => {
   const failure = takeFailure()
-  if (failure) return { ok: false, message: failure }
+  if (failure) return failure
   const row = rows.get(id)
   if (row) row.deleted = true
   return { ok: true, message: null, data: null }

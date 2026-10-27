@@ -8,9 +8,9 @@
  */
 import { create } from 'zustand'
 import type { Session, User } from '@supabase/supabase-js'
-import { getSupabase, isAuthConfigured } from './client'
+import { getSupabase, isAuthConfigured, supabaseUrl } from './client'
 import { setSignedInProbe, useEditor } from '../state/store'
-import { adoptLocalGraphs } from '../sync/adopt'
+import { isNetworkFailure } from '../sync/cloud'
 import {
   cleanOAuthParamsFromUrl,
   consumeRememberedRoute,
@@ -81,25 +81,69 @@ const stateFromSession = (session: Session | null) =>
 /**
  * Everything the editor needs to do when the account changes.
  *
- * Signing in adopts any graphs left over from before saving required an
- * account, then loads the account's list. Signing out drops the list from
- * memory — signed out there is nowhere to save, so there is nothing to show.
+ * Signing in copies the graphs saved in this browser into the account, then
+ * loads the account's list. Signing out drops what came from the account and
+ * shows this browser's saved graphs again, which is where saves now go.
  */
 let adoptedThisSession = false
 
 const onSignedIn = async (): Promise<void> => {
   const editor = useEditor.getState()
-  if (!adoptedThisSession) {
-    adoptedThisSession = true
-    const outcome = await adoptLocalGraphs()
-    if (outcome.message) editor.notify(outcome.message, outcome.failed > 0 ? 'error' : 'success')
+  try {
+    if (!adoptedThisSession) {
+      adoptedThisSession = true
+      await editor.syncLocalIntoAccount()
+    }
+    await editor.refreshDocuments()
+  } catch {
+    // Nothing here may take the editor down: the worst case is a list that
+    // refreshes on the next visit, with every local original still in place.
   }
-  await editor.refreshDocuments()
 }
 
 const onSignedOut = (): void => {
   adoptedThisSession = false
-  useEditor.getState().forgetDocuments()
+  const editor = useEditor.getState()
+  editor.forgetDocuments()
+  void editor.refreshDocuments()
+}
+
+/**
+ * Whether the Supabase project answers at all.
+ *
+ * Signing in is a full-page redirect to the project. When the project is
+ * paused or deleted its hostname stops resolving, and the redirect lands the
+ * user on a browser error page with no way back. A `no-cors` request needs no
+ * CORS headers and resolves for any HTTP answer, so it rejects only when
+ * nothing answered — exactly the case worth stopping for.
+ */
+const PROBE_TIMEOUT_MS = 8000
+
+const projectIsReachable = async (): Promise<boolean> => {
+  const base = supabaseUrl()
+  if (!base) return false
+  try {
+    await fetch(`${base.replace(/\/$/, '')}/auth/v1/health`, {
+      mode: 'no-cors',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export const SIGN_IN_UNAVAILABLE =
+  'Google sign-in is unavailable right now because the account service could not be reached. Saving still works: graphs are kept in this browser until you can sign in.'
+
+/**
+ * The account notice is rendered on the home page only; the workbench reports
+ * through its status bar. A failed sign-in says why in both, so it is never
+ * just a button that silently stopped spinning.
+ */
+const reportSignInFailure = (message: string) => {
+  useEditor.getState().notify(`Sign-in did not complete. ${message}`, 'error')
 }
 
 let subscribed = false
@@ -138,7 +182,14 @@ export const useAuth = create<AuthState>((set) => ({
       .getSession()
       .then(({ data, error }) => {
         if (error) {
-          set({ status: 'signedOut', profile: null, error: error.message })
+          // Unreachable is not a sign-in failure the user can act on, and
+          // supabase-js keeps the stored session through it: when the project
+          // answers again its refresh timer signs the user back in by itself.
+          set({
+            status: 'signedOut',
+            profile: null,
+            error: isNetworkFailure(error) ? null : error.message,
+          })
           return
         }
         set(stateFromSession(data.session))
@@ -169,6 +220,11 @@ export const useAuth = create<AuthState>((set) => ({
     const supabase = getSupabase()
     if (!supabase) return
     set({ status: 'signingIn', error: null })
+    if (!(await projectIsReachable())) {
+      set({ status: 'signedOut', error: SIGN_IN_UNAVAILABLE })
+      reportSignInFailure(SIGN_IN_UNAVAILABLE)
+      return
+    }
     rememberRoute()
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -182,6 +238,7 @@ export const useAuth = create<AuthState>((set) => ({
     })
     if (error) {
       set({ status: 'signedOut', error: error.message })
+      reportSignInFailure(error.message)
       return
     }
     // On success the browser is navigating away; leaving the status at
@@ -191,10 +248,10 @@ export const useAuth = create<AuthState>((set) => ({
   /**
    * Ends the session and nothing else.
    *
-   * Saved graphs, the working document and every editor preference live under
-   * `graphualize:*` in local storage and are untouched. Signing out returns the
-   * user to exactly the anonymous experience they would have had without ever
-   * signing in — with their work still in front of them.
+   * Graphs saved in this browser, the working document and every editor
+   * preference live under `graphualize:*` in local storage and are untouched.
+   * Signing out returns the user to exactly the anonymous experience they would
+   * have had without ever signing in — with their work still in front of them.
    */
   signOut: async () => {
     const supabase = getSupabase()

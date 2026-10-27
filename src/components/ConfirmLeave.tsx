@@ -4,9 +4,9 @@ import { useEditor } from '../state/store'
 /**
  * Warns before a reload or a closed tab throws the graph away.
  *
- * Graphualize keeps nothing locally: a graph survives by being saved to an
- * account, and that is the whole rule. The rule is defensible — but only if it
- * is never a surprise. This is the browser's own "Leave site?" prompt, raised
+ * Nothing is autosaved: a graph survives by being saved — to the account, or to
+ * this browser when signed out — and that is the whole rule. The rule is
+ * defensible — but only if it is never a surprise. This is the browser's own "Leave site?" prompt, raised
  * exactly when leaving would actually destroy something.
  *
  * Browsers only honour this after the page has been interacted with, and they

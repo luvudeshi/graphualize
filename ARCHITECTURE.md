@@ -300,6 +300,35 @@ own `graphualize:auth:v1` key precisely so that the two can never collide, and a
 test asserts that saved graphs survive a sign-out — a promise of "anonymous
 usage keeps working" is worthless if signing out takes the user's work with it.
 
+### Where a save goes
+
+Signed out, `saveCurrent` writes to local storage (`state/documents.ts`).
+Signed in, it writes to the `graphs` table (`sync/cloud.ts`) with an optimistic
+`version` check: a stale write is saved as a separate copy, never over the newer
+row. `savedWhere` and `documentsSource` record which of the two the open graph
+and the listed graphs belong to, so opening or deleting goes back to the same
+place.
+
+`sync/adopt.ts` carries local graphs into the account on sign-in. It keeps one
+link per local graph — `{cloudId, version, updatedAt}` under
+`graphualize:adopted:v2` — with one invariant: the local copy *as of
+`updatedAt`* is the content of `cloudId` at `version`. A newer local save means
+"upload again, expecting `version`", so an edit made signed out lands on the
+same row, and if that row moved on elsewhere the version check keeps both.
+Every writer preserves the invariant: a signed-in save of a local graph rewrites
+the local copy to match, an offline fallback links with `updatedAt: 0` to the
+version it was based on, and deleting a row in the account unlinks the local
+copies that pointed at it. Uploads run one at a time across tabs (Web Locks)
+because Supabase announces a sign-in to every open tab.
+
+When the account cannot be reached — `cloud.ts` reports `unreachable` for a
+failed fetch and for gateway, Cloudflare 52x and Supabase's paused-project 540
+statuses — a save falls back to local storage and the list shows this browser's
+graphs; the next call that gets through copies them across. Before redirecting
+to Google, `signInWithGoogle` makes a `no-cors` request to the project, which
+rejects only when nothing answers (a paused project stops resolving in DNS), and
+says so instead of navigating into a browser error page.
+
 ## Exporting the drawing
 
 There are two exporters and they are deliberately different things.
@@ -356,9 +385,8 @@ read CSS variables; both palettes are defined in one place each.
 ## Deliberate non-goals
 
 No collaboration, no AI, and no backend the product depends on. Signing in is
-optional and identity-only: it does not sync, gate or store anything, and the
-account menu says so in as many words rather than letting a user assume their
-graphs are backed up. The home page is a home page:
+optional: it changes where saves go, from this browser to the account, and
+gates nothing — every feature, saving included, works signed out. The home page is a home page:
 it explains and demonstrates the tool and then gets out of the way. There is no
 sign-up, no pricing, no newsletter and no analytics. The serialisation format
 carries a version number and the documents layer is a thin adapter over local

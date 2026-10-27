@@ -93,8 +93,8 @@ export const AboutDialog = ({ open }: { open: boolean }) => {
         <div className="flex justify-between gap-4">
           <dt className="text-[var(--gz-muted)]">Storage</dt>
           <dd className="text-right">
-            Saved graphs live in your Google account. Without one, nothing is kept when the tab
-            closes.
+            Saved to your Google account when signed in, and to this browser otherwise. Nothing
+            is autosaved: use File → Save.
           </dd>
         </div>
         <div className="flex justify-between gap-4">
