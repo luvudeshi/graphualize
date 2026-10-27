@@ -28,7 +28,7 @@ beforeEach(() => {
   state().newDocument()
 })
 
-describe('a graph is only kept by saving it to an account', () => {
+describe('the working document is only kept by saving it', () => {
   it('leaves nothing behind in this browser while you work', () => {
     state().replaceDocument(docFromEdges(['A-B', 'B-C', 'C-A']), 'Triangle')
     state().addVertexAt(40, 40)
@@ -54,23 +54,57 @@ describe('a graph is only kept by saving it to an account', () => {
 })
 
 describe('the home page when signed out', () => {
-  it('explains what signing in is for instead of showing an empty shelf', () => {
+  it('says saving keeps graphs here, and what signing in adds', () => {
     signedIn(false)
     render(<SavedGraphs />)
-    expect(screen.getByText(/Sign in to keep your graphs/i)).toBeInTheDocument()
+    expect(screen.getByText(/Saving keeps graphs in this browser/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument()
   })
 
-  it('says how many older graphs are waiting, when there are some', () => {
-    saveDocument({ id: 'legacy-1', name: 'Old one', graph: docFromEdges(['A-B']) })
-    saveDocument({ id: 'legacy-2', name: 'Old two', graph: docFromEdges(['A-B', 'B-C']) })
+  it('lists the graphs saved here, and offers to carry them into an account', async () => {
+    saveDocument({ id: 'local-1', name: 'Local one', graph: docFromEdges(['A-B']) })
+    saveDocument({ id: 'local-2', name: 'Local two', graph: docFromEdges(['A-B', 'B-C']) })
     signedIn(false)
+    await state().refreshDocuments()
     render(<SavedGraphs />)
-    expect(screen.getByText(/2 graphs saved here by an older version/i)).toBeInTheDocument()
+    expect(screen.getByText('Saved in this browser')).toBeInTheDocument()
+    expect(screen.getByText('Local one')).toBeInTheDocument()
+    expect(screen.getByText(/2 graphs here are not in your account yet/i)).toBeInTheDocument()
+  })
+
+  it('does not call graphs already in the account "not in your account yet"', async () => {
+    saveDocument({ id: 'local-1', name: 'Local one', graph: docFromEdges(['A-B']) })
+    signedIn(true)
+    await adoptLocalGraphs()
+    signedIn(false)
+    await state().refreshDocuments()
+    render(<SavedGraphs />)
+    expect(screen.queryByText(/not in your account yet/i)).toBeNull()
+    expect(screen.getByText(/Sign in with Google to save to your account/i)).toBeInTheDocument()
+  })
+
+  it('signed in, shows nothing until the account list has arrived', async () => {
+    saveDocument({ id: 'local-1', name: 'Local one', graph: docFromEdges(['A-B']) })
+    signedIn(false)
+    await state().refreshDocuments()
+    // Signed in now, but the list on hand is still this browser's.
+    setSignedInProbe(() => true)
+    useAuth.setState({ status: 'signedIn', profile: { id: 'u', email: null, name: 'Ada', avatarUrl: null } })
+    const { container } = render(<SavedGraphs />)
+    expect(container.textContent ?? '').not.toContain('Saved in this browser')
+  })
+
+  it('opens a graph saved here from this browser, not the account', async () => {
+    saveDocument({ id: 'local-1', name: 'Local one', graph: docFromEdges(['A-B']) })
+    signedIn(false)
+    await state().refreshDocuments()
+    render(<SavedGraphs />)
+    screen.getByRole('button', { name: /open local one/i }).click()
+    expect(decodeURIComponent(window.location.hash)).toContain('g=local:local-1')
   })
 })
 
-describe('graphs saved before an account was required', () => {
+describe('graphs saved in this browser, on sign-in', () => {
   it('counts what is still waiting to move', () => {
     expect(pendingLocalGraphCount()).toBe(0)
     saveDocument({ id: 'legacy-1', name: 'Old one', graph: docFromEdges(['A-B']) })
@@ -118,6 +152,22 @@ describe('graphs saved before an account was required', () => {
     expect(outcome.uploaded).toBe(1)
     expect(outcome.failed).toBe(1)
     expect(outcome.message).toMatch(/1 could not be copied/i)
+  })
+
+  it('does not upload again graphs an older build already copied', async () => {
+    saveDocument({ id: 'legacy-1', name: 'Homework 1', graph: docFromEdges(['A-B']) })
+    window.localStorage.setItem('graphualize:adopted:v1', JSON.stringify(['legacy-1']))
+    const outcome = await adoptLocalGraphs()
+    expect(outcome.uploaded).toBe(0)
+    expect(__fake.rows()).toHaveLength(0)
+  })
+
+  it('reads a corrupt record as nothing uploaded, instead of throwing', async () => {
+    saveDocument({ id: 'legacy-1', name: 'Homework 1', graph: docFromEdges(['A-B']) })
+    window.localStorage.setItem('graphualize:adopted:v2', '{not json')
+    expect(pendingLocalGraphCount()).toBe(1)
+    const outcome = await adoptLocalGraphs()
+    expect(outcome.uploaded).toBe(1)
   })
 
   it('survives an index entry whose document has gone missing', async () => {

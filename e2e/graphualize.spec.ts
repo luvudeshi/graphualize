@@ -144,37 +144,42 @@ test('flow 3: Dijkstra steps through a weighted example to the right distances',
   await expect(player).toContainText('G=10')
 })
 
-test('flow 4: without an account, a graph is genuinely not kept', async ({ page }) => {
-  // The rule the product now makes: saving means saving to an account. This
-  // asserts the honest version of that — a reload really does lose the graph,
-  // rather than the app quietly keeping a copy it no longer admits to.
+test('flow 4: without an account, saving keeps the graph in this browser', async ({ page }) => {
   await page.getByLabel('Quick graph command').fill('K4')
   await page.getByLabel('Quick graph command').press('Enter')
   await expect.poll(async () => (await readState(page)).vertices.length).toBe(4)
+  const { name } = await readState(page)
 
   await page.getByRole('button', { name: 'File' }).click()
   await page.getByRole('menuitem', { name: /^Save/ }).click()
-  // No account in this build, so saving says so instead of pretending.
-  await expect(page.getByRole('contentinfo')).toContainText(/sign in/i)
+  await expect(page.getByRole('contentinfo')).toContainText(/saved in this browser/i)
 
-  // Nothing was written to this browser.
+  // The saved graph is in local storage; the working document is not.
   const stored = await page.evaluate(() =>
     Object.keys(localStorage).filter((key) => key.startsWith('graphualize:')),
   )
-  expect(stored.filter((key) => key.includes('session') || key.includes('doc:'))).toEqual([])
+  expect(stored.some((key) => key.startsWith('graphualize:doc:'))).toBe(true)
+  expect(stored.filter((key) => key.includes('session'))).toEqual([])
 
+  // A reload starts a fresh canvas — nothing is autosaved — but the saved
+  // graph is still there to open.
   await page.reload()
   await expect(page.getByTestId('graph-canvas')).toBeVisible()
-  const after = await readState(page)
-  expect(after.vertices.length).toBe(0)
-  expect(after.name).toBe('Untitled graph')
-})
+  expect((await readState(page)).vertices.length).toBe(0)
 
-test('the open dialog points at the account rather than this browser', async ({ page }) => {
   await page.getByRole('button', { name: 'File' }).click()
   await page.getByRole('menuitem', { name: /^Open/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Saved graphs' })
-  await expect(dialog).toContainText(/your Google account/i)
+  await dialog.getByRole('button', { name }).first().click()
+  await expect.poll(async () => (await readState(page)).vertices.length).toBe(4)
+})
+
+test('the open dialog says where graphs are saved', async ({ page }) => {
+  await page.getByRole('button', { name: 'File' }).click()
+  await page.getByRole('menuitem', { name: /^Open/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Saved graphs' })
+  // No Supabase in this build, so saving is to this browser.
+  await expect(dialog).toContainText(/saved in this browser/i)
 })
 
 test('undo and redo reverse a generated graph', async ({ page }) => {

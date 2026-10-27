@@ -20,6 +20,14 @@ const onAuthStateChange = vi.fn(
 
 let configured = true
 
+// Signing in copies graphs into the account and lists it; those calls go to
+// the in-memory stand-in rather than to a mock client with no database.
+vi.mock('../sync/cloud', () => import('../test/fakeCloud'))
+
+/** The reachability probe made before redirecting to Google. */
+const probe = vi.fn(async (..._args: unknown[]) => new Response(null))
+vi.stubGlobal('fetch', probe)
+
 vi.mock('./client', () => ({
   isAuthConfigured: () => configured,
   supabaseUrl: () => 'https://example.supabase.co',
@@ -30,7 +38,9 @@ vi.mock('./client', () => ({
   resetSupabaseForTests: () => {},
 }))
 
-const { useAuth, resetAuthSubscriptionForTests, initialsFor } = await import('./store')
+const { useAuth, resetAuthSubscriptionForTests, initialsFor, SIGN_IN_UNAVAILABLE } = await import(
+  './store'
+)
 const { AccountMenu } = await import('./AccountMenu')
 
 const userWith = (meta: Record<string, unknown>, email = 'ada@example.com'): User =>
@@ -42,6 +52,7 @@ beforeEach(() => {
   configured = true
   vi.clearAllMocks()
   getSession.mockResolvedValue({ data: { session: null }, error: null })
+  probe.mockImplementation(async () => new Response(null))
   window.localStorage.clear()
   window.sessionStorage.clear()
   resetAuthSubscriptionForTests()
@@ -169,6 +180,44 @@ describe('signing in', () => {
     await useAuth.getState().signInWithGoogle()
     expect(useAuth.getState().status).toBe('signedOut')
     expect(useAuth.getState().error).toMatch(/not enabled/)
+  })
+
+  it('checks the project answers before leaving the page', async () => {
+    await useAuth.getState().signInWithGoogle()
+    expect(probe).toHaveBeenCalledTimes(1)
+    const [url, init] = probe.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://example.supabase.co/auth/v1/health')
+    // no-cors: the probe must not depend on the project's CORS headers.
+    expect(init.mode).toBe('no-cors')
+  })
+
+  it('stays on the page and says so when the project cannot be reached', async () => {
+    // A paused or deleted Supabase project stops resolving in DNS; redirecting
+    // there would strand the user on a browser error page.
+    probe.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    await useAuth.getState().signInWithGoogle()
+    expect(signInWithOAuth).not.toHaveBeenCalled()
+    expect(useAuth.getState().status).toBe('signedOut')
+    expect(useAuth.getState().error).toBe(SIGN_IN_UNAVAILABLE)
+    expect(useAuth.getState().error).toMatch(/saved in this browser|kept in this browser/i)
+  })
+
+  it('reports a failed sign-in in the workbench too, not only on the home page', async () => {
+    const { useEditor } = await import('../state/store')
+    probe.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    await useAuth.getState().signInWithGoogle()
+    expect(useEditor.getState().status?.tone).toBe('error')
+    expect(useEditor.getState().status?.text).toMatch(/unavailable right now/i)
+  })
+
+  it('does not call an unreachable project a failed sign-in on every page load', async () => {
+    getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: { name: 'AuthRetryableFetchError', message: 'Failed to fetch' },
+    } as never)
+    useAuth.getState().initialize()
+    await waitFor(() => expect(useAuth.getState().status).toBe('signedOut'))
+    expect(useAuth.getState().error).toBeNull()
   })
 })
 
@@ -312,7 +361,7 @@ describe('the account menu', () => {
     expect(signOut).toHaveBeenCalledTimes(1)
   })
 
-  it('is honest that graphs are still local', async () => {
+  it('says where saves go while signed in', async () => {
     const user = userEvent.setup()
     useAuth.setState({
       status: 'signedIn',
@@ -320,6 +369,6 @@ describe('the account menu', () => {
     })
     render(<AccountMenu />)
     await user.click(screen.getByRole('button', { name: /account: ada/i }))
-    expect(screen.getByText(/still stored in this browser/i)).toBeInTheDocument()
+    expect(screen.getByText(/save go to your Google account/i)).toBeInTheDocument()
   })
 })

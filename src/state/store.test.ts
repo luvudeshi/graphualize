@@ -2,12 +2,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { docFromEdges } from '../graph/model/builder'
 import { Graph } from '../graph/model/graph'
 
-// Saving goes to the account, never to this browser, so the store is tested
-// against an in-memory stand-in for the cloud rather than local storage.
+// Signed in, saving goes to the account, so the store is tested against an
+// in-memory stand-in for the cloud. Signed out it goes to this browser, which
+// is jsdom's real local storage.
 vi.mock('../sync/cloud', () => import('../test/fakeCloud'))
 
 const { __fake } = await import('../test/fakeCloud')
 const { useEditor, setSignedInProbe } = await import('./store')
+const { listDocuments } = await import('./documents')
+const { adoptLocalGraphs, cloudLinkFor } = await import('../sync/adopt')
+const { saveDocument } = await import('./documents')
+
+/** Lets the clock move on, so the next local save gets a later `updatedAt`. */
+const tick = () => new Promise((resolve) => setTimeout(resolve, 3))
 const { applyGenerator, importText, runGraphCommand } = await import('./actions')
 
 const state = () => useEditor.getState()
@@ -260,20 +267,401 @@ describe('staying consistent with the graph on screen', () => {
   })
 })
 
-describe('saving to an account', () => {
-  it('refuses to save at all when signed out', async () => {
+describe('saving in this browser when signed out', () => {
+  beforeEach(() => {
     signedIn = false
+  })
+
+  it('saves to local storage, not the account', async () => {
     state().replaceDocument(docFromEdges(['A-B', 'B-C']), 'Path')
     await state().saveCurrent('Homework 3')
 
     expect(__fake.rows()).toHaveLength(0)
-    expect(state().savedId).toBeNull()
-    expect(state().status?.tone).toBe('error')
-    expect(state().status?.text).toMatch(/sign in/i)
-    // The name the user typed is still kept, so signing in and saving works.
-    expect(state().name).toBe('Homework 3')
+    expect(listDocuments().map((entry) => entry.name)).toEqual(['Homework 3'])
+    expect(state().savedWhere).toBe('local')
+    expect(state().dirty).toBe(false)
+    expect(state().status?.tone).toBe('success')
+    expect(state().status?.text).toMatch(/in this browser/i)
   })
 
+  it('lists and reopens what was saved here', async () => {
+    state().replaceDocument(docFromEdges(['A-B', 'B-C', 'C-A']), 'Triangle')
+    await state().saveCurrent('My triangle')
+    await state().refreshDocuments()
+    expect(state().documentsSource).toBe('local')
+    const [entry] = state().documents
+    expect(entry!.name).toBe('My triangle')
+
+    state().newDocument()
+    await state().openDocument(entry!.id)
+    expect(state().name).toBe('My triangle')
+    expect(state().doc.edges).toHaveLength(3)
+    expect(state().savedWhere).toBe('local')
+    expect(state().dirty).toBe(false)
+  })
+
+  it('updates the same entry rather than piling up copies', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Working')
+    const first = listDocuments()[0]!
+    state().addVertexAt(10, 10)
+    await state().saveCurrent()
+
+    const entries = listDocuments()
+    expect(entries).toHaveLength(1)
+    expect(entries[0]!.vertexCount).toBe(3)
+    expect(entries[0]!.createdAt).toBe(first.createdAt)
+  })
+
+  it('deletes from this browser', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Doomed')
+    const id = state().savedId!
+    await state().removeDocument(id, 'local')
+    expect(listDocuments()).toHaveLength(0)
+    expect(state().savedId).toBeNull()
+    expect(state().dirty).toBe(true)
+  })
+
+  it('reports a missing local graph instead of throwing', async () => {
+    await state().openDocument('nope', 'local')
+    expect(state().status?.tone).toBe('error')
+    expect(state().status?.text).toMatch(/no longer saved in this browser/i)
+  })
+
+  it('keeps a graph opened from this browser saved here after signing out', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Mine')
+    state().forgetDocuments()
+    expect(state().savedWhere).toBe('local')
+    expect(state().savedId).not.toBeNull()
+  })
+})
+
+describe('moving between this browser and the account', () => {
+  it('copies a graph saved here into the account, then keeps saving it there', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B', 'B-C']), 'Path')
+    await state().saveCurrent('Carried over')
+
+    signedIn = true
+    await adoptLocalGraphs()
+    state().followIntoAccount()
+    expect(state().savedWhere).toBe('cloud')
+    expect(__fake.rows()).toHaveLength(1)
+
+    state().addVertexAt(1, 1)
+    await state().saveCurrent()
+    // The same account entry, now at version 2 — not a second copy.
+    expect(__fake.rows()).toHaveLength(1)
+    expect(__fake.rows()[0]!.version).toBe(2)
+    expect(__fake.rows()[0]!.vertexCount).toBe(4)
+  })
+
+  it('saving a graph from this browser while signed in links it, so it is not uploaded twice', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Linked')
+    const localId = state().savedId!
+
+    signedIn = true
+    await state().saveCurrent()
+    expect(__fake.rows()).toHaveLength(1)
+    expect(cloudLinkFor(localId)?.cloudId).toBe(state().savedId)
+
+    const outcome = await adoptLocalGraphs()
+    expect(outcome.uploaded).toBe(0)
+    expect(__fake.rows()).toHaveLength(1)
+  })
+
+  it('re-uploads a graph edited here since it was copied, onto the same entry', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Edited later')
+    signedIn = true
+    await adoptLocalGraphs()
+
+    signedIn = false
+    state().addVertexAt(3, 3)
+    // A later save gets a later timestamp, which is what marks it as newer.
+    await tick()
+    await state().saveCurrent()
+
+    signedIn = true
+    const outcome = await adoptLocalGraphs()
+    expect(outcome.uploaded).toBe(1)
+    expect(__fake.rows()).toHaveLength(1)
+    expect(__fake.rows()[0]!.vertexCount).toBe(3)
+  })
+
+  it('never writes over an account entry that moved on elsewhere', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Contested')
+    signedIn = true
+    await adoptLocalGraphs()
+    const cloudId = __fake.rows()[0]!.id
+    __fake.bumpElsewhere(cloudId)
+
+    signedIn = false
+    state().addVertexAt(3, 3)
+    await tick()
+    await state().saveCurrent()
+
+    signedIn = true
+    await adoptLocalGraphs()
+    // Both survive: the other device's version and this browser's.
+    expect(__fake.rows()).toHaveLength(2)
+    expect(__fake.rows().find((row) => row.id === cloudId)!.vertexCount).toBe(2)
+  })
+
+  it('drops the account list, and only it, on sign-out', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('In the account')
+    await state().refreshDocuments()
+    expect(state().documentsSource).toBe('cloud')
+
+    signedIn = false
+    state().forgetDocuments()
+    expect(state().savedId).toBeNull()
+    expect(state().documents).toEqual([])
+    await state().refreshDocuments()
+    expect(state().documentsSource).toBe('local')
+  })
+})
+
+describe('when the account cannot be reached', () => {
+  it('keeps the graph in this browser instead of failing the save', async () => {
+    __fake.setOffline(true)
+    state().replaceDocument(docFromEdges(['A-B', 'B-C']), 'Path')
+    await state().saveCurrent('Offline work')
+
+    expect(listDocuments().map((entry) => entry.name)).toEqual(['Offline work'])
+    expect(state().savedWhere).toBe('local')
+    expect(state().dirty).toBe(false)
+    expect(state().status?.text).toMatch(/could not reach your account/i)
+    expect(state().status?.text).toMatch(/saved in this browser/i)
+  })
+
+  it('updates the original account entry once it is back, rather than duplicating it', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Was online')
+    expect(__fake.rows()).toHaveLength(1)
+
+    __fake.setOffline(true)
+    state().addVertexAt(9, 9)
+    await state().saveCurrent()
+    expect(state().savedWhere).toBe('local')
+
+    __fake.setOffline(false)
+    const outcome = await adoptLocalGraphs()
+    expect(outcome.uploaded).toBe(1)
+    expect(__fake.rows()).toHaveLength(1)
+    expect(__fake.rows()[0]!.version).toBe(2)
+    expect(__fake.rows()[0]!.vertexCount).toBe(3)
+  })
+
+  it('still reports an ordinary refusal as a failure', async () => {
+    __fake.failNextCall('This account is not allowed to do that.')
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Refused')
+    expect(listDocuments()).toHaveLength(0)
+    expect(state().status?.tone).toBe('error')
+    expect(state().status?.text).toMatch(/not allowed/)
+  })
+
+  it('ignores an account list that arrives after signing out', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Cloud one')
+    signedIn = false
+    await state().refreshDocuments()
+    expect(state().documentsSource).toBe('local')
+
+    signedIn = true
+    const pending = state().refreshDocuments()
+    signedIn = false
+    await pending
+    expect(state().documentsSource).toBe('local')
+    expect(state().documents.map((entry) => entry.name)).not.toContain('Cloud one')
+  })
+})
+
+describe('found in review: the sync never loses or hides work', () => {
+  it('a signed-in save of a graph from this browser cannot be undone by its old local content', async () => {
+    // The account entry gets newer content than the local copy had. The local
+    // copy must be brought up to date with it, or a later edit of the stale
+    // local copy would pass the version check and overwrite this save.
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Foo')
+    const cloudId = state().savedId!
+
+    __fake.setOffline(true)
+    state().addVertexAt(1, 1)
+    await state().saveCurrent()
+    const localId = state().savedId!
+    __fake.setOffline(false)
+
+    state().addVertexAt(2, 2)
+    state().addVertexAt(3, 3)
+    await state().saveCurrent()
+    expect(__fake.rows().find((row) => row.id === cloudId)!.vertexCount).toBe(5)
+
+    signedIn = false
+    state().forgetDocuments()
+    await state().openDocument(localId, 'local')
+    // The local copy now holds what the account holds, not the stale 3.
+    expect(state().doc.vertices).toHaveLength(5)
+    state().renameVertex(state().doc.vertices[0]!.id, 'Z')
+    await tick()
+    await state().saveCurrent()
+
+    signedIn = true
+    await adoptLocalGraphs()
+    const row = __fake.rows().find((candidate) => candidate.id === cloudId)!
+    expect(row.vertexCount).toBe(5)
+    expect(row.graph.vertices.map((v) => v.label)).toContain('Z')
+  })
+
+  it('a graph deleted from the account is not re-uploaded into the deleted entry', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Foo')
+    signedIn = true
+    await adoptLocalGraphs()
+    const cloudId = __fake.rows()[0]!.id
+    await state().removeDocument(cloudId, 'cloud')
+    expect(__fake.rows()).toHaveLength(0)
+
+    signedIn = false
+    const [entry] = listDocuments()
+    await state().openDocument(entry!.id, 'local')
+    state().addVertexAt(4, 4)
+    await tick()
+    await state().saveCurrent()
+
+    signedIn = true
+    const outcome = await adoptLocalGraphs()
+    expect(outcome.uploaded).toBe(1)
+    // A new, visible entry — not an update to the tombstone.
+    expect(__fake.rows()).toHaveLength(1)
+    expect(__fake.rows()[0]!.id).not.toBe(cloudId)
+  })
+
+  it('an untouched graph deleted from the account is not resurrected on sign-in', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Foo')
+    signedIn = true
+    await adoptLocalGraphs()
+    await state().removeDocument(__fake.rows()[0]!.id, 'cloud')
+    const outcome = await adoptLocalGraphs()
+    expect(outcome.uploaded).toBe(0)
+    expect(__fake.rows()).toHaveLength(0)
+  })
+
+  it('two adoptions at once upload each graph once', async () => {
+    saveDocument({ id: 'one', name: 'One', graph: docFromEdges(['A-B']) })
+    saveDocument({ id: 'two', name: 'Two', graph: docFromEdges(['A-B']) })
+    await Promise.all([adoptLocalGraphs(), adoptLocalGraphs()])
+    expect(__fake.rows().map((row) => row.name).sort()).toEqual(['One', 'Two'])
+  })
+
+  it('a save made while adoption is running does not insert the graph twice', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Racing')
+    signedIn = true
+    const adoption = adoptLocalGraphs()
+    const save = state().saveCurrent()
+    await Promise.all([adoption, save])
+    expect(__fake.rows()).toHaveLength(1)
+  })
+
+  it('a graph an older build copied is uploaded again once edited here', async () => {
+    saveDocument({ id: 'legacy-1', name: 'Old', graph: docFromEdges(['A-B']) })
+    window.localStorage.setItem('graphualize:adopted:v1', JSON.stringify(['legacy-1']))
+    expect((await adoptLocalGraphs()).uploaded).toBe(0)
+
+    signedIn = false
+    await state().openDocument('legacy-1', 'local')
+    state().addVertexAt(5, 5)
+    await tick()
+    await state().saveCurrent()
+
+    signedIn = true
+    expect((await adoptLocalGraphs()).uploaded).toBe(1)
+    expect(__fake.rows()[0]!.vertexCount).toBe(3)
+  })
+
+  it('while the account is unreachable, the list shows what is saved in this browser', async () => {
+    saveDocument({ id: 'here', name: 'Saved here', graph: docFromEdges(['A-B']) })
+    __fake.setOffline(true)
+    await state().refreshDocuments()
+    expect(state().accountUnreachable).toBe(true)
+    expect(state().documentsSource).toBe('local')
+    expect(state().documents.map((entry) => entry.name)).toEqual(['Saved here'])
+  })
+
+  it('copies an offline save across as soon as the account answers again', async () => {
+    __fake.setOffline(true)
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Made offline')
+    expect(__fake.rows()).toHaveLength(0)
+
+    __fake.setOffline(false)
+    await state().refreshDocuments()
+    await vi.waitFor(() => expect(__fake.rows().map((row) => row.name)).toEqual(['Made offline']))
+    expect(state().accountUnreachable).toBe(false)
+    // And the open graph now follows its account entry.
+    await vi.waitFor(() => expect(state().savedWhere).toBe('cloud'))
+  })
+
+  it('a graph from the account, saved after signing out, updates its entry on the next sign-in', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Shared')
+    expect(__fake.rows()).toHaveLength(1)
+
+    signedIn = false
+    state().forgetDocuments()
+    state().addVertexAt(6, 6)
+    await state().saveCurrent()
+    expect(state().savedWhere).toBe('local')
+
+    signedIn = true
+    await adoptLocalGraphs()
+    expect(__fake.rows()).toHaveLength(1)
+    expect(__fake.rows()[0]!.version).toBe(2)
+    expect(__fake.rows()[0]!.vertexCount).toBe(3)
+  })
+
+  it('a local save does not overwrite what another tab saved in the meantime', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Two tabs')
+    const id = state().savedId!
+
+    // Another tab saves the same entry with different content.
+    await tick()
+    saveDocument({ id, name: 'Two tabs', graph: docFromEdges(['X-Y', 'Y-Z']) })
+
+    state().addVertexAt(7, 7)
+    await state().saveCurrent()
+    const names = listDocuments().map((entry) => entry.name).sort()
+    expect(names).toEqual(['Two tabs', 'Two tabs (copy)'])
+    expect(listDocuments().find((entry) => entry.id === id)!.vertexCount).toBe(3)
+    expect(state().status?.text).toMatch(/another tab/i)
+  })
+
+  it('an expired session keeps the graph in this browser instead of refusing the save', async () => {
+    __fake.setSessionGone(true)
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Expired')
+    expect(listDocuments().map((entry) => entry.name)).toEqual(['Expired'])
+    expect(state().status?.text).toMatch(/sign-in has expired/i)
+  })
+})
+
+describe('saving to an account', () => {
   it('saves, lists and reopens a graph', async () => {
     state().replaceDocument(docFromEdges(['A-B', 'B-C', 'C-A']), 'Triangle')
     await state().saveCurrent('My triangle')

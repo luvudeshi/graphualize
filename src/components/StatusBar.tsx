@@ -38,6 +38,7 @@ export const StatusBar = () => {
   const hasContent = useEditor((s) => s.doc.vertices.length > 0)
   const signedOut = useAuth((s) => s.status === 'signedOut')
   const savedId = useEditor((s) => s.savedId)
+  const savedWhere = useEditor((s) => s.savedWhere)
   const witness = useEditor((s) => s.activeWitness)
   const witnessCaption = witness ? captionFor(witness.witness) : null
   const clearWitness = useEditor((s) => s.clearWitness)
@@ -87,21 +88,25 @@ export const StatusBar = () => {
         </button>
       )}
 
-      {/* Signed out, "not saved yet" would imply saving is a thing that
-          happens later by itself. It is not — the graph is genuinely
-          temporary, and the status bar is where that stays visible. */}
+      {/* Where the graph is kept is the thing worth knowing at a glance:
+          nothing is autosaved, and "saved" means different things signed in
+          and signed out. */}
       <span className="shrink-0 text-[var(--gz-faint)]">
         {syncing
           ? 'saving…'
-          : signedOut
-            ? hasContent
-              ? 'not saved — sign in to keep this'
-              : 'not signed in'
-            : savedId
-              ? dirty
-                ? 'unsaved changes'
-                : 'saved to your account'
-              : 'not saved yet'}
+          : savedId
+            ? dirty
+              ? 'unsaved changes'
+              : savedWhere === 'cloud'
+                ? 'saved to your account'
+                : 'saved in this browser'
+            : hasContent
+              ? signedOut
+                ? 'not saved — saving keeps it in this browser'
+                : 'not saved yet'
+              : signedOut
+                ? 'not signed in'
+                : 'not saved yet'}
       </span>
     </footer>
   )

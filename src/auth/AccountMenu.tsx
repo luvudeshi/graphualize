@@ -113,11 +113,11 @@ const SignedInMenu = ({ profile }: { profile: AuthProfile }) => {
             </div>
           </div>
 
-          {/* Saying what signing in does *not* do matters as much as what it
-              does: the graphs are still local, and the user should not assume
-              they are backed up. */}
+          {/* Where saves go is the one thing signing in changes, so it is said
+              here plainly — along with the fact that signing out loses nothing. */}
           <p className="border-t px-2.5 py-2 text-[0.75rem] leading-relaxed text-[var(--gz-faint)]">
-            Your graphs are still stored in this browser. Signing out keeps them.
+            Graphs you save go to your Google account. Signing out keeps them there, and
+            saving then keeps graphs in this browser.
           </p>
 
           <button

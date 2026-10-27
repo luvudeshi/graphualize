@@ -246,18 +246,31 @@ your write-up. PNG is captured from the canvas at 2× and matches the screen
 exactly. Both offer a light or dark drawing and an optional transparent
 background.
 
-Graphs are saved in the browser's local storage, with the working document
-restored when you come back. Generating, importing or opening an example puts a
+File → Save keeps a graph in the browser's local storage when you are signed
+out, and in your Google account when you are signed in. Nothing is autosaved:
+the working document is not restored on reload, and the browser warns before
+leaving with unsaved changes. Generating, importing or opening an example puts a
 *new* graph on screen rather than editing the saved one, so it takes that name
 (unless you chose one) and Save cannot write it over the graph it replaced.
 
 ## Signing in (optional)
 
-Graphualize works without an account and always will. Sign-in is additive: it
-puts your Google name and picture in the header and nothing else changes. With
-no Supabase project configured — which is the default, and the case for the
+Graphualize works without an account and always will. Signing in adds one
+thing: graphs you save go to your Google account, so they follow you between
+devices. Graphs saved in this browser while signed out are copied into the
+account the next time you sign in (and an edited one is copied again, onto the
+same entry), and the local copies are kept. If the account cannot be reached, a
+save falls back to this browser and is copied across once it can. With no
+Supabase project configured — which is the default, and the case for the
 single-file build — there is no account UI at all, no network request is made,
-and the app is byte-for-byte the tool it was before.
+and saving simply uses this browser.
+
+**If sign-in stops working.** Supabase pauses free-tier projects after a week
+without activity. A paused project's hostname stops resolving, so sign-in and
+account saves fail while local saving keeps working; the sign-in button says the
+service is unavailable instead of redirecting into an error page. Resume the
+project from its Supabase dashboard (data is kept) and everything comes back
+without a redeploy.
 
 **Setting it up.** One command does everything that can be scripted:
 

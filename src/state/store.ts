@@ -5,15 +5,32 @@ import type { EdgeId, GraphDocument, GraphWitness, VertexId } from '../graph/mod
 import { applyLayout, type LayoutName, type Positions } from '../graph/layout'
 import type { AlgorithmOptions, AlgorithmRun, AlgorithmStep } from '../graph/algorithms/types'
 import { algorithmById } from '../graph/algorithms'
-import { clearSession, type DocumentSummary } from './documents'
+import {
+  clearSession,
+  deleteDocument,
+  listDocuments,
+  loadDocument,
+  saveDocument,
+  type DocumentSummary,
+} from './documents'
 import {
   deleteCloudDocument,
   listCloudDocuments,
   loadCloudDocument,
   saveCloudDocument,
 } from '../sync/cloud'
+import {
+  adoptionInFlight,
+  adoptLocalGraphs,
+  cloudLinkFor,
+  forgetCloudLink,
+  recordCloudLink,
+  unlinkCloudEntry,
+} from '../sync/adopt'
 
 export type Tool = 'select' | 'vertex' | 'edge' | 'erase'
+/** Where a saved graph lives: this browser's local storage, or the signed-in account. */
+export type SaveLocation = 'local' | 'cloud'
 export type ThemePreference = 'light' | 'dark' | 'system'
 
 export interface ViewRequest {
@@ -56,6 +73,19 @@ const newDocId = () => `doc-${Date.now().toString(36)}-${nextVertexId()}`
 export interface EditorState {
   docId: string
   savedId: string | null
+  /** Where `savedId` points. Null exactly when `savedId` is. */
+  savedWhere: SaveLocation | null
+  /**
+   * The account entry this graph came from, kept after signing out has made
+   * it unreachable. A save made signed out records it as the local copy's
+   * origin, so the next sign-in updates that entry instead of adding a copy.
+   */
+  cloudOrigin: { id: string; version: number | null } | null
+  /**
+   * The local entry's `updatedAt` as this tab last read or wrote it. If the
+   * stored one has moved on, another tab saved over it in the meantime.
+   */
+  localStamp: number | null
   name: string
   /** False while the name is one Graphualize chose rather than the user. */
   namedByUser: boolean
@@ -89,6 +119,14 @@ export interface EditorState {
   status: StatusMessage | null
   viewRequest: ViewRequest | null
   documents: DocumentSummary[]
+  /** Where `documents` came from, so opening or deleting one goes back to the same place. */
+  documentsSource: SaveLocation
+  /**
+   * True since the account last failed to answer at all. While it is, the
+   * list shows this browser's graphs, which is where saves are going; the
+   * first call that gets through copies them across.
+   */
+  accountUnreachable: boolean
 
   /* actions */
   setTool: (tool: Tool) => void
@@ -137,11 +175,22 @@ export interface EditorState {
 
   newDocument: () => void
   saveCurrent: (name?: string) => Promise<void>
-  openDocument: (id: string) => Promise<void>
-  removeDocument: (id: string) => Promise<void>
+  /** `source` defaults to the account when signed in and this browser otherwise. */
+  openDocument: (id: string, source?: SaveLocation) => Promise<void>
+  removeDocument: (id: string, source?: SaveLocation) => Promise<void>
   refreshDocuments: () => Promise<void>
-  /** Drops the in-memory list when the user signs out. */
+  /** Drops what came from the account when the user signs out. */
   forgetDocuments: () => void
+  /**
+   * After sign-in has copied this browser's graphs into the account, points an
+   * open graph that was saved here at its account entry instead.
+   */
+  followIntoAccount: () => void
+  /**
+   * Copies graphs saved in this browser into the account (`sync/adopt.ts`),
+   * reports the outcome, and re-points the open graph at its account entry.
+   */
+  syncLocalIntoAccount: () => Promise<void>
   setName: (name: string) => void
 }
 
@@ -163,20 +212,30 @@ const isSignedIn = () => signedInProbe()
 /**
  * Every session starts empty.
  *
- * Graphualize used to keep the working document in local storage and restore it
- * on reload. It no longer does: a graph is kept by saving it to an account, and
- * nothing else. That is a deliberate, visible rule rather than a half-promise —
- * work that looks persisted but silently is not is worse than work the app
- * plainly told you it would not keep. `ConfirmLeave` warns before a reload
- * actually discards anything.
+ * The working document is not autosaved: a graph is kept by saving it — to the
+ * account when signed in, to this browser otherwise — and nothing else. That is
+ * a deliberate, visible rule rather than a half-promise: work that looks
+ * persisted but silently is not is worse than work the app plainly told you it
+ * would not keep. `ConfirmLeave` warns before a reload actually discards
+ * anything.
  */
 const initialSession = () => ({
   docId: newDocId(),
   savedId: null,
+  savedWhere: null,
   name: 'Untitled graph',
   namedByUser: false,
   doc: emptyDocument(),
 })
+
+/** Everything that ties the working document to a saved copy, cleared. */
+const UNSAVED = {
+  savedId: null,
+  savedWhere: null,
+  savedVersion: null,
+  cloudOrigin: null,
+  localStamp: null,
+} as const
 
 export const useEditor = create<EditorState>((set, get) => {
   const seed = initialSession()
@@ -223,9 +282,82 @@ export const useEditor = create<EditorState>((set, get) => {
     if (session?.playing) set({ algorithm: { ...session, playing: false } })
   }
 
+  /**
+   * Writes the working document to this browser. A graph already saved here
+   * is overwritten in place; anything else becomes a new entry. Reports its
+   * own failure and returns null when the browser refuses the write.
+   *
+   * `origin` is the account entry this content descends from, when there is
+   * one: the local copy is linked to it with a stale stamp, so the next
+   * sign-in uploads it there under the usual version check.
+   */
+  const saveLocally = (
+    name: string,
+    origin: { id: string | null; version: number | null } | null = null,
+  ): { name: string; forked: boolean } | null => {
+    const state = get()
+    let existing = state.savedWhere === 'local' ? state.savedId : null
+    const previous = existing
+      ? listDocuments().find((candidate) => candidate.id === existing)
+      : undefined
+    // Another tab saved this graph after this one last read it. Writing over
+    // that would discard its work, so this version becomes its own entry.
+    const forked =
+      !!previous && state.localStamp !== null && previous.updatedAt !== state.localStamp
+    if (forked) existing = null
+    const finalName = forked ? `${name} (copy)`.slice(0, 200) : name
+
+    const id = existing ?? newDocId()
+    const summary = saveDocument({
+      id,
+      name: finalName,
+      graph: state.doc,
+      createdAt: existing ? previous?.createdAt : undefined,
+    })
+    if (!summary) {
+      get().notify(
+        'This browser would not let Graphualize save (storage is full or blocked). Use File → Export to keep a copy.',
+        'error',
+      )
+      return null
+    }
+
+    const descendsFrom = forked ? null : (origin ?? (existing ? null : state.cloudOrigin))
+    if (descendsFrom?.id) {
+      recordCloudLink(id, { cloudId: descendsFrom.id, version: descendsFrom.version, updatedAt: 0 })
+    }
+
+    set({
+      ...UNSAVED,
+      savedId: id,
+      savedWhere: 'local',
+      localStamp: summary.updatedAt,
+      dirty: false,
+      ...(forked ? { name: finalName } : {}),
+    })
+    // Read straight from storage rather than through refreshDocuments: signed
+    // in, that would ask an account that just failed to answer, and replace
+    // the message explaining what happened with a vaguer one.
+    const current = get()
+    if (!isSignedIn() || current.documentsSource === 'local' || current.accountUnreachable) {
+      set({ documents: listDocuments(), documentsSource: 'local' })
+    }
+    return { name: finalName, forked }
+  }
+
+  /** The account answered: if it had not been, carry across what piled up here. */
+  const accountAnswered = () => {
+    if (!get().accountUnreachable) return
+    set({ accountUnreachable: false })
+    void get().syncLocalIntoAccount()
+  }
+
   return {
     docId: seed.docId,
     savedId: seed.savedId,
+    savedWhere: seed.savedWhere,
+    cloudOrigin: null,
+    localStamp: null,
     name: seed.name,
     namedByUser: seed.namedByUser,
     doc: seed.doc,
@@ -252,9 +384,10 @@ export const useEditor = create<EditorState>((set, get) => {
     shortcutsOpen: false,
     status: null,
     viewRequest: null,
-    // Populated from the account once signed in. Signed out there is nothing
-    // to list, because there is nowhere to save to.
+    // The account's graphs when signed in, this browser's otherwise.
     documents: [],
+    documentsSource: 'local',
+    accountUnreachable: false,
 
     setTool: (tool) => set({ tool, pendingEdgeSource: null }),
 
@@ -427,9 +560,8 @@ export const useEditor = create<EditorState>((set, get) => {
       if (options?.title !== undefined) {
         set({
           docId: state.savedId === null ? state.docId : newDocId(),
-          savedId: null,
+          ...UNSAVED,
           ...(state.namedByUser ? {} : { name: options.title }),
-          savedVersion: null,
         })
       }
       if (options?.relayout !== false) get().requestView('fit')
@@ -577,7 +709,7 @@ export const useEditor = create<EditorState>((set, get) => {
       clearSession()
       set({
         docId: newDocId(),
-        savedId: null,
+        ...UNSAVED,
         name: 'Untitled graph',
         namedByUser: false,
         doc: emptyDocument(),
@@ -589,67 +721,148 @@ export const useEditor = create<EditorState>((set, get) => {
         activeWitness: null,
         algorithm: null,
         dirty: false,
-        savedVersion: null,
       })
     },
 
     /**
-     * Saves to the signed-in account. There is nowhere else to save to.
+     * Saves to the signed-in account, or to this browser when signed out.
      *
-     * A signed-out save is refused with a sentence saying why, rather than
-     * writing to local storage the app has stopped reading.
+     * Signed out, the graph goes to local storage and is copied into the
+     * account on the next sign-in (`sync/adopt.ts`). Signed in but unable to
+     * reach the account — offline, the project down, or the session expired —
+     * it is kept in this browser too, rather than the save simply failing, and
+     * linked to the account entry it was meant for so the copy-across picks it
+     * up later.
      */
     saveCurrent: async (name) => {
-      const state = get()
-      const finalName = (name ?? state.name).trim() || 'Untitled graph'
+      const finalName = (name ?? get().name).trim() || 'Untitled graph'
       set({ name: finalName, namedByUser: true })
+      const doc = get().doc
 
       if (!isSignedIn()) {
-        get().notify('Sign in to save this graph to your account.', 'error')
+        const saved = saveLocally(finalName)
+        if (saved) {
+          get().notify(
+            saved.forked
+              ? `Another tab had saved over this graph, so this version was saved separately as "${saved.name}".`
+              : `Saved "${saved.name}" in this browser`,
+            saved.forked ? 'error' : 'success',
+          )
+        }
         return
       }
 
       set({ syncing: true })
+      // While graphs from this browser are being copied into the account, this
+      // one may be among them; waiting avoids inserting it a second time.
+      await adoptionInFlight()
+      const state = get()
+
+      // A graph saved in this browser continues on the account entry its link
+      // names, at the version its content is based on; one never uploaded
+      // becomes a new entry.
+      const localId = state.savedWhere === 'local' ? state.savedId : null
+      const link = localId ? cloudLinkFor(localId) : null
+      const target =
+        state.savedWhere === 'cloud'
+          ? { id: state.savedId, version: state.savedVersion }
+          : link?.cloudId != null && link.version != null
+            ? { id: link.cloudId, version: link.version }
+            : { id: null, version: null }
+
       const result = await saveCloudDocument({
-        id: state.savedId,
+        id: target.id,
         name: finalName,
-        graph: state.doc,
-        expectedVersion: state.savedVersion,
+        graph: doc,
+        expectedVersion: target.version,
       })
       set({ syncing: false })
 
       if (!result.ok || !result.data) {
+        if (result.unreachable || result.noSession) {
+          if (result.unreachable) set({ accountUnreachable: true })
+          const saved = saveLocally(finalName, target)
+          if (saved) {
+            get().notify(
+              result.unreachable
+                ? `Could not reach your account, so "${saved.name}" was saved in this browser. It will be copied to your account once Graphualize can reach it again.`
+                : `Your sign-in has expired, so "${saved.name}" was saved in this browser. Sign in again to copy it to your account.`,
+              'error',
+            )
+          }
+          return
+        }
         get().notify(result.message ?? 'That graph could not be saved.', 'error')
         return
       }
 
+      if (localId) {
+        // Keep this browser's copy identical to what the account now holds, so
+        // its link describes it truthfully. Recording the new version against
+        // the old local content would let a later edit of that old content
+        // pass the version check and overwrite this save.
+        const previous = listDocuments().find((candidate) => candidate.id === localId)
+        const summary = saveDocument({
+          id: localId,
+          name: finalName,
+          graph: doc,
+          createdAt: previous?.createdAt,
+        })
+        if (summary) {
+          recordCloudLink(localId, {
+            cloudId: result.data.id,
+            version: result.data.version,
+            updatedAt: summary.updatedAt,
+          })
+        }
+      }
+
       set({
+        ...UNSAVED,
         savedId: result.data.id,
+        savedWhere: 'cloud',
         savedVersion: result.data.version,
         dirty: false,
       })
       // A conflict still counts as saved — both versions are in the account —
       // so it reports as a warning rather than a failure.
       get().notify(result.message ?? `Saved "${finalName}"`, result.message ? 'error' : 'success')
+      accountAnswered()
       void get().refreshDocuments()
     },
 
-    openDocument: async (id) => {
-      set({ syncing: true })
-      const result = await loadCloudDocument(id)
-      set({ syncing: false })
+    openDocument: async (id, source = isSignedIn() ? 'cloud' : 'local') => {
+      let opened: { name: string; graph: GraphDocument; version: number | null; stamp: number | null }
+      if (source === 'local') {
+        const saved = loadDocument(id)
+        if (!saved) {
+          get().notify('That graph is no longer saved in this browser.', 'error')
+          return
+        }
+        opened = { name: saved.name, graph: saved.graph, version: null, stamp: saved.updatedAt }
+      } else {
+        set({ syncing: true })
+        const result = await loadCloudDocument(id)
+        set({ syncing: false })
 
-      if (!result.ok || !result.data) {
-        get().notify(result.message ?? 'That graph could not be opened.', 'error')
-        return
+        if (!result.ok || !result.data) {
+          if (result.unreachable) set({ accountUnreachable: true })
+          get().notify(result.message ?? 'That graph could not be opened.', 'error')
+          return
+        }
+        opened = { ...result.data, stamp: null }
+        accountAnswered()
       }
-      const { name, graph, version } = result.data
+      const { name, graph, version, stamp } = opened
       absorbIds(graph)
       stopPlayback()
       set({
+        ...UNSAVED,
         docId: id,
         savedId: id,
+        savedWhere: source,
         savedVersion: version,
+        localStamp: stamp,
         name,
         namedByUser: true,
         doc: graph,
@@ -666,32 +879,95 @@ export const useEditor = create<EditorState>((set, get) => {
       get().notify(`Opened "${name}"`, 'success')
     },
 
-    removeDocument: async (id) => {
-      const result = await deleteCloudDocument(id)
-      if (!result.ok) {
-        get().notify(result.message ?? 'That graph could not be deleted.', 'error')
-        return
+    removeDocument: async (id, source = get().documentsSource) => {
+      if (source === 'local') {
+        deleteDocument(id)
+        forgetCloudLink(id)
+      } else {
+        const result = await deleteCloudDocument(id)
+        if (!result.ok) {
+          if (result.unreachable) set({ accountUnreachable: true })
+          get().notify(result.message ?? 'That graph could not be deleted.', 'error')
+          return
+        }
+        // Local copies of it must not later be uploaded into the tombstone.
+        unlinkCloudEntry(id)
+        accountAnswered()
       }
-      if (get().savedId === id) set({ savedId: null, savedVersion: null, dirty: true })
+      const state = get()
+      if (state.savedId === id && state.savedWhere === source) {
+        set({ ...UNSAVED, dirty: true })
+      }
       await get().refreshDocuments()
     },
 
     refreshDocuments: async () => {
       if (!isSignedIn()) {
-        set({ documents: [] })
+        set({ documents: listDocuments(), documentsSource: 'local' })
         return
       }
       const result = await listCloudDocuments()
+      // Signed out while the request was in flight: the account's list must
+      // not land on top of this browser's.
+      if (!isSignedIn()) return
       if (!result.ok || !result.data) {
+        if (result.unreachable) {
+          // Saves are going to this browser until the account is back, so this
+          // browser's list is the one that is true right now.
+          set({ accountUnreachable: true, documents: listDocuments(), documentsSource: 'local' })
+          get().notify(
+            'Could not reach your account, so these are the graphs saved in this browser.',
+            'error',
+          )
+          return
+        }
         // A failed refresh leaves the last known list alone rather than
         // blanking it — an empty list would read as "you have no graphs".
         if (result.message) get().notify(result.message, 'error')
         return
       }
-      set({ documents: result.data })
+      set({ documents: result.data, documentsSource: 'cloud' })
+      accountAnswered()
     },
 
-    forgetDocuments: () => set({ documents: [], savedId: null, savedVersion: null }),
+    forgetDocuments: () => {
+      const state = get()
+      set({
+        ...(state.documentsSource === 'cloud' ? { documents: [] } : {}),
+        accountUnreachable: false,
+        // A graph opened from this browser is still saved here. One opened from
+        // the account can no longer be saved there, but where it came from is
+        // kept, so saving it now links the local copy back to that entry.
+        ...(state.savedWhere === 'cloud' && state.savedId
+          ? { ...UNSAVED, cloudOrigin: { id: state.savedId, version: state.savedVersion } }
+          : {}),
+      })
+    },
+
+    followIntoAccount: () => {
+      const state = get()
+      if (state.savedWhere !== 'local' || !state.savedId) return
+      const link = cloudLinkFor(state.savedId)
+      if (link?.cloudId == null || link.version == null) return
+      // Only when the account holds what is on screen. A local save the
+      // upload has not caught up with stays pointed at this browser, and the
+      // next save carries it across.
+      const entry = listDocuments().find((candidate) => candidate.id === state.savedId)
+      if (!entry || link.updatedAt < entry.updatedAt) return
+      set({ ...UNSAVED, savedId: link.cloudId, savedWhere: 'cloud', savedVersion: link.version })
+    },
+
+    syncLocalIntoAccount: async () => {
+      if (!isSignedIn()) return
+      const outcome = await adoptLocalGraphs()
+      // Signed out while uploading: the uploads stand, but the editor now
+      // belongs to the signed-out state and must not be re-pointed.
+      if (!isSignedIn()) return
+      if (outcome.unreachable) set({ accountUnreachable: true })
+      if (outcome.message) get().notify(outcome.message, outcome.failed > 0 ? 'error' : 'success')
+      get().followIntoAccount()
+      if (outcome.uploaded > 0) await get().refreshDocuments()
+    },
 
     setName: (name) => {
       set({ name, namedByUser: true })
