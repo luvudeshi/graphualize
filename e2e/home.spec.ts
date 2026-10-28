@@ -34,6 +34,23 @@ test('the demo tour can be driven by hand', async ({ page }) => {
   await expect(diameter).toContainText('furthest pair')
 })
 
+test('the tour can be paused, and stays paused once the pointer has gone', async ({ page }) => {
+  const bipartite = demo(page).getByRole('button', { name: /Bipartite/ })
+  await expect(bipartite).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Pause the tour' }).click()
+  await page.mouse.move(0, 0)
+  // Longer than one step of the tour.
+  await page.waitForTimeout(3800)
+  await expect(bipartite).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Resume the tour' })).toBeVisible()
+})
+
+test('browsing the examples scrolls to them without changing the route', async ({ page }) => {
+  await page.getByRole('button', { name: 'Browse examples' }).click()
+  await expect(page.getByRole('heading', { name: 'Start from a classic.' })).toBeInViewport()
+  expect(new URL(page.url()).hash).not.toContain('examples')
+})
+
 test('the primary call to action opens the workbench', async ({ page }) => {
   await page.getByRole('button', { name: 'Start drawing' }).click()
   await expect(page.getByTestId('graph-canvas')).toBeVisible()

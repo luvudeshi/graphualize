@@ -220,12 +220,23 @@ rather than with an inner scroll container is what makes browser find-in-page,
 
 ## The home page
 
-`home/HomePage.tsx` is a marketing page that markets by demonstrating.
+`home/HomePage.tsx` is a marketing page that markets by demonstrating, and keeps
+its own words to a headline, one sentence and labels.
 `home/HeroDemo.tsx` mounts a small Cytoscape instance and runs the *real*
 `analyzeCore` / `analyzeMetrics` over a hand-laid eight-vertex graph, stepping
 through five properties and drawing each witness with the same
-`witnessToHighlight` pipeline the workbench uses. It pauses on hover and focus,
-respects `prefers-reduced-motion`, and leaves the vertices draggable.
+`witnessToHighlight` pipeline the workbench uses. It pauses on hover and focus
+and has a pause control of its own, does not tour at all under
+`prefers-reduced-motion`, and leaves the vertices draggable. A stage too narrow
+for the long left-to-right drawing gets a compact drawing of the same graph
+(`demoPositions` in `home/demoGraph.ts`); only positions change, so nothing is
+recomputed.
+
+The example gallery draws every thumbnail from the example's own document
+(`home/thumbnail.ts`) rather than shipping pictures, so a card cannot disagree
+with the graph it opens. Styles used only by the home page live in
+`home/home.css`, built from the same `--gz-*` tokens as everything else, so both
+themes follow without a second palette.
 
 Because the demo runs the real library, the copy around it can go stale in a way
 a screenshot cannot. `home/home.test.tsx` therefore asserts that the demo graph

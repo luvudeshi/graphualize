@@ -115,7 +115,9 @@ odd-degree vertices, or a realising shortest path on the canvas.
 does, then demonstrates it. The graph in the hero is live — it runs the same
 analysis library as the workbench, cycles through five properties and draws the
 witness for each one, and you can drag its vertices around to watch the
-mathematics stay put. A unit test asserts that the demo graph genuinely has the
+mathematics stay put. The tour holds still while you point at it and has a pause
+button of its own, and on a phone the demo switches to a compact drawing of the
+same graph. A unit test asserts that the demo graph genuinely has the
 properties the surrounding copy claims (three bridges, four articulation
 vertices, diameter 5, an odd cycle of length 3), so the marketing cannot drift
 away from the mathematics.
