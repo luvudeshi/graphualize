@@ -194,6 +194,8 @@ export interface SaveOutcome {
   version: number
   /** Set when someone else's newer version was found and kept alongside. */
   conflictWith?: { name: string; device: string | null }
+  /** The name this version was saved under, when it differs from the one asked for. */
+  savedAs?: string
 }
 
 /**
@@ -285,6 +287,7 @@ export const saveCloudDocument = guarded(async (input: {
     data: {
       id: copy.id as string,
       version: copy.version as number,
+      savedAs: copyName,
       conflictWith: {
         name: (current?.name as string) ?? input.name,
         device: (current?.origin_device as string) ?? null,

@@ -18,6 +18,7 @@ import {
 } from '../state/actions'
 import { EdgeIcon, SparkIcon } from './Icons'
 import { replaceWorkingGraph } from '../state/replace'
+import { requestSave, requestSaveAs } from '../state/save'
 import { copyShareLink } from '../state/share'
 
 interface Command {
@@ -80,7 +81,8 @@ const buildCommands = (): Command[] => {
       group: 'File',
       run: () => replaceWorkingGraph({ kind: 'new' }),
     },
-    { id: 'file.save', label: 'Save graph', group: 'File', run: () => void s().saveCurrent() },
+    { id: 'file.save', label: 'Save graph', group: 'File', run: () => requestSave() },
+    { id: 'file.saveAs', label: 'Save as…', group: 'File', run: () => requestSaveAs() },
     {
       id: 'file.open',
       label: 'Open saved graph',

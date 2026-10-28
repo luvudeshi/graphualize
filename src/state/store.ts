@@ -75,6 +75,23 @@ const cloneDoc = (doc: GraphDocument): GraphDocument => ({
 const newDocId = () => `doc-${Date.now().toString(36)}-${nextVertexId()}`
 
 /**
+ * How a save ended, so the interface can say so plainly rather than leaving
+ * the user to guess from a line in the status bar.
+ *
+ * - `saved`: it went where it was meant to.
+ * - `savedElsewhere`: signed in, but the account could not take it, so it was
+ *   kept in this browser instead and will be copied across later.
+ * - `savedAsCopy`: kept, but under a new name, because another tab or device
+ *   had changed the saved graph in the meantime and nothing is written over.
+ * - `failed`: nothing was saved; `message` says why.
+ */
+export type SaveOutcome =
+  | { kind: 'saved'; where: SaveLocation; name: string }
+  | { kind: 'savedElsewhere'; where: 'local'; name: string; reason: 'unreachable' | 'noSession' }
+  | { kind: 'savedAsCopy'; where: SaveLocation; name: string; reason: 'otherTab' | 'otherDevice' }
+  | { kind: 'failed'; message: string }
+
+/**
  * What a delete removed, kept so it can be undone exactly: the document itself
  * for one saved in this browser, the links that pointed at it, and — when it
  * was the graph on screen — how the editor was tied to it.
@@ -207,7 +224,12 @@ export interface EditorState {
   requestView: (kind: ViewRequest['kind']) => void
 
   newDocument: () => void
-  saveCurrent: (name?: string) => Promise<void>
+  saveCurrent: (name?: string) => Promise<SaveOutcome>
+  /**
+   * Unties the working graph from its saved copy, so the next save makes a new
+   * one (Save as). Returns a function that ties it back, for a save that fails.
+   */
+  detachFromSaved: () => () => void
   /** `source` defaults to the account when signed in and this browser otherwise. */
   openDocument: (id: string, source?: SaveLocation) => Promise<void>
   /**
@@ -345,6 +367,9 @@ export const useEditor = create<EditorState>((set, get) => {
    * one: the local copy is linked to it with a stale stamp, so the next
    * sign-in uploads it there under the usual version check.
    */
+  const STORAGE_REFUSED =
+    'This browser would not let Graphualize save (storage is full or blocked). Use File → Export to keep a copy.'
+
   const saveLocally = (
     name: string,
     origin: { id: string | null; version: number | null } | null = null,
@@ -369,10 +394,7 @@ export const useEditor = create<EditorState>((set, get) => {
       createdAt: existing ? previous?.createdAt : undefined,
     })
     if (!summary) {
-      get().notify(
-        'This browser would not let Graphualize save (storage is full or blocked). Use File → Export to keep a copy.',
-        'error',
-      )
+      get().notify(STORAGE_REFUSED, 'error')
       return null
     }
 
@@ -929,15 +951,16 @@ export const useEditor = create<EditorState>((set, get) => {
 
       if (!isSignedIn()) {
         const saved = saveLocally(finalName)
-        if (saved) {
-          get().notify(
-            saved.forked
-              ? `Another tab had saved over this graph, so this version was saved separately as "${saved.name}".`
-              : `Saved "${saved.name}" in this browser`,
-            saved.forked ? 'error' : 'success',
-          )
-        }
-        return
+        if (!saved) return { kind: 'failed', message: STORAGE_REFUSED }
+        get().notify(
+          saved.forked
+            ? `Another tab had saved over this graph, so this version was saved separately as "${saved.name}".`
+            : `Saved "${saved.name}" in this browser`,
+          saved.forked ? 'error' : 'success',
+        )
+        return saved.forked
+          ? { kind: 'savedAsCopy', where: 'local', name: saved.name, reason: 'otherTab' }
+          : { kind: 'saved', where: 'local', name: saved.name }
       }
 
       set({ syncing: true })
@@ -970,18 +993,23 @@ export const useEditor = create<EditorState>((set, get) => {
         if (result.unreachable || result.noSession) {
           if (result.unreachable) set({ accountUnreachable: true })
           const saved = saveLocally(finalName, target)
-          if (saved) {
-            get().notify(
-              result.unreachable
-                ? `Could not reach your account, so "${saved.name}" was saved in this browser. It will be copied to your account once Graphualize can reach it again.`
-                : `Your sign-in has expired, so "${saved.name}" was saved in this browser. Sign in again to copy it to your account.`,
-              'error',
-            )
+          if (!saved) return { kind: 'failed', message: STORAGE_REFUSED }
+          get().notify(
+            result.unreachable
+              ? `Could not reach your account, so "${saved.name}" was saved in this browser. It will be copied to your account once Graphualize can reach it again.`
+              : `Your sign-in has expired, so "${saved.name}" was saved in this browser. Sign in again to copy it to your account.`,
+            'error',
+          )
+          return {
+            kind: 'savedElsewhere',
+            where: 'local',
+            name: saved.name,
+            reason: result.unreachable ? 'unreachable' : 'noSession',
           }
-          return
         }
-        get().notify(result.message ?? 'That graph could not be saved.', 'error')
-        return
+        const message = result.message ?? 'That graph could not be saved.'
+        get().notify(message, 'error')
+        return { kind: 'failed', message }
       }
 
       if (localId) {
@@ -1005,21 +1033,53 @@ export const useEditor = create<EditorState>((set, get) => {
         }
       }
 
+      // The name as it is now, read before anything below changes it: a rename
+      // typed while the request was out is the user's, and is kept.
+      const liveName = get().name
+      const renamedMeanwhile = liveName !== finalName
       set({
         ...UNSAVED,
         savedId: result.data.id,
         savedWhere: 'cloud',
         savedVersion: result.data.version,
+        // Kept as a copy beside a newer version: the editor is now that copy,
+        // so it takes the copy's name and the next save updates the copy —
+        // unless the user has typed a new name since, which wins.
+        ...(result.data.savedAs && !renamedMeanwhile ? { name: result.data.savedAs } : {}),
         // What was saved is the document as it was when Save was pressed. An
         // edit made while the request was out is not in the account, so the
         // graph is still unsaved — and New, Open and leaving must still ask.
-        dirty: get().doc !== doc,
+        dirty: get().doc !== doc || renamedMeanwhile,
       })
       // A conflict still counts as saved — both versions are in the account —
       // so it reports as a warning rather than a failure.
       get().notify(result.message ?? `Saved "${finalName}"`, result.message ? 'error' : 'success')
       accountAnswered()
       void get().refreshDocuments()
+      return result.data.conflictWith
+        ? {
+            kind: 'savedAsCopy',
+            where: 'cloud',
+            name: result.data.savedAs ?? finalName,
+            reason: 'otherDevice',
+          }
+        : { kind: 'saved', where: 'cloud', name: finalName }
+    },
+
+    detachFromSaved: () => {
+      const before = get()
+      const tie = {
+        savedId: before.savedId,
+        savedWhere: before.savedWhere,
+        savedVersion: before.savedVersion,
+        cloudOrigin: before.cloudOrigin,
+        localStamp: before.localStamp,
+        dirty: before.dirty,
+        name: before.name,
+        namedByUser: before.namedByUser,
+      }
+      set({ ...UNSAVED, dirty: true })
+      return () => set(tie)
     },
 
     openDocument: async (id, source = isSignedIn() ? 'cloud' : 'local') => {
@@ -1178,7 +1238,11 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     setName: (name) => {
-      set({ name, namedByUser: true })
+      // A new name is a change like any other: until it is saved, Save must
+      // write it and leaving must ask — otherwise "All changes saved" would
+      // be said over a rename that a reload throws away.
+      const changed = name !== get().name
+      set({ name, namedByUser: true, ...(changed ? { dirty: true } : {}) })
     },
   }
 })

@@ -47,6 +47,7 @@ const GROUPS: { title: string; items: [string, string][] }[] = [
     title: 'File',
     items: [
       [formatShortcut('mod+S'), 'Save'],
+      [formatShortcut('mod+shift+S'), 'Save as…'],
       [formatShortcut('mod+O'), 'Open a saved graph'],
       [formatShortcut('mod+N'), 'New graph'],
     ],

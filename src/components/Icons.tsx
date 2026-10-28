@@ -194,3 +194,23 @@ export const TrashIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M10 11v6M14 11v6" />
   </svg>
 )
+
+export const SaveIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M12 4v10m0 0l-4-4m4 4l4-4" />
+    <path d="M5 15v3a2 2 0 002 2h10a2 2 0 002-2v-3" />
+  </svg>
+)
+
+export const CheckIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </svg>
+)
+
+export const AlertIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M12 4l9 16H3l9-16z" />
+    <path d="M12 10v4M12 17.5v.01" />
+  </svg>
+)

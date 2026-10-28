@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
 import { CloseIcon } from './Icons'
 
 const FOCUSABLE =
@@ -18,6 +18,12 @@ export interface DialogProps {
    * content handled it — backing out of an inline step — and the dialog stays.
    */
   onEscape?: () => boolean
+  /**
+   * The control to focus on opening, when it is not the first one — a name
+   * field rather than the header's close button. Focusing it here, in the
+   * same effect, leaves no moment where a keystroke lands somewhere else.
+   */
+  initialFocus?: RefObject<HTMLElement | null>
 }
 
 /** Modal dialog with a real focus trap and restored focus on close. */
@@ -30,6 +36,7 @@ export const Dialog = ({
   footer,
   width = 'max-w-xl',
   onEscape,
+  initialFocus,
 }: DialogProps) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -42,9 +49,9 @@ export const Dialog = ({
     if (!open) return
     const restoreTo = document.activeElement as HTMLElement | null
     const panel = panelRef.current
-    ;(panel?.querySelector<HTMLElement>(FOCUSABLE) ?? panel)?.focus()
+    ;(initialFocus?.current ?? panel?.querySelector<HTMLElement>(FOCUSABLE) ?? panel)?.focus()
     return () => restoreTo?.focus?.()
-  }, [open])
+  }, [open, initialFocus])
 
   useEffect(() => {
     if (!open) return
