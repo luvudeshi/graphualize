@@ -15,6 +15,13 @@
 import { labelForIndex, nextEdgeId, nextVertexId } from '../model/ids'
 import type { Graph } from '../model/graph'
 import type { Edge, EdgeId, GraphDocument, Vertex, VertexId } from '../model/types'
+import { seedFromText } from '../generators/random'
+import {
+  DEFAULT_WEIGHT_RANGE,
+  LENGTH_SCALE,
+  edgeWeights,
+  type EdgeWeighting,
+} from '../generators/weights'
 
 /* ------------------------------------------------------------------ */
 /* Public types                                                        */
@@ -633,6 +640,88 @@ const toUndirectedApply = (graph: Graph): TransformResult => {
 }
 
 /* ------------------------------------------------------------------ */
+/* 10. Edge weights                                                    */
+/* ------------------------------------------------------------------ */
+
+const weightsPrecondition = (graph: Graph): string | null =>
+  graph.size === 0 ? 'There are no edges to weigh yet. Draw or generate some first.' : null
+
+/** A fresh copy of the graph in weighted mode, ready for its new weights. */
+const weightedCopy = (graph: Graph): GraphDocument => ({
+  vertices: graph.vertices.map(copyVertex),
+  edges: graph.edges.map(copyEdge),
+  directed: graph.directed,
+  weighted: true,
+})
+
+const setWeights = (doc: GraphDocument, weights: readonly number[]): GraphDocument => {
+  doc.edges.forEach((e, i) => {
+    e.weight = weights[i]!
+  })
+  return doc
+}
+
+/** How many fresh draws to try before accepting one that changed nothing. */
+const REROLL_ATTEMPTS = 16
+
+/**
+ * The draw is seeded by the graph's structure key, which includes the current
+ * weights. So undo and redo always give back the same numbers, yet running it
+ * again on its own output rolls a fresh set. A draw identical to what is
+ * already there (likely only for a graph with one or two edges) would make
+ * that a fixed point, so it is redrawn from the next seed.
+ */
+const randomWeightsApply = (graph: Graph): TransformResult => {
+  const problem = weightsPrecondition(graph)
+  if (problem) throw new TransformError(problem)
+
+  const doc = weightedCopy(graph)
+  const weighting: EdgeWeighting = { kind: 'random', ...DEFAULT_WEIGHT_RANGE }
+  const seed = seedFromText(graph.structureKey())
+  const current = graph.edges.map((e) => graph.weight(e.id))
+  let weights = edgeWeights(doc, weighting, seed)
+  for (let attempt = 1; attempt < REROLL_ATTEMPTS; attempt++) {
+    if (!graph.weighted || weights.some((w, i) => w !== current[i])) break
+    weights = edgeWeights(doc, weighting, seed + attempt)
+  }
+
+  return {
+    document: setWeights(doc, weights),
+    summary: sentences([
+      `Gave ${countOf(graph.size, 'edge')} random weights from` +
+        ` ${DEFAULT_WEIGHT_RANGE.min} to ${DEFAULT_WEIGHT_RANGE.max}.`,
+      graph.weighted ? null : 'The graph is now weighted.',
+      'Run it again for a fresh set.',
+    ]),
+    relayout: false,
+  }
+}
+
+const lengthWeightsApply = (graph: Graph): TransformResult => {
+  const problem = weightsPrecondition(graph)
+  if (problem) throw new TransformError(problem)
+
+  const doc = weightedCopy(graph)
+  const loops = graph.selfLoops().length
+
+  return {
+    // Length reads positions only, so the seed is irrelevant.
+    document: setWeights(doc, edgeWeights(doc, { kind: 'length' }, 0)),
+    summary: sentences([
+      `Weighed ${countOf(graph.size, 'edge')} by drawn length, with the median edge at` +
+        ` ${LENGTH_SCALE}.`,
+      loops === 0
+        ? null
+        : loops === 1
+          ? 'The self-loop has no length, so it weighs 1.'
+          : `The ${loops} self-loops have no length, so they weigh 1.`,
+      graph.weighted ? null : 'The graph is now weighted.',
+    ]),
+    relayout: false,
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Registry                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -715,6 +804,22 @@ export const TRANSFORMS: TransformDefinition[] = [
       'Forgets orientation: the mode flips to undirected and each pair of endpoints keeps a single edge, so antiparallel arcs (u→v with v→u) and duplicate arcs merge into one. The surviving edge keeps the first arc’s id, and in weighted mode the smallest weight of the pair.',
     precondition: (graph) => toUndirectedPrecondition(graph),
     apply: (graph) => toUndirectedApply(graph),
+  },
+  {
+    id: 'random-weights',
+    name: 'Assign random weights',
+    description:
+      `Gives every edge a random whole-number weight from ${DEFAULT_WEIGHT_RANGE.min} to ${DEFAULT_WEIGHT_RANGE.max} and switches the graph to weighted mode, so Dijkstra, Prim and Kruskal have real choices to make. The draw is seeded by the graph itself: undo and redo give back exactly the same numbers, and running it again rolls a fresh set. Vertices, edges and their ids are untouched. For another range, generate with the Edge weights option or a suffix such as K6 w2-20.`,
+    precondition: (graph) => weightsPrecondition(graph),
+    apply: (graph) => randomWeightsApply(graph),
+  },
+  {
+    id: 'length-weights',
+    name: 'Weights from edge lengths',
+    description:
+      `Sets each edge’s weight to its length as drawn, scaled so the median edge weighs ${LENGTH_SCALE} and rounded to a whole number (never below 1), and switches the graph to weighted mode. Shortest paths then agree with what the picture suggests. A self-loop has no length and weighs 1. Move some vertices and run it again to update the weights.`,
+    precondition: (graph) => weightsPrecondition(graph),
+    apply: (graph) => lengthWeightsApply(graph),
   },
 ]
 

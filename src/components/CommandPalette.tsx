@@ -255,7 +255,7 @@ const PaletteBody = () => {
               event.preventDefault()
             }
           }}
-          placeholder="Search commands, or type K5, C8, G(20,0.2)..."
+          placeholder="Search commands, or type K5, C8, G(20,0.2), K6 w1-9..."
           aria-label="Command search"
           className="w-full border-b bg-transparent px-4 py-3 text-[0.9375rem] outline-none placeholder:text-[var(--gz-faint)]"
           spellCheck={false}
