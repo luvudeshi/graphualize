@@ -217,6 +217,17 @@ double-invoked effects in development) and then erased from the URL with
 `history.replaceState`, so a reload does not silently regenerate the graph over
 whatever the user has since drawn.
 
+`#/graph?d=…` is a share link: the whole document, packed by
+`graph/serialization/link.ts` into a compact positional JSON, deflated with
+`CompressionStream` where available and base64url-encoded behind a version and
+codec prefix (`1z.` or `1j.`). It arrives from anyone, so decoding checks the
+length first, caps how far a compressed payload may inflate, validates every
+slot, then expands the result into a saved file and reads it with the same
+`parseGraphualizeJson` that opens files — and never throws. Opening one is an
+undoable `replaceDocument` with a title, like a generator command. The copied
+URL is built from protocol, host and path only, never the query string, which
+can briefly hold an OAuth `?code=` on the way back from sign-in.
+
 The two routes want different scroll behaviour: the workbench is a fixed
 viewport with its own scrolling panels, the home page is a document. `App` sets
 `document.documentElement.dataset.route`, and three CSS rules relax the

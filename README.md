@@ -271,6 +271,16 @@ the highlight as one style per role, so restyling the cycle means editing one
 line. Copy it into a document, or tick **Standalone document** for a `.tex`
 file that compiles as it is on Overleaf.
 
+**Links.** File → Copy share link (also in the command palette) copies a URL
+that carries the whole graph — labels, positions, edges, weights and the
+directed/weighted flags — in its `#/graph?d=…` fragment, compressed where the
+browser can. Nothing is uploaded: the fragment never leaves the browser, so
+whoever opens the link gets the graph straight out of the URL, as a new graph
+they can undo. Links carry up to 2,000 vertices and 10,000 edges; a graph past
+that, or one whose link would be longer than 100,000 characters, is reported
+rather than turned into a link that cannot open. Where the clipboard is
+unavailable the link is shown, selected, to copy by hand.
+
 File → Save keeps a graph in the browser's local storage when you are signed
 out, and in your Google account when you are signed in. Nothing is autosaved:
 the working document is not restored on reload, and the browser warns before

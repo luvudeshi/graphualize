@@ -11,6 +11,7 @@ import { LAYOUT_LABELS, type LayoutName } from '../graph/layout'
 import { applyGenerator, applyTransformById, loadExample, runGraphCommand } from '../state/actions'
 import { SparkIcon } from './Icons'
 import { replaceWorkingGraph } from '../state/replace'
+import { copyShareLink } from '../state/share'
 
 interface Command {
   id: string
@@ -90,6 +91,13 @@ const buildCommands = (): Command[] => {
       label: 'Export graph data',
       group: 'File',
       run: () => useUi.getState().openDialog('export'),
+    },
+    {
+      id: 'file.share',
+      label: 'Copy share link',
+      group: 'File',
+      hint: 'A link that opens this graph for anyone, with nothing uploaded',
+      run: () => void copyShareLink(),
     },
     {
       id: 'help.shortcuts',
