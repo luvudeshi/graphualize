@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { Session, User } from '@supabase/supabase-js'
+import type { Session, SignInWithOAuthCredentials, User } from '@supabase/supabase-js'
 
 /**
  * The tests below never reach the network. `getSupabase` is mocked, and each
@@ -9,7 +9,10 @@ import type { Session, User } from '@supabase/supabase-js'
  * of most of them: Graphualize's contract is that an unconfigured or broken
  * auth layer is invisible rather than fatal.
  */
-const signInWithOAuth = vi.fn(async () => ({ data: {}, error: null }))
+const signInWithOAuth = vi.fn(async (_credentials: SignInWithOAuthCredentials) => ({
+  data: {},
+  error: null,
+}))
 const signOut = vi.fn(async () => ({ error: null }))
 const getSession = vi.fn(async () => ({ data: { session: null as Session | null }, error: null }))
 const onAuthStateChange = vi.fn(
@@ -146,16 +149,13 @@ describe('signing in', () => {
   it('asks Google for a code flow back to this origin', async () => {
     await useAuth.getState().signInWithGoogle()
     expect(signInWithOAuth).toHaveBeenCalledTimes(1)
-    const options = signInWithOAuth.mock.calls[0]![0] as {
-      provider: string
-      options: { redirectTo: string; queryParams: Record<string, string> }
-    }
-    expect(options.provider).toBe('google')
-    expect(options.options.redirectTo).toBe(
+    const credentials = signInWithOAuth.mock.calls[0]![0]
+    expect(credentials.provider).toBe('google')
+    expect(credentials.options?.redirectTo).toBe(
       `${window.location.origin}${window.location.pathname}`,
     )
     // A refresh token needs both of these; without them the session dies early.
-    expect(options.options.queryParams.access_type).toBe('offline')
+    expect(credentials.options?.queryParams?.access_type).toBe('offline')
   })
 
   it('remembers the route so the user comes back to where they were', async () => {
@@ -167,9 +167,10 @@ describe('signing in', () => {
   it('never puts the route in redirectTo, which has to stay allow-listable', async () => {
     window.location.hash = '#/graph'
     await useAuth.getState().signInWithGoogle()
-    const options = signInWithOAuth.mock.calls[0]![0] as { options: { redirectTo: string } }
-    expect(options.options.redirectTo).not.toContain('#')
-    expect(options.options.redirectTo).not.toContain('?')
+    const redirectTo = signInWithOAuth.mock.calls[0]![0].options?.redirectTo
+    expect(redirectTo).toBeDefined()
+    expect(redirectTo).not.toContain('#')
+    expect(redirectTo).not.toContain('?')
   })
 
   it('reports a refused sign-in instead of hanging in a pending state', async () => {

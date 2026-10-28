@@ -175,7 +175,7 @@ describe('deleting from the home page', () => {
     render(<SavedGraphs />)
 
     await user.click(screen.getByRole('button', { name: 'Delete Delete me' }))
-    await user.click(screen.getByRole('button', { name: 'Delete', exact: true }))
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
 
     expect(state().documents.map((entry) => entry.name)).toEqual(['Keep me'])
     expect(screen.queryByRole('button', { name: /^Open Delete me/ })).not.toBeInTheDocument()
@@ -188,7 +188,7 @@ describe('deleting from the home page', () => {
     const { container } = render(<SavedGraphs />)
 
     await user.click(screen.getByRole('button', { name: 'Delete Only one' }))
-    await user.click(screen.getByRole('button', { name: 'Delete', exact: true }))
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
 
     expect(container).toBeEmptyDOMElement()
   })

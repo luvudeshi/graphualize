@@ -5,5 +5,7 @@
     "types": ["vite/client", "node", "@testing-library/jest-dom"],
     "noEmit": true
   },
-  "include": ["src", "e2e", "vitest.setup.ts"]
+  "include": ["src", "e2e", "vitest.setup.ts"],
+  // Overrides the app config's exclude, which leaves out every test file.
+  "exclude": ["node_modules", "dist"]
 }
