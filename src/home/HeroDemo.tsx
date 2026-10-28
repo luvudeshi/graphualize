@@ -53,15 +53,27 @@ const MoveIcon = () => (
  *
  * It tours its properties on a timer, pausing while the pointer or focus is
  * inside it, and has an explicit pause control as well, because content that
- * moves on its own should always be stoppable. With reduced motion there is
- * no tour at all, so there is nothing to pause.
+ * moves on its own should always be stoppable. Picking a row stops the tour
+ * too: the visitor has taken over, and the row they chose stays chosen. With
+ * reduced motion there is no tour at all, so there is nothing to pause.
  */
 export const HeroDemo = () => {
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<Core | null>(null)
   const [active, setActive] = useState(0)
-  const [hovered, setHovered] = useState(false)
+  // Pointer and focus are tracked apart: a row keeps focus after the pointer
+  // has left, and pressing on the canvas to drag a vertex takes focus off a
+  // row while the pointer is still in the demo. Either one holds the tour.
+  const [pointerInside, setPointerInside] = useState(false)
+  const [focusInside, setFocusInside] = useState(false)
   const [stopped, setStopped] = useState(false)
+  /**
+   * The row the visitor picked, which is the only kind of change worth saying
+   * out loud. The tour moving on by itself is not announced, or a screen
+   * reader would be interrupted every few seconds for as long as the page
+   * stays open.
+   */
+  const [announced, setAnnounced] = useState<InspectorRow | null>(null)
   const [still] = useState(prefersReducedMotion)
   const { dark } = useTheme()
   const theme = useMemo(() => canvasTheme(dark), [dark])
@@ -183,7 +195,7 @@ export const HeroDemo = () => {
   }, [active, stops, theme])
 
   /* Advance the tour, unless the visitor is interacting, stopped it, or prefers stillness. */
-  const touring = !hovered && !stopped && !still && stops.length > 1
+  const touring = !pointerInside && !focusInside && !stopped && !still && stops.length > 1
   useEffect(() => {
     if (!touring) return
     const handle = window.setInterval(() => {
@@ -192,30 +204,43 @@ export const HeroDemo = () => {
     return () => window.clearInterval(handle)
   }, [touring, stops.length])
 
-  const current = stops[active]?.row
+  const pick = (index: number) => {
+    setActive(index)
+    setStopped(true)
+    setAnnounced(stops[index]?.row ?? null)
+  }
+
+  const toggleTour = () => {
+    // A resumed tour goes back to running silently.
+    if (stopped) setAnnounced(null)
+    setStopped(!stopped)
+  }
 
   return (
     <div
       className="gz-demo"
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
-      onFocusCapture={() => setHovered(true)}
-      onBlurCapture={() => setHovered(false)}
+      onPointerEnter={() => setPointerInside(true)}
+      onPointerLeave={() => setPointerInside(false)}
+      onFocus={() => setFocusInside(true)}
+      onBlur={(event) => {
+        // Moving from one row to the next is not leaving.
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocusInside(false)
+      }}
     >
       <div className="flex h-11 items-center gap-2.5 border-b px-4">
         <span className="gz-demo-live" aria-hidden />
         <span className="text-[0.8125rem] font-medium tracking-[-0.01em]">Live analysis</span>
-        <span className="gz-num hidden text-[0.75rem] text-[var(--gz-faint)] sm:inline">
+        <span className="gz-num hidden text-[0.75rem] text-[var(--gz-muted)] sm:inline">
           · {graph.order} vertices · {graph.size} edges
         </span>
-        <span className="ml-auto flex items-center gap-1.5 text-[0.75rem] text-[var(--gz-faint)]">
+        <span className="ml-auto flex items-center gap-1.5 text-[0.75rem] text-[var(--gz-muted)]">
           <MoveIcon />
           Drag a vertex
         </span>
         {!still && (
           <button
             type="button"
-            onClick={() => setStopped((value) => !value)}
+            onClick={toggleTour}
             aria-label={stopped ? 'Resume the tour' : 'Pause the tour'}
             className="gz-demo-control ml-1.5"
           >
@@ -239,7 +264,7 @@ export const HeroDemo = () => {
                 <li key={row.id}>
                   <button
                     type="button"
-                    onClick={() => setActive(index)}
+                    onClick={() => pick(index)}
                     aria-pressed={selected}
                     className="gz-demo-row"
                     style={{ '--gz-row': swatch } as CSSProperties}
@@ -283,10 +308,12 @@ export const HeroDemo = () => {
                 </li>
               )
             })}
-            <li aria-live="polite" className="sr-only">
-              {current ? `${current.label}: ${current.value}. ${current.explanation ?? ''}` : ''}
-            </li>
           </ul>
+          <p role="status" aria-live="polite" className="sr-only">
+            {announced
+              ? `${announced.label}: ${announced.value}. ${announced.explanation ?? ''}`
+              : ''}
+          </p>
         </div>
       </div>
     </div>
