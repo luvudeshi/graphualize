@@ -10,6 +10,8 @@ import { GenerateDialog } from './components/GenerateDialog'
 import { ExamplesDialog } from './components/ExamplesDialog'
 import { ExportDialog, ImportDialog } from './components/TransferDialogs'
 import { DocumentsDialog } from './components/DocumentsDialog'
+import { ConfirmReplace } from './components/ConfirmReplace'
+import { replaceWorkingGraph } from './state/replace'
 import { AboutDialog, ShortcutsDialog } from './components/HelpDialogs'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { HomePage } from './home/HomePage'
@@ -48,6 +50,7 @@ const Dialogs = () => {
       <ImportDialog open={dialog === 'import'} />
       <ExportDialog open={dialog === 'export'} />
       <DocumentsDialog open={dialog === 'documents'} />
+      <ConfirmReplace />
       <AboutDialog open={dialog === 'about'} />
       <ShortcutsDialog
         open={dialog === 'shortcuts' || shortcutsOpen}
@@ -78,10 +81,12 @@ const useArrivalCommand = (command: string | null) => {
     if (command.startsWith('doc:') || command.startsWith('local:')) {
       // openDocument reports both success and failure itself, so this branch
       // deliberately says nothing more.
+      // Through the same guard as File → Open: a link, a bookmark or Back can
+      // land here while the canvas holds unsaved work.
       const local = command.startsWith('local:')
-      void useEditor
-        .getState()
-        .openDocument(command.slice(local ? 'local:'.length : 'doc:'.length), local ? 'local' : 'cloud')
+      const id = command.slice(local ? 'local:'.length : 'doc:'.length)
+      const name = useEditor.getState().documents.find((entry) => entry.id === id)?.name
+      replaceWorkingGraph({ kind: 'open', id, source: local ? 'local' : 'cloud', name })
     } else {
       const example = command.startsWith('example:') ? command.slice('example:'.length) : null
       const ok = example ? loadExample(example) : runGraphCommand(command)

@@ -294,6 +294,29 @@ export const saveCloudDocument = guarded(async (input: {
   }
 })
 
+/**
+ * Undoes a soft delete. The row's version is untouched by deleting, so anything
+ * still pointing at it — an open editor, a local copy's link — stays valid.
+ */
+export const restoreCloudDocument = guarded(async (id: string): Promise<CloudResult<null>> => {
+  const supabase = getSupabase()
+  if (!supabase) return fail('Sign-in is not configured in this build.')
+
+  // Only a row that is actually deleted: if it was purged, or never deleted,
+  // there is nothing to put back and saying "restored" would be untrue.
+  const { data, error, status } = await supabase
+    .from('graphs')
+    .update({ deleted_at: null })
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .select('id')
+    .maybeSingle()
+
+  if (error) return failWith(error, status)
+  if (!data) return fail('That graph is no longer in your account, so it could not be put back.')
+  return ok(null)
+})
+
 /** Soft delete, so the removal reaches every device instead of bouncing back. */
 export const deleteCloudDocument = guarded(async (id: string): Promise<CloudResult<null>> => {
   const supabase = getSupabase()

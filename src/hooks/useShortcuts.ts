@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
 import { getCanvasInstance } from '../canvas/instance'
+import { replaceWorkingGraph } from '../state/replace'
 
 const isTypingTarget = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false
@@ -50,6 +51,11 @@ export const useShortcuts = (): void => {
       const ui = useUi.getState()
       const mod = event.metaKey || event.ctrlKey
       const typing = isTypingTarget(event.target)
+
+      // The discard-unsaved-work question is modal: nothing may change the
+      // graph it is asking about, or open something on top of it. Its own
+      // dialog handles Escape and Tab.
+      if (ui.pendingReplacement) return
 
       // Shortcuts that must work even while a dialog or field has focus.
       if (mod && event.key.toLowerCase() === 'k' && !ui.dialog) {
@@ -110,7 +116,7 @@ export const useShortcuts = (): void => {
         }
         if (key === 'n') {
           event.preventDefault()
-          store.newDocument()
+          replaceWorkingGraph({ kind: 'new' })
           return
         }
         if (key === 'a') {

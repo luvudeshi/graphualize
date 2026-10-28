@@ -661,6 +661,161 @@ describe('found in review: the sync never loses or hides work', () => {
   })
 })
 
+describe('undoing a delete', () => {
+  it('puts an account graph back, with the links that pointed at it', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Linked')
+    const localId = state().savedId!
+    signedIn = true
+    await adoptLocalGraphs()
+    const cloudId = __fake.rows()[0]!.id
+    const link = cloudLinkFor(localId)
+
+    await state().removeDocument(cloudId, 'cloud', { offerUndo: true })
+    expect(__fake.rows()).toHaveLength(0)
+    expect(cloudLinkFor(localId)?.cloudId).toBeNull()
+
+    await state().undoDelete()
+    expect(__fake.rows().map((row) => row.id)).toEqual([cloudId])
+    expect(cloudLinkFor(localId)).toEqual(link)
+    expect(state().lastDeleted).toBeNull()
+    expect(state().status?.text).toMatch(/Restored/)
+  })
+
+  it('re-attaches the graph on screen when nothing was edited since', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('On screen')
+    const id = state().savedId!
+    await state().refreshDocuments()
+
+    await state().removeDocument(id, 'cloud', { offerUndo: true })
+    expect(state().savedId).toBeNull()
+    expect(state().dirty).toBe(true)
+
+    await state().undoDelete()
+    expect(state().savedId).toBe(id)
+    expect(state().savedWhere).toBe('cloud')
+    expect(state().savedVersion).toBe(1)
+    expect(state().dirty).toBe(false)
+  })
+
+  it('leaves an edited graph unsaved, because it no longer matches what was restored', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Edited after')
+    const id = state().savedId!
+
+    await state().removeDocument(id, 'local', { offerUndo: true })
+    state().addVertexAt(8, 8)
+    await state().undoDelete()
+    expect(listDocuments().map((entry) => entry.id)).toEqual([id])
+    expect(state().savedId).toBeNull()
+    expect(state().dirty).toBe(true)
+  })
+
+  it('cannot undo an account delete after signing out', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Account only')
+    await state().removeDocument(state().savedId!, 'cloud', { offerUndo: true })
+    expect(state().lastDeleted).not.toBeNull()
+    signedIn = false
+    state().forgetDocuments()
+    expect(state().lastDeleted).toBeNull()
+  })
+
+  it('reports a failed restore and keeps the offer open', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Flaky')
+    await state().removeDocument(state().savedId!, 'cloud', { offerUndo: true })
+    __fake.failNextCall('Could not reach your account.')
+    await state().undoDelete()
+    expect(state().status?.tone).toBe('error')
+    expect(state().lastDeleted).not.toBeNull()
+    await state().undoDelete()
+    expect(__fake.rows()).toHaveLength(1)
+  })
+
+  it('offers no undo for a delete made elsewhere, such as the home page', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Home delete')
+    await state().removeDocument(state().savedId!, 'local')
+    expect(state().lastDeleted).toBeNull()
+  })
+
+  it('does not re-offer undo for a delete that finished after the offer was withdrawn', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Slow delete')
+    const pending = state().removeDocument(state().savedId!, 'cloud', { offerUndo: true })
+    state().dismissDeleted()
+    await pending
+    expect(state().lastDeleted).toBeNull()
+  })
+
+  it('a repeated delete of the same graph runs once', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Twice')
+    const id = state().savedId!
+    await Promise.all([
+      state().removeDocument(id, 'cloud', { offerUndo: true }),
+      state().removeDocument(id, 'cloud', { offerUndo: true }),
+    ])
+    await state().undoDelete()
+    expect(__fake.rows().map((row) => row.id)).toEqual([id])
+  })
+
+  it('restores beside, not over, a graph saved under the same id since', async () => {
+    signedIn = false
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Original')
+    const id = state().savedId!
+    await state().removeDocument(id, 'local', { offerUndo: true })
+    // Another tab saves something new under that id.
+    saveDocument({ id, name: 'Newer', graph: docFromEdges(['X-Y', 'Y-Z']) })
+
+    await state().undoDelete()
+    const names = listDocuments().map((entry) => entry.name).sort()
+    expect(names).toEqual(['Newer', 'Original (restored)'])
+    expect(listDocuments().find((entry) => entry.id === id)!.name).toBe('Newer')
+  })
+
+  it('refuses to "restore" an account graph that is not deleted', async () => {
+    state().replaceDocument(docFromEdges(['A-B']), 'Edge')
+    await state().saveCurrent('Alive')
+    const id = state().savedId!
+    await state().removeDocument(id, 'cloud', { offerUndo: true })
+    await state().undoDelete()
+    // A second restore of the same, now live, row is not a success.
+    useEditor.setState({ lastDeleted: { id, source: 'cloud', name: 'Alive', saved: null, links: [], wasOpen: null } })
+    await state().undoDelete()
+    expect(state().status?.tone).toBe('error')
+  })
+})
+
+describe('found in review: edits made while a request is out are never discarded unasked', () => {
+  it('an edit made while a save is in flight keeps the graph unsaved', async () => {
+    state().replaceDocument(docFromEdges(['A-B', 'B-C']), 'Path')
+    const saving = state().saveCurrent('In flight')
+    state().addVertexAt(9, 9)
+    await saving
+    expect(__fake.rows()[0]!.vertexCount).toBe(3)
+    expect(state().doc.vertices).toHaveLength(4)
+    expect(state().dirty).toBe(true)
+  })
+
+  it('does not open an account graph over work drawn while it was loading', async () => {
+    const id = __fake.seed('Remote', docFromEdges(['X-Y']))
+    const opening = state().openDocument(id, 'cloud')
+    state().addVertexAt(1, 1)
+    state().addVertexAt(2, 2)
+    await opening
+    expect(state().doc.vertices).toHaveLength(2)
+    expect(state().name).not.toBe('Remote')
+    expect(state().status?.text).toMatch(/was loading, so it was not opened/)
+  })
+})
+
 describe('saving to an account', () => {
   it('saves, lists and reopens a graph', async () => {
     state().replaceDocument(docFromEdges(['A-B', 'B-C', 'C-A']), 'Triangle')

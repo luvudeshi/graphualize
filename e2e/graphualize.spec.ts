@@ -174,6 +174,25 @@ test('flow 4: without an account, saving keeps the graph in this browser', async
   await expect.poll(async () => (await readState(page)).vertices.length).toBe(4)
 })
 
+test('New asks before throwing away unsaved work, and Cancel keeps it', async ({ page }) => {
+  await page.getByLabel('Quick graph command').fill('K4')
+  await page.getByLabel('Quick graph command').press('Enter')
+  await expect.poll(async () => (await readState(page)).vertices.length).toBe(4)
+
+  await page.getByRole('button', { name: 'File' }).click()
+  await page.getByRole('menuitem', { name: /^New graph/ }).click()
+  const confirm = page.getByRole('dialog', { name: 'Discard the graph you are working on?' })
+  await expect(confirm).toBeVisible()
+  await confirm.getByRole('button', { name: 'Cancel' }).click()
+  expect((await readState(page)).vertices.length).toBe(4)
+
+  // The keyboard shortcut goes through the same question.
+  await page.keyboard.press('Control+n')
+  await expect(confirm).toBeVisible()
+  await confirm.getByRole('button', { name: 'Discard changes' }).click()
+  await expect.poll(async () => (await readState(page)).vertices.length).toBe(0)
+})
+
 test('the open dialog says where graphs are saved', async ({ page }) => {
   await page.getByRole('button', { name: 'File' }).click()
   await page.getByRole('menuitem', { name: /^Open/ }).click()

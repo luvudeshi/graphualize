@@ -10,6 +10,7 @@ import { EXAMPLES } from '../graph/examples'
 import { LAYOUT_LABELS, type LayoutName } from '../graph/layout'
 import { applyGenerator, applyTransformById, loadExample, runGraphCommand } from '../state/actions'
 import { SparkIcon } from './Icons'
+import { replaceWorkingGraph } from '../state/replace'
 
 interface Command {
   id: string
@@ -65,7 +66,12 @@ const buildCommands = (): Command[] => {
       run: () => s().setTheme(s().theme === 'dark' ? 'light' : 'dark'),
     },
 
-    { id: 'file.new', label: 'New graph', group: 'File', run: () => s().newDocument() },
+    {
+      id: 'file.new',
+      label: 'New graph',
+      group: 'File',
+      run: () => replaceWorkingGraph({ kind: 'new' }),
+    },
     { id: 'file.save', label: 'Save graph', group: 'File', run: () => void s().saveCurrent() },
     {
       id: 'file.open',
