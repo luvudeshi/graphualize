@@ -19,7 +19,7 @@ const WEIGHT_MODES: { id: WeightMode; label: string; hint: string }[] = [
   {
     id: 'random',
     label: 'Random',
-    hint: 'Whole numbers drawn with the seed below, so the same seed gives the same weights.',
+    hint: 'Whole numbers drawn at random, a new set each time.',
   },
   {
     id: 'length',
@@ -36,7 +36,6 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
   const docWeighted = useEditor((s) => s.doc.weighted)
   const [activeId, setActiveId] = useState(GENERATORS[0]?.id ?? 'complete')
   const [values, setValues] = useState<Record<string, Record<string, number>>>({})
-  const [seed, setSeed] = useState(1)
   // null follows the document's mode until the user picks, which keeps the old
   // behaviour (unit weights when weighted) for anyone who never touches it.
   const [weightChoice, setWeightChoice] = useState<WeightMode | null>(null)
@@ -64,7 +63,6 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
         : { kind: weightMode }
   const weightError = weighting ? weightingProblem(weighting) : null
   const weightHint = WEIGHT_MODES.find((mode) => mode.id === weightMode)?.hint
-  const seeded = active.category === 'random' || weightMode === 'random'
 
   return (
     <Dialog
@@ -83,7 +81,7 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
             className="gz-btn gz-btn-primary px-3"
             disabled={weightError !== null}
             onClick={() => {
-              if (applyGenerator(active.id, params, seed, weighting)) close()
+              if (applyGenerator(active.id, params, weighting)) close()
             }}
           >
             Generate {active.shortName}
@@ -220,25 +218,6 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
                 </span>
               )}
             </div>
-
-            {seeded && (
-              <label className="block">
-                <span className="text-[0.8125rem]">Seed</span>
-                <input
-                  type="number"
-                  className="gz-input gz-num mt-1"
-                  value={seed}
-                  onChange={(event) => setSeed(Number(event.target.value) || 0)}
-                />
-                <span className="mt-0.5 block text-[0.6875rem] text-[var(--gz-faint)]">
-                  {active.category !== 'random'
-                    ? 'The same seed always produces the same weights.'
-                    : weightMode === 'random'
-                      ? 'The same seed always produces the same graph and weights.'
-                      : 'The same seed always produces the same graph.'}
-                </span>
-              </label>
-            )}
           </div>
 
           {estimate && (

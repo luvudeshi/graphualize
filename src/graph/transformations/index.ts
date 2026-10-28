@@ -3,8 +3,8 @@
  *
  * Every transformation is a pure function from a {@link Graph} (plus whatever
  * the user has selected) to a brand-new {@link GraphDocument}. Nothing here
- * mutates its input, touches React, or uses `Math.random`: two runs on the
- * same graph and selection always produce the same picture.
+ * mutates its input, touches React, or uses `Math.random`: two runs with the
+ * same graph, selection and `ctx.seed` always produce the same picture.
  *
  * Identity policy — undo, redo and the selection all key off ids, so:
  *   * an element that genuinely survives keeps its id (transposing an arc,
@@ -31,6 +31,12 @@ export interface TransformContext {
   /** Vertices the user currently has selected, in document order. */
   selectedVertices?: VertexId[]
   selectedEdges?: EdgeId[]
+  /**
+   * Where a random transformation draws from. The app passes a fresh one on
+   * every run; without it the graph's own structure key is used, so the
+   * result is still a pure function of the input.
+   */
+  seed?: number
 }
 
 export interface TransformResult {
@@ -665,19 +671,18 @@ const setWeights = (doc: GraphDocument, weights: readonly number[]): GraphDocume
 const REROLL_ATTEMPTS = 16
 
 /**
- * The draw is seeded by the graph's structure key, which includes the current
- * weights. So undo and redo always give back the same numbers, yet running it
- * again on its own output rolls a fresh set. A draw identical to what is
- * already there (likely only for a graph with one or two edges) would make
- * that a fixed point, so it is redrawn from the next seed.
+ * The draw comes from `ctx.seed`, which the app makes fresh for every run, or
+ * else from the graph's structure key. A draw identical to what is already
+ * there (likely only for a graph with one or two edges) would look like
+ * nothing happened, so it is redrawn from the next seed.
  */
-const randomWeightsApply = (graph: Graph): TransformResult => {
+const randomWeightsApply = (graph: Graph, ctx: TransformContext): TransformResult => {
   const problem = weightsPrecondition(graph)
   if (problem) throw new TransformError(problem)
 
   const doc = weightedCopy(graph)
   const weighting: EdgeWeighting = { kind: 'random', ...DEFAULT_WEIGHT_RANGE }
-  const seed = seedFromText(graph.structureKey())
+  const seed = ctx.seed ?? seedFromText(graph.structureKey())
   const current = graph.edges.map((e) => graph.weight(e.id))
   let weights = edgeWeights(doc, weighting, seed)
   for (let attempt = 1; attempt < REROLL_ATTEMPTS; attempt++) {
@@ -809,9 +814,9 @@ export const TRANSFORMS: TransformDefinition[] = [
     id: 'random-weights',
     name: 'Assign random weights',
     description:
-      `Gives every edge a random whole-number weight from ${DEFAULT_WEIGHT_RANGE.min} to ${DEFAULT_WEIGHT_RANGE.max} and switches the graph to weighted mode, so Dijkstra, Prim and Kruskal have real choices to make. The draw is seeded by the graph itself: undo and redo give back exactly the same numbers, and running it again rolls a fresh set. Vertices, edges and their ids are untouched. For another range, generate with the Edge weights option or a suffix such as K6 w2-20.`,
+      `Gives every edge a random whole-number weight from ${DEFAULT_WEIGHT_RANGE.min} to ${DEFAULT_WEIGHT_RANGE.max} and switches the graph to weighted mode, so Dijkstra, Prim and Kruskal have real choices to make. Every run rolls a fresh set. Vertices, edges and their ids are untouched. For another range, generate with the Edge weights option or a suffix such as K6 w2-20.`,
     precondition: (graph) => weightsPrecondition(graph),
-    apply: (graph) => randomWeightsApply(graph),
+    apply: (graph, ctx) => randomWeightsApply(graph, ctx),
   },
   {
     id: 'length-weights',

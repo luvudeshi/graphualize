@@ -1,6 +1,7 @@
 import { useEditor } from './store'
 import { GeneratorError, generate, generatorById } from '../graph/generators'
 import { parseGraphCommand } from '../graph/generators/commands'
+import { freshSeed } from '../graph/generators/random'
 import { describeWeighting, type EdgeWeighting } from '../graph/generators/weights'
 import { applyTransform as runTransform, TransformError } from '../graph/transformations'
 import { exampleById } from '../graph/examples'
@@ -48,12 +49,15 @@ const generatorLabel = (shortName: string, params: Record<string, number>): stri
  * `weights` decides the new graph's weighted mode: leave it out to keep the
  * document's (weight 1 on every edge when weighted, as always), pass `null`
  * for an unweighted graph, or pass a scheme for a weighted one.
+ *
+ * Every call draws a fresh seed, so generating a random family (or random
+ * weights) again gives a new graph. Only tests pass `seed`.
  */
 export const applyGenerator = (
   id: string,
   params: Record<string, number>,
-  seed = 1,
   weights?: EdgeWeighting | null,
+  seed: number = freshSeed(),
 ): boolean => {
   const state = useEditor.getState()
   const def = generatorById(id)
@@ -98,10 +102,10 @@ export const applyGenerator = (
 }
 
 /** Handles the quick-input syntax: `K5`, `C8`, `K3,4`, `G(20,0.2)`, `K6 w1-9`, ... */
-export const runGraphCommand = (input: string, seed = 1): boolean => {
+export const runGraphCommand = (input: string, seed?: number): boolean => {
   const parsed = parseGraphCommand(input)
   if (!parsed) return false
-  return applyGenerator(parsed.generatorId, parsed.params, seed, parsed.weights)
+  return applyGenerator(parsed.generatorId, parsed.params, parsed.weights, seed)
 }
 
 /**
@@ -284,8 +288,8 @@ export const addTypedEdges = (input: string): QuickInputOutcome => {
  * complete graph, never a vertex called "K5" — and anything else is tried as
  * an edge list to add to the current graph.
  */
-export const runQuickInput = (input: string, seed = 1): QuickInputOutcome => {
-  if (parseGraphCommand(input)) return runGraphCommand(input, seed) ? 'done' : 'failed'
+export const runQuickInput = (input: string): QuickInputOutcome => {
+  if (parseGraphCommand(input)) return runGraphCommand(input) ? 'done' : 'failed'
   return addTypedEdges(input)
 }
 
@@ -295,6 +299,7 @@ export const applyTransformById = (id: string): boolean => {
     const result = runTransform(id, state.graph, {
       selectedVertices: state.selectedVertices,
       selectedEdges: state.selectedEdges,
+      seed: freshSeed(),
     })
     state.replaceDocument(result.document, result.summary, { relayout: result.relayout })
     state.notify(result.summary, 'success')

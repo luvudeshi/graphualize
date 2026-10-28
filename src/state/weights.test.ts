@@ -24,7 +24,14 @@ describe('generating with edge weights', () => {
     expect(state().status?.text).toBe('Generated K6 with random weights 2–20')
   })
 
-  it('gives the same weights for the same command and seed', () => {
+  it('draws fresh weights each time the same command runs', () => {
+    runGraphCommand('K6 w1-9')
+    const first = weights()
+    runGraphCommand('K6 w1-9')
+    expect(weights()).not.toEqual(first)
+  })
+
+  it('still gives the same weights when a test pins the seed', () => {
     runGraphCommand('grid(3,4) w1-9', 4)
     const first = weights()
     runGraphCommand('grid(3,4) w1-9', 4)
@@ -46,7 +53,7 @@ describe('generating with edge weights', () => {
 
   it('can make an unweighted graph from a weighted document', () => {
     state().setWeighted(true)
-    expect(applyGenerator('cycle', { n: 5 }, 1, null)).toBe(true)
+    expect(applyGenerator('cycle', { n: 5 }, null)).toBe(true)
     expect(state().doc.weighted).toBe(false)
   })
 
@@ -78,6 +85,15 @@ describe('assigning random weights to the graph on screen', () => {
 
     state().redo()
     expect(JSON.stringify(state().doc)).toBe(after)
+  })
+
+  it('rolls a fresh set after an undo, not the set that was undone', () => {
+    runGraphCommand('K6')
+    applyTransformById('random-weights')
+    const first = weights()
+    state().undo()
+    applyTransformById('random-weights')
+    expect(weights()).not.toEqual(first)
   })
 
   it('reports a graph with no edges instead of changing anything', () => {

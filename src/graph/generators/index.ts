@@ -4,7 +4,8 @@
  * Every generator is a pure function from a bag of numeric parameters to a
  * fully laid-out {@link GraphDocument}. Nothing here touches React, Cytoscape,
  * or `Math.random`: the random families take their entropy from a seeded
- * mulberry32 stream so the same seed always rebuilds the same graph.
+ * mulberry32 stream so the same seed always rebuilds the same graph. The app
+ * passes a fresh seed on every generation; tests pass a fixed one.
  *
  * Edge weights are a separate concern (see `./weights`): {@link generate}
  * applies the requested weighting after layout, so every family gets unit,
@@ -823,7 +824,7 @@ const randomRegularGenerator: GeneratorDefinition = {
       }
       if (edges === null) {
         throw new GeneratorError(
-          `Could not build a simple ${d}-regular graph on ${n} vertices after ${PAIRING_ATTEMPTS} attempts. Try a different seed, a smaller degree, or more vertices.`,
+          `Could not build a simple ${d}-regular graph on ${n} vertices after ${PAIRING_ATTEMPTS} attempts. Generate again, or try a smaller degree or more vertices.`,
         )
       }
       for (const [a, c] of edges) b.addEdge(ids[a], ids[c], unitWeight(options))
