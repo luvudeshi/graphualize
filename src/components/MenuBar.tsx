@@ -141,7 +141,8 @@ export const MenuBar = () => {
   const transformItems: MenuItem[] = TRANSFORMS.map((transform, index) => ({
     id: transform.id,
     label: transform.name,
-    separatorBefore: index === 3 || index === 6,
+    // Index 10 starts the edge-weight transforms.
+    separatorBefore: index === 3 || index === 6 || index === 10,
     disabled: Boolean(
       transform.precondition?.(graph, { selectedVertices, selectedEdges }),
     ),

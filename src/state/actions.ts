@@ -1,6 +1,7 @@
 import { useEditor } from './store'
 import { GeneratorError, generate, generatorById } from '../graph/generators'
 import { parseGraphCommand } from '../graph/generators/commands'
+import { describeWeighting, type EdgeWeighting } from '../graph/generators/weights'
 import { applyTransform as runTransform, TransformError } from '../graph/transformations'
 import { exampleById } from '../graph/examples'
 import {
@@ -35,10 +36,16 @@ const generatorLabel = (shortName: string, params: Record<string, number>): stri
   return label
 }
 
+/**
+ * `weights` decides the new graph's weighted mode: leave it out to keep the
+ * document's (weight 1 on every edge when weighted, as always), pass `null`
+ * for an unweighted graph, or pass a scheme for a weighted one.
+ */
 export const applyGenerator = (
   id: string,
   params: Record<string, number>,
   seed = 1,
+  weights?: EdgeWeighting | null,
 ): boolean => {
   const state = useEditor.getState()
   const def = generatorById(id)
@@ -54,19 +61,24 @@ export const applyGenerator = (
     )
     return false
   }
+  const weighted = weights === undefined ? state.doc.weighted : weights !== null
   try {
     const doc = generate(id, params, {
       seed,
       directed: state.doc.directed,
-      weighted: state.doc.weighted,
+      weighted,
+      weights: weights ?? undefined,
     })
     const label = generatorLabel(def.shortName, params)
     state.replaceDocument(
-      { ...doc, directed: state.doc.directed, weighted: state.doc.weighted },
+      { ...doc, directed: state.doc.directed, weighted },
       `Generate ${label}`,
       { title: label },
     )
-    state.notify(`Generated ${label}`, 'success')
+    state.notify(
+      weights ? `Generated ${label} with ${describeWeighting(weights)}` : `Generated ${label}`,
+      'success',
+    )
     return true
   } catch (error) {
     state.notify(
@@ -77,11 +89,11 @@ export const applyGenerator = (
   }
 }
 
-/** Handles the quick-input syntax: `K5`, `C8`, `K3,4`, `G(20,0.2)`, ... */
+/** Handles the quick-input syntax: `K5`, `C8`, `K3,4`, `G(20,0.2)`, `K6 w1-9`, ... */
 export const runGraphCommand = (input: string, seed = 1): boolean => {
   const parsed = parseGraphCommand(input)
   if (!parsed) return false
-  return applyGenerator(parsed.generatorId, parsed.params, seed)
+  return applyGenerator(parsed.generatorId, parsed.params, seed, parsed.weights)
 }
 
 export const applyTransformById = (id: string): boolean => {

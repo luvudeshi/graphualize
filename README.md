@@ -147,7 +147,9 @@ menu bar and the command palette can also reach.
 Double-click a vertex to rename it, or an edge to change its weight. The
 inspector's quick-input box takes the same shorthand as the palette:
 `K5`, `C8`, `P12`, `K3,4`, `S6`, `W7`, `Q4`, `grid(3,4)`, `G(20,0.2)`,
-`tree(12)`, `random(10,3)`, `petersen`.
+`tree(12)`, `random(10,3)`, `petersen`. Any of them can end in a weight suffix
+that makes the result weighted: `K6 w2-20` for random whole-number weights from
+2 to 20, or `grid(4,5) w=len` for weights from the drawn edge lengths.
 
 ## What it computes
 
@@ -220,12 +222,20 @@ random models: Erdős–Rényi G(*n*,*p*), a uniformly random labelled tree via 
 Prüfer sequence, and a random *d*-regular graph via the configuration model.
 Random generators take a seed and are fully deterministic.
 
+Any generated graph can come with edge weights: **Unit** (every edge 1),
+**Random** (whole numbers in a range, 1–9 by default, drawn from the same seed
+so an exercise can be rebuilt exactly), or **Length** (the drawn length of each
+edge, scaled so the median edge weighs 10). Unit weights make Dijkstra, Prim and
+Kruskal behave like BFS; the other two give them real choices to make.
+
 ## Transformations
 
 Complement, transpose, induced subgraph, delete selected vertices or edges,
-contract an edge, subdivide an edge, line graph, graph square, and conversion to
-the underlying undirected graph. Each integrates with undo/redo and reports what
-it did.
+contract an edge, subdivide an edge, line graph, graph square, conversion to
+the underlying undirected graph, random weights (1–9) for the graph on screen,
+and weights from its drawn edge lengths. Each integrates with undo/redo and
+reports what it did. Random weights are seeded by the graph itself, so undo and
+redo give back the same numbers and running it again rolls a fresh set.
 
 ## Import and export
 

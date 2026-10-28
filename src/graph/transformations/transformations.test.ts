@@ -726,6 +726,104 @@ describe('underlying undirected graph', () => {
 })
 
 /* ------------------------------------------------------------------ */
+/* Edge weights                                                        */
+/* ------------------------------------------------------------------ */
+
+describe('assign random weights', () => {
+  const weightsOf = (doc: GraphDocument): Array<number | undefined> =>
+    doc.edges.map((e) => e.weight)
+
+  it('weighs every edge 1–9 and turns the graph weighted, keeping everything else', () => {
+    const doc = cycleOn(8)
+    const result = run('random-weights', doc)
+    expect(result.document.weighted).toBe(true)
+    expect(result.relayout).toBe(false)
+    for (const w of weightsOf(result.document)) {
+      expect(Number.isInteger(w)).toBe(true)
+      expect(w).toBeGreaterThanOrEqual(1)
+      expect(w).toBeLessThanOrEqual(9)
+    }
+    expect(result.document.edges.map((e) => [e.id, e.source, e.target])).toEqual(
+      doc.edges.map((e) => [e.id, e.source, e.target]),
+    )
+    expect(result.document.vertices).toEqual(doc.vertices)
+    expect(result.summary).toBe(
+      'Gave 8 edges random weights from 1 to 9. The graph is now weighted. Run it again for a fresh set.',
+    )
+  })
+
+  it('is deterministic: the same graph always gets the same weights', () => {
+    const doc = completeOn(6)
+    expect(weightsOf(run('random-weights', doc).document)).toEqual(
+      weightsOf(run('random-weights', doc).document),
+    )
+  })
+
+  it('rolls a fresh set when run on its own output', () => {
+    const first = run('random-weights', completeOn(6)).document
+    const second = run('random-weights', first).document
+    expect(weightsOf(second)).not.toEqual(weightsOf(first))
+    expect(run('random-weights', first).summary).not.toMatch(/now weighted/)
+  })
+
+  it('never gets stuck on a single edge, where a repeat draw is likely', () => {
+    let doc = pathOn(2)
+    for (let i = 0; i < 30; i++) {
+      const next = run('random-weights', doc).document
+      if (doc.weighted) expect(next.edges[0]!.weight, `run ${i}`).not.toBe(doc.edges[0]!.weight)
+      doc = next
+    }
+  })
+
+  it('keeps direction and replaces weights a graph already had', () => {
+    const doc = docFromEdges(['A->B:100', 'B->C:200'], { directed: true, weighted: true })
+    const result = run('random-weights', doc)
+    expect(result.document.directed).toBe(true)
+    expect(weightsOf(result.document).every((w) => w! >= 1 && w! <= 9)).toBe(true)
+  })
+
+  it('refuses a graph with no edges', () => {
+    expect(refusal('random-weights', emptyOn(3))).toMatch(/no edges/i)
+  })
+})
+
+describe('weights from edge lengths', () => {
+  it('weighs each edge by its drawn length, the median edge at 10', () => {
+    const b = new GraphBuilder()
+    const a = b.addVertex('A', 0, 0)
+    const c = b.addVertex('B', 60, 0)
+    const d = b.addVertex('C', 60, 120)
+    const e = b.addVertex('D', 240, 120)
+    b.addEdge(a, c)
+    b.addEdge(c, d)
+    b.addEdge(d, e)
+    const result = run('length-weights', b.build())
+    expect(result.document.weighted).toBe(true)
+    expect(result.document.edges.map((edge) => edge.weight)).toEqual([5, 10, 15])
+    expect(result.summary).toBe(
+      'Weighed 3 edges by drawn length, with the median edge at 10. The graph is now weighted.',
+    )
+  })
+
+  it('gives a self-loop weight 1 and says so', () => {
+    const b = new GraphBuilder({ weighted: true })
+    const a = b.addVertex('A', 0, 0)
+    const c = b.addVertex('B', 100, 0)
+    b.addEdge(a, c, 7)
+    b.addEdge(c, c, 7)
+    const result = run('length-weights', b.build())
+    expect(result.document.edges.map((edge) => edge.weight)).toEqual([10, 1])
+    expect(result.summary).toBe(
+      'Weighed 2 edges by drawn length, with the median edge at 10. The self-loop has no length, so it weighs 1.',
+    )
+  })
+
+  it('refuses a graph with no edges', () => {
+    expect(refusal('length-weights', emptyOn(2))).toMatch(/no edges/i)
+  })
+})
+
+/* ------------------------------------------------------------------ */
 /* Cross-cutting guarantees                                            */
 /* ------------------------------------------------------------------ */
 
