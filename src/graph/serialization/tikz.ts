@@ -41,7 +41,7 @@ export interface TikzOptions {
   classColors?: readonly string[]
   /** Draw everything that is not highlighted faintly. */
   dimmed?: boolean
-  /** Written as a comment on the first line. */
+  /** Written as a comment at the top, after the engine's magic comment if any. */
   title?: string
 }
 
@@ -101,12 +101,138 @@ const LATEX_TEXT_ESCAPES: Record<string, string> = {
 }
 
 /**
+ * Greek letters and primes, written as math so the labels a maths course uses
+ * (α, Δ, v′) compile under any engine, pdfLaTeX — Overleaf's default — among
+ * them, and look as they do in a formula. Exactly the letters LaTeX has a
+ * command for are mapped, each to the one whose glyph it is (ε is
+ * `\varepsilon`, ϵ is `\epsilon`); the rest — omicron, the capitals that look
+ * Latin, accented Greek — are left as they are, for a Unicode engine.
+ */
+const LATEX_MATH_CHARACTERS: Record<string, string> = {
+  α: '\\alpha',
+  β: '\\beta',
+  γ: '\\gamma',
+  δ: '\\delta',
+  ε: '\\varepsilon',
+  ϵ: '\\epsilon',
+  ζ: '\\zeta',
+  η: '\\eta',
+  θ: '\\theta',
+  ϑ: '\\vartheta',
+  ι: '\\iota',
+  κ: '\\kappa',
+  λ: '\\lambda',
+  μ: '\\mu',
+  ν: '\\nu',
+  ξ: '\\xi',
+  π: '\\pi',
+  ϖ: '\\varpi',
+  ρ: '\\rho',
+  ϱ: '\\varrho',
+  σ: '\\sigma',
+  ς: '\\varsigma',
+  τ: '\\tau',
+  υ: '\\upsilon',
+  φ: '\\varphi',
+  ϕ: '\\phi',
+  χ: '\\chi',
+  ψ: '\\psi',
+  ω: '\\omega',
+  Γ: '\\Gamma',
+  Δ: '\\Delta',
+  Θ: '\\Theta',
+  Λ: '\\Lambda',
+  Ξ: '\\Xi',
+  Π: '\\Pi',
+  Σ: '\\Sigma',
+  Υ: '\\Upsilon',
+  Φ: '\\Phi',
+  Ψ: '\\Psi',
+  Ω: '\\Omega',
+  '′': "'",
+  '″': "''",
+  '‴': "'''",
+}
+
+/** Neighbours share one formula, so `α′` is `$\alpha'$` and the prime sits on the α. */
+const MATH_RUN = new RegExp(`[${Object.keys(LATEX_MATH_CHARACTERS).join('')}]+`, 'g')
+
+/**
  * Makes user text safe to typeset in text mode. Each character is replaced at
  * most once, so an escape is never itself escaped, and line breaks collapse to
  * spaces because a blank line inside a node is a paragraph break and an error.
+ * Greek letters and primes become math, as above.
  */
 export const escapeLatex = (text: string): string =>
-  text.replace(/\s+/g, ' ').replace(/[\\{}$&#%_~^<>|]/g, (ch) => LATEX_TEXT_ESCAPES[ch] ?? ch)
+  text
+    .replace(/\s+/g, ' ')
+    .replace(/[\\{}$&#%_~^<>|]/g, (ch) => LATEX_TEXT_ESCAPES[ch] ?? ch)
+    .replace(MATH_RUN, (run) => `$${[...run].map((ch) => LATEX_MATH_CHARACTERS[ch]).join('')}$`)
+
+/**
+ * The accents OT1, LaTeX's default font encoding, sets over any letter, as the
+ * combining marks a letter decomposes into: grave, acute, circumflex, tilde,
+ * macron, breve, dot, diaeresis, ring, double acute, caron and cedilla.
+ */
+const OT1_ACCENTS = new Set([
+  0x300, 0x301, 0x302, 0x303, 0x304, 0x306, 0x307, 0x308, 0x30a, 0x30b, 0x30c, 0x327,
+])
+
+/**
+ * Whether pdfLaTeX typesets a character with nothing in the preamble. Since
+ * 2018 LaTeX reads UTF-8 by default and declares all of printable Latin-1
+ * (é, ß, ×, °). From Latin Extended-A it builds the letters that are one of
+ * OT1's accents over a letter (Erdős's ő, Čech's Č) the way `\H{o}` would,
+ * and has ı, Ł, ł, Œ and œ as glyphs. Past that, coverage is patchy and
+ * depends on the font encoding, and Greek, primes, Cyrillic and CJK stop the
+ * compile with "Unicode character not set up for use with LaTeX". So anything
+ * else counts as beyond pdfLaTeX: a false alarm costs a switch to an engine
+ * that still compiles the picture, a miss costs a picture that does not
+ * compile.
+ */
+const pdfLatexTypesets = (ch: string): boolean => {
+  const code = ch.codePointAt(0)!
+  if (code < 0x80 || (code >= 0xa0 && code <= 0xff)) return true
+  if (code < 0x100 || code > 0x17f) return false
+  if ('ıŁłŒœ'.includes(ch)) return true
+  const [letter, accent, ...more] = ch.normalize('NFD')
+  return (
+    /^[A-Za-z]$/.test(letter) &&
+    accent !== undefined &&
+    more.length === 0 &&
+    OT1_ACCENTS.has(accent.codePointAt(0)!)
+  )
+}
+
+/** Chinese, Japanese and Korean, which also need a CJK font. */
+const CJK =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Bopomofo}]/u
+
+/** What the labels need from the engine that compiles the picture. */
+export interface UnicodeLabels {
+  /**
+   * The characters pdfLaTeX cannot be relied on to typeset, each once, in the
+   * order the labels first use them. Greek letters and primes that become math
+   * are not among them, since they compile anywhere.
+   */
+  characters: string[]
+  /** Whether any is Chinese, Japanese or Korean, which also needs a CJK font. */
+  cjk: boolean
+}
+
+/**
+ * Only the vertex labels are typeset. The title is only ever a comment, which
+ * TeX skips without decoding a character of it, so it can be in any script.
+ */
+export const unicodeLabels = (graph: Graph): UnicodeLabels => {
+  const characters = new Set<string>()
+  for (const vertex of graph.vertices) {
+    for (const ch of vertex.label.replace(/\s+/g, ' ')) {
+      if (!pdfLatexTypesets(ch) && LATEX_MATH_CHARACTERS[ch] === undefined) characters.add(ch)
+    }
+  }
+  return { characters: [...characters], cjk: [...characters].some((ch) => CJK.test(ch)) }
+}
 
 /** A comment runs to the end of its line, so only line breaks need taming. */
 const comment = (text: string): string => `% ${text.replace(/\s+/g, ' ').trim()}`
@@ -337,15 +463,37 @@ export const toTikz = (graph: Graph, options: TikzOptions = {}): string => {
 
   const title = options.title?.trim() ? [comment(options.title)] : []
 
+  // Labels pdfLaTeX may not typeset need LuaLaTeX or XeLaTeX. Overleaf
+  // compiles with pdfLaTeX unless told otherwise, so the comment says where.
+  const unicode = unicodeLabels(graph)
+  const engine = unicode.characters.length
+    ? [
+        comment(
+          'Some labels use characters pdfLaTeX may not typeset: compile with LuaLaTeX or XeLaTeX and a font that has them (on Overleaf, choose the compiler in the project menu).',
+        ),
+        ...(unicode.cjk
+          ? [
+              comment(
+                'The Chinese, Japanese or Korean labels also need a CJK setup, e.g. \\usepackage{luatexja} under LuaLaTeX.',
+              ),
+            ]
+          : []),
+      ]
+    : []
+
   if (!options.standalone) {
     const needs = graph.directed
       ? '\\usepackage{tikz} and \\usetikzlibrary{arrows.meta}'
       : '\\usepackage{tikz}'
-    return [...title, comment(`Needs ${needs} in the preamble.`), ...picture].join('\n')
+    return [...title, comment(`Needs ${needs} in the preamble.`), ...engine, ...picture].join('\n')
   }
 
   return [
+    // A magic comment on the first line picks the engine in TeXShop, TeXworks
+    // and VS Code; it only works in the main file, so a bare picture has none.
+    ...(engine.length ? ['% !TEX program = lualatex'] : []),
     ...title,
+    ...engine,
     '\\documentclass[tikz, border=4pt]{standalone}',
     '\\usetikzlibrary{arrows.meta}',
     '\\begin{document}',
