@@ -3,7 +3,7 @@ import { useEditor, type SaveLocation } from '../state/store'
 import { openEditor } from '../app/router'
 import { relativeTime } from '../utils/time'
 import { Dialog } from '../components/Dialog'
-import { TrashIcon, GoogleIcon } from '../components/Icons'
+import { TrashIcon, GoogleIcon, GraphMarkIcon } from '../components/Icons'
 import { useAuth } from '../auth/store'
 import { pendingLocalGraphCount } from '../sync/adopt'
 import { preapproveReplacement } from '../state/replace'
@@ -60,23 +60,40 @@ const openCommand = (id: string, source: SaveLocation) =>
  * be untrue.
  */
 const SignInNudge = ({ pending, onSignIn }: { pending: number; onSignIn: () => void }) => (
-  <div className="rounded-xl border bg-[var(--gz-panel)] px-5 py-4">
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div className="max-w-xl">
-        <p className="text-[0.875rem] font-medium">
-          {pending > 0 ? 'Keep these in your Google account' : 'Saving keeps graphs in this browser'}
-        </p>
-        <p className="mt-1 text-[0.8125rem] leading-relaxed text-[var(--gz-muted)]">
-          {pending > 0
-            ? `${pending === 1 ? '1 graph here is' : `${pending} graphs here are`} not in your account yet. Sign in to copy ${pending === 1 ? 'it' : 'them'} across and open ${pending === 1 ? 'it' : 'them'} on any device.`
-            : 'Sign in with Google to save to your account instead, so your graphs follow you between devices.'}
-        </p>
-      </div>
-      <button type="button" onClick={onSignIn} className="gz-btn border gap-2 px-3 py-2">
-        <GoogleIcon />
-        Continue with Google
-      </button>
+  <div className="gz-home-nudge">
+    <span className="gz-home-nudge-icon" aria-hidden="true">
+      <svg
+        width={18}
+        height={18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.7}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 7.97" />
+        <path d="M12 12v8M9 17l3 3 3-3" />
+      </svg>
+    </span>
+    <div className="min-w-0">
+      <p className="text-[0.875rem] font-medium tracking-[-0.01em]">
+        {pending > 0 ? 'Keep these in your Google account' : 'Saving keeps graphs in this browser'}
+      </p>
+      <p className="mt-0.5 text-[0.8125rem] leading-relaxed text-[var(--gz-muted)]">
+        {pending > 0
+          ? `${pending === 1 ? '1 graph here is' : `${pending} graphs here are`} not in your account yet. Sign in to copy ${pending === 1 ? 'it' : 'them'} across and open ${pending === 1 ? 'it' : 'them'} on any device.`
+          : 'Sign in with Google to save to your account instead, so your graphs follow you between devices.'}
+      </p>
     </div>
+    <button
+      type="button"
+      onClick={onSignIn}
+      className="gz-home-btn gz-home-btn-quiet h-10 px-4 text-[0.8125rem]"
+    >
+      <GoogleIcon />
+      Continue with Google
+    </button>
   </div>
 )
 
@@ -137,21 +154,26 @@ export const SavedGraphs = () => {
       <SignInNudge pending={pendingLocalGraphCount()} onSignIn={() => void signIn()} />
     ) : null
 
-  if (documents.length === 0) return nudge ? <div className="mt-12">{nudge}</div> : null
+  if (documents.length === 0) return nudge ? <div className="mt-16 sm:mt-20">{nudge}</div> : null
 
   const visible = showAll ? documents : documents.slice(0, INITIALLY_SHOWN)
   const hidden = documents.length - visible.length
 
   return (
-    <div className="mt-12">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <p className="gz-label">Your graphs</p>
+    <section className="mt-16 sm:mt-20" aria-labelledby="home-your-graphs">
+      <div className="mb-4 flex items-baseline justify-between gap-3">
+        <h2
+          id="home-your-graphs"
+          className="text-[1.0625rem] font-semibold tracking-[-0.02em]"
+        >
+          Your graphs
+        </h2>
         <span className="text-[0.75rem] text-[var(--gz-faint)]">
           {source === 'local' ? 'Saved in this browser' : 'In your Google account'}
         </span>
       </div>
 
-      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((entry) => (
           // `group` drives the delete button's reveal on hover. The button is
           // always in the DOM and always focusable — only its opacity changes —
@@ -166,11 +188,18 @@ export const SavedGraphs = () => {
                 entry.edgeCount,
                 entry.updatedAt,
               )}
-              className="w-full rounded-lg border py-2.5 pl-3 pr-10 text-left transition-colors hover:border-[var(--gz-accent)] hover:bg-[var(--gz-accent-soft)]"
+              className="gz-home-saved"
             >
-              <span className="block truncate text-[0.8125rem] font-medium">{entry.name}</span>
-              <span className="gz-num mt-0.5 block text-[0.6875rem] text-[var(--gz-faint)]">
-                {entry.vertexCount}v · {entry.edgeCount}e · {relativeTime(entry.updatedAt)}
+              <span className="gz-home-saved-icon" aria-hidden="true">
+                <GraphMarkIcon width={16} height={16} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[0.875rem] font-medium tracking-[-0.01em]">
+                  {entry.name}
+                </span>
+                <span className="gz-num mt-0.5 block truncate text-[0.6875rem] text-[var(--gz-faint)]">
+                  {entry.vertexCount}v · {entry.edgeCount}e · {relativeTime(entry.updatedAt)}
+                </span>
               </span>
             </button>
 
@@ -187,9 +216,9 @@ export const SavedGraphs = () => {
                 })
               }
               aria-label={`Delete ${entry.name}`}
-              className="absolute right-1.5 top-1.5 rounded-md p-1.5 text-[var(--gz-faint)] opacity-0 transition-opacity hover:bg-[color-mix(in_oklab,var(--gz-danger)_12%,transparent)] hover:text-[var(--gz-danger)] focus:opacity-100 focus:outline-none focus-visible:ring-1 group-hover:opacity-100"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[var(--gz-faint)] opacity-0 transition-opacity hover:bg-[color-mix(in_oklab,var(--gz-danger)_12%,transparent)] hover:text-[var(--gz-danger)] focus:opacity-100 focus:outline-none focus-visible:ring-1 group-hover:opacity-100"
             >
-              <TrashIcon width={14} height={14} />
+              <TrashIcon width={15} height={15} />
             </button>
           </li>
         ))}
@@ -199,7 +228,7 @@ export const SavedGraphs = () => {
         <button
           type="button"
           onClick={() => setShowAll(true)}
-          className="mt-2 text-[0.75rem] text-[var(--gz-muted)] underline underline-offset-2 hover:text-[var(--gz-text)]"
+          className="mt-3 text-[0.75rem] text-[var(--gz-muted)] underline underline-offset-2 hover:text-[var(--gz-text)]"
         >
           Show {hidden} more
         </button>
@@ -269,6 +298,6 @@ export const SavedGraphs = () => {
           </p>
         </Dialog>
       )}
-    </div>
+    </section>
   )
 }
