@@ -7,7 +7,7 @@ import { PropertyRow } from './PropertyRow'
 import { MatrixSection } from './MatrixSection'
 import { SelectionPanel } from './SelectionPanel'
 import { ChevronIcon } from './Icons'
-import { runGraphCommand } from '../state/actions'
+import { runQuickInput } from '../state/actions'
 
 const DEFAULT_OPEN = new Set([
   'selection',
@@ -161,15 +161,23 @@ export const Inspector = () => {
             event.preventDefault()
             const text = command.trim()
             if (!text) return
-            if (runGraphCommand(text)) setCommand('')
-            else notify(`"${text}" is not a graph I recognise. Try K5, C8, K3,4 or G(20,0.2).`, 'error')
+            // A graph command replaces the graph; an edge list adds to it.
+            // `failed` has already said why in the status bar.
+            const outcome = runQuickInput(text)
+            if (outcome === 'done') setCommand('')
+            else if (outcome === 'unrecognised') {
+              notify(
+                `"${text}" is not a graph or an edge list I recognise. Try K5, C8, G(20,0.2) or A-B, B-C.`,
+                'error',
+              )
+            }
           }}
         >
           <input
             value={command}
             onChange={(event) => setCommand(event.target.value)}
             className="gz-input gz-num"
-            placeholder="K5, C8, K3,4, Q4, G(20,0.2)..."
+            placeholder="K5, C8, G(20,0.2) or A-B, B-C..."
             aria-label="Quick graph command"
             spellCheck={false}
           />
