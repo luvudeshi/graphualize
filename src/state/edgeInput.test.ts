@@ -22,6 +22,16 @@ beforeEach(() => {
   useEditor.setState({ status: null })
 })
 
+describe('typing a random graph into the quick box', () => {
+  it('draws a new graph each time the same command is entered', () => {
+    expect(runQuickInput('G(14,0.5)')).toBe('done')
+    const first = edges()
+    expect(runQuickInput('G(14,0.5)')).toBe('done')
+    expect(labels()).toHaveLength(14)
+    expect(edges()).not.toEqual(first)
+  })
+})
+
 describe('typing edges into the quick box', () => {
   it('draws a graph from nothing', () => {
     expect(runQuickInput('A-B, B-C, C-A')).toBe('done')

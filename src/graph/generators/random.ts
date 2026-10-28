@@ -3,7 +3,9 @@
  *
  * Nothing in the graph library calls `Math.random`. Every random choice comes
  * from one of these streams, so a seed (or, for a transformation, the graph
- * itself) always reproduces the same result.
+ * itself) always reproduces the same result. The app is what makes them
+ * random: it draws a {@link freshSeed} for every press of Generate, so the
+ * same parameters give a new graph each time.
  */
 
 export type Rng = () => number
@@ -29,9 +31,15 @@ export const randomBelow = (rand: Rng, bound: number): number => {
 }
 
 /**
- * FNV-1a over a string, as an unsigned 32-bit seed. Used where the only
- * reproducible input is the graph itself — a transformation has no seed
- * field, but it does have the graph's structure key.
+ * A new unsigned 32-bit seed from the platform's entropy. The one place
+ * randomness enters; everything downstream stays a pure function of it.
+ */
+export const freshSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0]!
+
+/**
+ * FNV-1a over a string, as an unsigned 32-bit seed. The fallback when a
+ * transformation runs without `ctx.seed`, as tests do: the graph's structure
+ * key keeps the result a pure function of its input.
  */
 export const seedFromText = (text: string): number => {
   let hash = 0x811c9dc5

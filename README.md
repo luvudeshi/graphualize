@@ -240,12 +240,12 @@ Path P*n*, cycle C*n*, complete K*n*, complete bipartite K*m,n*, star S*n*,
 wheel W*n*, grid, hypercube Q*n*, the Petersen graph, complete trees, and three
 random models: Erdős–Rényi G(*n*,*p*), a uniformly random labelled tree via a
 Prüfer sequence, and a random *d*-regular graph via the configuration model.
-Random generators take a seed and are fully deterministic.
+Each press of Generate, or each typed command such as `G(20,0.2)`, draws a new
+random graph.
 
 Any generated graph can come with edge weights: **Unit** (every edge 1),
-**Random** (whole numbers in a range, 1–9 by default, drawn from the same seed
-so an exercise can be rebuilt exactly), or **Length** (the drawn length of each
-edge, scaled so the median edge weighs 10). Unit weights make Dijkstra, Prim and
+**Random** (whole numbers in a range, 1–9 by default, a new set every time), or
+**Length** (the drawn length of each edge, scaled so the median edge weighs 10). Unit weights make Dijkstra, Prim and
 Kruskal behave like BFS; the other two give them real choices to make.
 
 ## Transformations
@@ -254,8 +254,8 @@ Complement, transpose, induced subgraph, delete selected vertices or edges,
 contract an edge, subdivide an edge, line graph, graph square, conversion to
 the underlying undirected graph, random weights (1–9) for the graph on screen,
 and weights from its drawn edge lengths. Each integrates with undo/redo and
-reports what it did. Random weights are seeded by the graph itself, so undo and
-redo give back the same numbers and running it again rolls a fresh set.
+reports what it did. Random weights roll a fresh set on every run, and undo and
+redo give back exactly the numbers you had.
 
 ## Import and export
 

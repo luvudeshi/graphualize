@@ -6,6 +6,13 @@ import { useEditor } from '../state/store'
 
 const state = () => useEditor.getState()
 const weights = () => state().doc.edges.map((e) => e.weight)
+/** The edges on screen as label pairs, so two draws can be compared. */
+const edgePairs = () => {
+  const label = new Map(state().doc.vertices.map((v) => [v.id, v.label]))
+  return state()
+    .doc.edges.map((e) => `${label.get(e.source)}-${label.get(e.target)}`)
+    .sort()
+}
 
 /** Opens the dialog on a generator, the way a person would. */
 const openOn = async (generatorName: string) => {
@@ -43,11 +50,7 @@ describe('GenerateDialog edge weights', () => {
 
   it('generates random integer weights in the chosen range', async () => {
     const user = await openOn('Complete graph Kn')
-    // A classic family has no seed field until its weights need one.
-    expect(screen.queryByRole('spinbutton', { name: /^Seed/ })).toBeNull()
-
     await user.click(screen.getByRole('radio', { name: 'Random' }))
-    expect(screen.getByRole('spinbutton', { name: /^Seed/ })).toBeInTheDocument()
     await setField(user, 'Min', '2')
     await setField(user, 'Max', '20')
     await user.click(screen.getByRole('button', { name: 'Generate Kn' }))
@@ -57,19 +60,15 @@ describe('GenerateDialog edge weights', () => {
     expect(weights().every((w) => Number.isInteger(w) && w! >= 2 && w! <= 20)).toBe(true)
   })
 
-  it('reuses the seed, so the same seed gives the same weights', async () => {
-    const user = await openOn('Cycle Cn')
+  it('draws a new set of random weights every time Generate is pressed', async () => {
+    const user = await openOn('Complete graph Kn')
     await user.click(screen.getByRole('radio', { name: 'Random' }))
-    await setField(user, /^Seed/, '7')
 
-    const generateButton = screen.getByRole('button', { name: 'Generate Cn' })
+    const generateButton = screen.getByRole('button', { name: 'Generate Kn' })
     await user.click(generateButton)
     const first = weights()
     await user.click(generateButton)
-    expect(weights()).toEqual(first)
-
-    await setField(user, /^Seed/, '8')
-    await user.click(generateButton)
+    // Ten edges from 1–9: the same draw twice is a 1-in-3-billion chance.
     expect(weights()).not.toEqual(first)
   })
 
@@ -94,6 +93,24 @@ describe('GenerateDialog edge weights', () => {
     await user.click(screen.getByRole('button', { name: 'Generate Petersen' }))
     expect(state().doc.weighted).toBe(true)
     expect(new Set(weights())).toEqual(new Set([6, 10, 14]))
+  })
+
+  it('never shows a seed, for a random family or for random weights', async () => {
+    const user = await openOn('Random graph')
+    expect(screen.queryByText(/seed/i)).toBeNull()
+    await user.click(screen.getByRole('radio', { name: 'Random' }))
+    expect(screen.queryByText(/seed/i)).toBeNull()
+    expect(screen.queryByRole('spinbutton', { name: /seed/i })).toBeNull()
+  })
+
+  it('draws a new random graph every time Generate is pressed', async () => {
+    const user = await openOn('Random graph')
+    const generateButton = screen.getByRole('button', { name: 'Generate G(n,p)' })
+    await user.click(generateButton)
+    const first = edgePairs()
+    await user.click(generateButton)
+    expect(state().doc.vertices).toHaveLength(12)
+    expect(edgePairs()).not.toEqual(first)
   })
 
   it('can generate an unweighted graph from a weighted document', async () => {
