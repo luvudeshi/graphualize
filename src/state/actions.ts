@@ -21,6 +21,7 @@ import {
   parseEdgeList,
   planEdgeList,
   type EdgeListPlan,
+  type ParsedEdgeList,
 } from '../graph/model/builder'
 import { getCanvasInstance } from '../canvas/instance'
 
@@ -116,6 +117,21 @@ export type QuickInputOutcome = 'done' | 'failed' | 'unrecognised'
  */
 const MAX_TYPED_EDGES = 500
 
+/**
+ * The most vertices {@link MAX_TYPED_EDGES} edges can name. Bare labels are
+ * not edges, so without this `A-B, x0, x1, …, x4999` would get past the edge
+ * cap and leave thousands of new vertices to lay out at once.
+ */
+const MAX_TYPED_LABELS = 2 * MAX_TYPED_EDGES
+
+/** Why `parsed` is too long for the quick box, or null when it fits. */
+const tooLongToType = (parsed: ParsedEdgeList): string | null =>
+  parsed.edges.length > MAX_TYPED_EDGES
+    ? `That is ${parsed.edges.length} edges, more than the quick box takes. Use File → Import for long edge lists.`
+    : parsed.labels.length > MAX_TYPED_LABELS
+      ? `That names ${parsed.labels.length} vertices, more than the quick box takes. Use File → Import for long lists.`
+      : null
+
 const counted = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 const listed = (items: readonly string[]): string =>
@@ -168,7 +184,8 @@ const describeAdded = (plan: EdgeListPlan): string => {
 }
 
 export interface EdgeListPreview {
-  plan: EdgeListPlan
+  /** Null when the list is too long for the quick box, so it was never planned. */
+  plan: EdgeListPlan | null
   /** What pressing Enter would do: "Add 3 edges, 1 new vertex". */
   title: string
   /** Side effects worth knowing before pressing it, each a short phrase. */
@@ -185,6 +202,11 @@ export const previewEdgeList = (
 ): EdgeListPreview | null => {
   const parsed = parseEdgeList(input)
   if (!parsed) return null
+  // This runs on every keystroke, so a pasted file is turned away before it is
+  // planned; Enter then reports it as `addTypedEdges` does.
+  if (tooLongToType(parsed)) {
+    return { plan: null, title: 'Too long for the quick box', notes: ['use File → Import'] }
+  }
   const plan = planEdgeList(doc, parsed)
   const edges = plan.newEdges.length
   const vertices = plan.newVertices.length
@@ -233,11 +255,9 @@ export const addTypedEdges = (input: string): QuickInputOutcome => {
   const state = useEditor.getState()
   const parsed = parseEdgeList(input)
   if (!parsed) return 'unrecognised'
-  if (parsed.edges.length > MAX_TYPED_EDGES) {
-    state.notify(
-      `That is ${parsed.edges.length} edges, more than the quick box takes. Use File → Import for long edge lists.`,
-      'error',
-    )
+  const tooLong = tooLongToType(parsed)
+  if (tooLong) {
+    state.notify(tooLong, 'error')
     return 'failed'
   }
 

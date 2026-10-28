@@ -39,6 +39,16 @@ export const SPECTRUM_VERTEX_LIMIT = 150
 /** The Matrix-Tree minor is exact but O(n^3) on big integers, so it needs its own gate. */
 export const SPANNING_TREE_VERTEX_LIMIT = 400
 
+/**
+ * Within the vertex limit, the most the exact count may be expected to take,
+ * in milliseconds as estimated by `spanningTreeCostMs`. The row is worked out
+ * on the main thread whenever the graph changes, and order alone is no guide:
+ * a 400-vertex cycle takes 0.25 s, but 400 vertices with 10,000 edges — which
+ * a share link can carry — took 13 s. K200, the densest graph on 200
+ * vertices, takes 0.9 s and still fits.
+ */
+export const SPANNING_TREE_BUDGET_MS = 1000
+
 /** Eigenvalues closer than this are reported as one value with a multiplicity. */
 export const EIGENVALUE_GROUPING_TOLERANCE = 1e-7
 
@@ -360,6 +370,40 @@ const isConnectedByIndex = (adjacency: number[][], n: number): boolean => {
   return count === n
 }
 
+/**
+ * Roughly how long, in milliseconds, the Bareiss elimination below will take
+ * on the Laplacian minor of a connected graph — worked out before starting,
+ * from timings in V8 on a laptop.
+ *
+ * Step k updates every entry below and to the right of its pivot, about 12 ns
+ * each while the entry is zero, and about 40 ns plus 0.2 ns per bit when it is
+ * not. Which entries are zero is known in advance: elimination without row
+ * swaps — a positive definite matrix never needs one — never fills in ahead of
+ * a row's first nonzero, its envelope. And every entry is a minor of that
+ * matrix, so by Hadamard's inequality it has at most Σ log₂ deg(v) bits. Both
+ * are close for dense graphs and generous for sparse ones, so the estimate
+ * errs high: a 400-vertex cycle in drawing order is put at 0.28 s and takes
+ * about 0.25 s, but in a jumbled order it is put at 1.8 s and takes 0.3 s.
+ */
+const spanningTreeCostMs = (multiplicity: readonly number[][], degree: readonly number[]) => {
+  const n = degree.length
+  let bits = 0
+  for (let i = 1; i < n; i++) bits += Math.log2(degree[i])
+  let zero = 0
+  let nonzero = 0
+  // Minor row i - 1 is graph vertex i; its envelope starts at its first neighbour.
+  for (let i = 2; i < n; i++) {
+    let first = 1
+    while (first < i && multiplicity[i][first] === 0) first++
+    for (let k = 1; k < i; k++) {
+      const filled = 2 * (i - Math.max(first, k + 1)) + 1
+      nonzero += filled
+      zero += 2 * (i - k - 1) + 1 - filled
+    }
+  }
+  return (zero * 12 + nonzero * (40 + 0.2 * bits)) / 1e6
+}
+
 export const spanningTreeCount = (g: Graph): PropertyResult<bigint | null> => {
   if (g.directed) {
     return declined(null, 'Not applicable', 'not-applicable', DIRECTED_TREE_EXPLANATION)
@@ -425,15 +469,25 @@ export const spanningTreeCount = (g: Graph): PropertyResult<bigint | null> => {
     }
   }
 
+  const degree = multiplicity.map((row) => row.reduce((sum, x) => sum + x, 0))
+  const cost = spanningTreeCostMs(multiplicity, degree)
+  if (cost > SPANNING_TREE_BUDGET_MS) {
+    const digits = Math.ceil(degree.slice(1).reduce((sum, d) => sum + Math.log10(d), 0))
+    return declined(
+      null,
+      'Not computed (too large)',
+      'not-computed',
+      `This graph has ${n} vertices and ${g.size} edges. Counting its spanning trees exactly means BigInt elimination on a ${n - 1} x ${n - 1} matrix with numbers up to ${digits} digits long, which could hold up the app for up to about ${Math.ceil(cost / 100) / 10} s each time the graph changes. Graphualize skips counts estimated to take more than ${SPANNING_TREE_BUDGET_MS / 1000} s.`,
+    )
+  }
+
   // Kirchhoff: delete any one row and column of L and take the determinant.
   const minor: bigint[][] = []
   for (let i = 1; i < n; i++) {
     const row: bigint[] = []
     for (let j = 1; j < n; j++) {
       if (i === j) {
-        let degree = 0
-        for (let k = 0; k < n; k++) degree += multiplicity[i][k]
-        row.push(BigInt(degree))
+        row.push(BigInt(degree[i]))
       } else {
         row.push(-BigInt(multiplicity[i][j]))
       }
