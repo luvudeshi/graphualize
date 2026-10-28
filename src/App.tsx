@@ -11,6 +11,8 @@ import { ExamplesDialog } from './components/ExamplesDialog'
 import { ExportDialog, ImportDialog } from './components/TransferDialogs'
 import { DocumentsDialog } from './components/DocumentsDialog'
 import { ConfirmReplace } from './components/ConfirmReplace'
+import { SaveDialog } from './components/SaveDialog'
+import { Toaster } from './components/Toaster'
 import { ShareLinkDialog } from './components/ShareLinkDialog'
 import { replaceWorkingGraph } from './state/replace'
 import { AboutDialog, ShortcutsDialog } from './components/HelpDialogs'
@@ -53,6 +55,8 @@ const Dialogs = () => {
       <ExportDialog open={dialog === 'export'} />
       <DocumentsDialog open={dialog === 'documents'} />
       <ConfirmReplace />
+      <SaveDialog />
+      <Toaster />
       <ShareLinkDialog />
       <AboutDialog open={dialog === 'about'} />
       <ShortcutsDialog

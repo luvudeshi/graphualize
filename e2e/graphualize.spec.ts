@@ -158,7 +158,12 @@ test('flow 4: without an account, saving keeps the graph in this browser', async
   const { name } = await readState(page)
 
   await page.getByRole('button', { name: 'File' }).click()
-  await page.getByRole('menuitem', { name: /^Save/ }).click()
+  await page.getByRole('menuitem', { name: /^Save\b/ }).first().click()
+  // The first save asks for a name, already filled in and selected.
+  const saveDialog = page.getByRole('dialog', { name: 'Save graph' })
+  await expect(saveDialog.getByLabel('Name')).toHaveValue(name)
+  await saveDialog.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByTestId('toast')).toContainText(`Saved “${name}”`)
   await expect(page.getByRole('contentinfo')).toContainText(/saved in this browser/i)
 
   // The saved graph is in local storage; the working document is not.
@@ -179,6 +184,30 @@ test('flow 4: without an account, saving keeps the graph in this browser', async
   const dialog = page.getByRole('dialog', { name: 'Saved graphs' })
   await dialog.getByRole('button', { name }).first().click()
   await expect.poll(async () => (await readState(page)).vertices.length).toBe(4)
+})
+
+test('saving is visible: name it once, then the header and a toast confirm every save', async ({ page }) => {
+  await page.getByLabel('Quick graph command').fill('C5')
+  await page.getByLabel('Quick graph command').press('Enter')
+  await expect.poll(async () => (await readState(page)).vertices.length).toBe(5)
+
+  const header = page.getByRole('banner')
+  await header.getByRole('button', { name: 'Save (unsaved changes)' }).click()
+  const saveDialog = page.getByRole('dialog', { name: 'Save graph' })
+  await expect(saveDialog).toContainText('This browser')
+  await page.keyboard.type('Pentagon')
+  await page.keyboard.press('Enter')
+  await expect(saveDialog).toBeHidden()
+  await expect(page.getByTestId('toast')).toContainText('Saved “Pentagon”')
+  await expect(header.getByRole('button', { name: 'Saved — no unsaved changes' })).toBeVisible()
+
+  // A later save goes straight through, with nothing to ask.
+  await page.getByLabel('Quick graph command').fill('A-F')
+  await page.getByLabel('Quick graph command').press('Enter')
+  await page.keyboard.press('Control+s')
+  await expect(page.getByRole('dialog', { name: 'Save graph' })).toBeHidden()
+  await expect(page.getByTestId('toast')).toContainText('Saved “Pentagon”')
+  await expect(header.getByRole('button', { name: 'Saved — no unsaved changes' })).toBeVisible()
 })
 
 test('New asks before throwing away unsaved work, and Cancel keeps it', async ({ page }) => {

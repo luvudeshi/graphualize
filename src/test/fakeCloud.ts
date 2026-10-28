@@ -214,6 +214,7 @@ export const saveCloudDocument = async (input: {
     data: {
       id: copyId,
       version: 1,
+      savedAs: copyName,
       conflictWith: { name: existing?.name ?? input.name, device: 'another device' },
     },
   }

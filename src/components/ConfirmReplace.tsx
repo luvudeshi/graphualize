@@ -3,6 +3,7 @@ import { Dialog } from './Dialog'
 import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
 import { performReplacement } from '../state/replace'
+import { saveWithName } from '../state/save'
 
 /**
  * Asks before New or Open throws away unsaved work.
@@ -38,10 +39,19 @@ export const ConfirmReplace = () => {
   const saveThenContinue = async () => {
     if (!pending || saving) return
     const target = pending
-    const before = useEditor.getState().doc
+    const editor = useEditor.getState()
+    // A graph never saved needs a name first: the Save dialog asks, and
+    // carries on with this New or Open once it has saved.
+    if (editor.savedId === null) {
+      close()
+      useUi.getState().setAfterSave(target)
+      useUi.getState().openDialog('save')
+      return
+    }
+    const before = editor.doc
     setSaving(true)
     setProblem(null)
-    await useEditor.getState().saveCurrent()
+    const outcome = await saveWithName(editor.name, false, { announceFailure: false })
     setSaving(false)
     const after = useEditor.getState()
     // Continue only if what is on screen is exactly what was just saved.
@@ -49,7 +59,7 @@ export const ConfirmReplace = () => {
       setProblem('changed')
       return
     }
-    if (after.dirty) {
+    if (outcome.kind === 'failed' || after.dirty) {
       setProblem('failed')
       return
     }

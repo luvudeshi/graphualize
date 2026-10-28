@@ -1,7 +1,7 @@
 import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
 import { Menu, type MenuItem } from './Menu'
-import { GraphMarkIcon, MoonIcon, SearchIcon, SunIcon } from './Icons'
+import { CheckIcon, GraphMarkIcon, MoonIcon, SaveIcon, SearchIcon, SunIcon } from './Icons'
 import { applyTransformById, runGraphCommand } from '../state/actions'
 import { LAYOUT_LABELS, type LayoutName } from '../graph/layout'
 import { TRANSFORMS } from '../graph/transformations'
@@ -12,6 +12,50 @@ import { AccountMenu } from '../auth/AccountMenu'
 import { useTheme } from '../hooks/useTheme'
 import { replaceWorkingGraph } from '../state/replace'
 import { copyShareLink } from '../state/share'
+import { requestSave, requestSaveAs } from '../state/save'
+
+/**
+ * Save, where it can be seen. Its label is the graph's save state — Save with
+ * a dot while there is unsaved work, Saving… while a save is out, Saved once
+ * it is kept — so whether a graph is safe is never something to go looking
+ * for in a menu or the status bar.
+ */
+const SaveButton = () => {
+  const dirty = useEditor((s) => s.dirty)
+  const syncing = useEditor((s) => s.syncing)
+  const savedId = useEditor((s) => s.savedId)
+  const hasContent = useEditor((s) => s.doc.vertices.length > 0)
+  const saved = savedId !== null && !dirty
+  const unsaved = !saved && (hasContent || savedId !== null)
+
+  const label = syncing ? 'Saving…' : saved ? 'Saved' : 'Save'
+  return (
+    // aria-disabled, not disabled: a disabled button that has focus drops it
+    // to <body> mid-save. requestSave already ignores a press while saving.
+    <button
+      type="button"
+      data-save-button
+      onClick={() => requestSave()}
+      aria-disabled={syncing || undefined}
+      aria-label={
+        syncing ? 'Saving' : saved ? 'Saved — no unsaved changes' : unsaved ? 'Save (unsaved changes)' : 'Save'
+      }
+      title={`Save (${formatShortcut('mod+S')})`}
+      className={`gz-btn relative gap-1.5 px-2 ${
+        saved ? 'text-[var(--gz-muted)]' : 'border border-[var(--gz-accent)] text-[var(--gz-accent)]'
+      }`}
+    >
+      {saved ? <CheckIcon width={14} height={14} /> : <SaveIcon width={14} height={14} />}
+      <span className="hidden text-[0.75rem] font-medium lg:inline">{label}</span>
+      {unsaved && !syncing && (
+        <span
+          aria-hidden
+          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--gz-accent)] ring-2 ring-[var(--gz-panel)]"
+        />
+      )}
+    </button>
+  )
+}
 
 export const MenuBar = () => {
   const openDialog = useUi((s) => s.openDialog)
@@ -52,20 +96,13 @@ export const MenuBar = () => {
       label: 'Save',
       shortcut: formatShortcut('mod+S'),
       separatorBefore: true,
-      onSelect: act((s) => void s.saveCurrent()),
+      onSelect: () => requestSave(),
     },
     {
-      id: 'duplicate',
-      label: 'Duplicate as new',
-      onSelect: act((s) => {
-        const doc = s.doc
-        const name = `${s.name} copy`
-        s.newDocument()
-        const next = useEditor.getState()
-        next.replaceDocument(doc, 'Duplicate graph')
-        next.setName(name)
-        next.saveCurrent(name)
-      }),
+      id: 'saveAs',
+      label: 'Save as...',
+      shortcut: formatShortcut('mod+shift+S'),
+      onSelect: () => requestSaveAs(),
     },
     { id: 'import', label: 'Import...', separatorBefore: true, onSelect: () => openDialog('import') },
     { id: 'export', label: 'Export...', onSelect: () => openDialog('export') },
@@ -223,7 +260,10 @@ export const MenuBar = () => {
   ]
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-0.5 border-b bg-[var(--gz-panel)] px-2">
+    // Wraps rather than clipping: where the menus and the right-hand controls
+    // do not fit on one line (narrow windows, phones), the controls drop to a
+    // second row instead of being pushed off-screen out of reach.
+    <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-0.5 border-b bg-[var(--gz-panel)] px-2 py-1">
       <button
         type="button"
         onClick={() => navigate('/')}
@@ -243,7 +283,8 @@ export const MenuBar = () => {
       <Menu label="View" items={viewItems} />
       <Menu label="Help" items={helpItems} />
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <SaveButton />
         <button
           type="button"
           className="gz-btn border px-2 text-[var(--gz-muted)]"

@@ -70,7 +70,10 @@ export const StatusBar = () => {
           hint on every tool change would be noise. */}
       <span className="min-w-0 flex-1 truncate">
         <span role="status" aria-live="polite" className={tone}>
-          {visible?.text ?? ''}
+          {/* Keyed by message, so the same sentence twice in a row (two
+              saves, say) is a new node each time — and is announced each
+              time — instead of an unchanged text node that is heard once. */}
+          {visible && <span key={visible.nonce}>{visible.text}</span>}
         </span>
         {!visible && <span className="text-[var(--gz-faint)]">{TOOL_HINTS[tool]}</span>}
       </span>

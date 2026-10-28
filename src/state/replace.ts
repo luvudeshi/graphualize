@@ -9,6 +9,7 @@
  */
 import { useEditor } from './store'
 import { useUi, type Replacement } from './ui'
+import { useToast } from './toast'
 
 /** True when replacing the working graph now would lose something. */
 export const hasUnsavedWork = (): boolean => {
@@ -18,6 +19,9 @@ export const hasUnsavedWork = (): boolean => {
 
 /** Replaces the working graph, with no questions asked. */
 export const performReplacement = (replacement: Replacement): void => {
+  // A failed save's toast is about the graph that is going; its actions
+  // ("Try again") must not be left to act on the one that replaces it.
+  if (useToast.getState().toast?.tone === 'error') useToast.getState().dismiss()
   const editor = useEditor.getState()
   if (replacement.kind === 'new') editor.newDocument()
   else void editor.openDocument(replacement.id, replacement.source)

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect } from 'react'
 import { docFromEdges } from '../graph/model/builder'
@@ -13,6 +13,7 @@ const { useEditor, setSignedInProbe } = await import('./store')
 const { useUi } = await import('./ui')
 const { hasUnsavedWork, replaceWorkingGraph, preapproveReplacement } = await import('./replace')
 const { ConfirmReplace } = await import('../components/ConfirmReplace')
+const { SaveDialog } = await import('../components/SaveDialog')
 const { DocumentsDialog } = await import('../components/DocumentsDialog')
 const { useShortcuts } = await import('../hooks/useShortcuts')
 const { saveDocument, listDocuments } = await import('./documents')
@@ -90,27 +91,65 @@ describe('the confirmation', () => {
     expect(state().doc.vertices).toHaveLength(0)
   })
 
-  it('Save first saves, then goes ahead', async () => {
+  it('Save first on a graph never saved asks for its name, then goes ahead', async () => {
     const user = userEvent.setup()
     drawUnsaved()
     state().setName('Worth keeping')
+    render(
+      <>
+        <ConfirmReplace />
+        <SaveDialog />
+      </>,
+    )
+    replaceWorkingGraph({ kind: 'new' })
+    await user.click(await screen.findByRole('button', { name: 'Save first' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Save graph' })
+    expect(state().doc.vertices).toHaveLength(4)
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(state().doc.vertices).toHaveLength(0))
+    expect(listDocuments().map((entry) => entry.name)).toEqual(['Worth keeping'])
+  })
+
+  it('cancelling that name dialog keeps the graph and forgets the New', async () => {
+    const user = userEvent.setup()
+    drawUnsaved()
+    render(
+      <>
+        <ConfirmReplace />
+        <SaveDialog />
+      </>,
+    )
+    replaceWorkingGraph({ kind: 'new' })
+    await user.click(await screen.findByRole('button', { name: 'Save first' }))
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }))
+    expect(state().doc.vertices).toHaveLength(4)
+    expect(useUi.getState().afterSave).toBeNull()
+  })
+
+  it('Save first on a saved graph saves, then goes ahead', async () => {
+    const user = userEvent.setup()
+    drawUnsaved()
+    await state().saveCurrent('Saved before')
+    state().addVertexAt(7, 7)
     render(<ConfirmReplace />)
     replaceWorkingGraph({ kind: 'new' })
     await user.click(await screen.findByRole('button', { name: 'Save first' }))
     await waitFor(() => expect(state().doc.vertices).toHaveLength(0))
-    expect(listDocuments().map((entry) => entry.name)).toEqual(['Worth keeping'])
+    expect(listDocuments()[0]!.vertexCount).toBe(5)
   })
 
   it('Save first replaces nothing when the save fails', async () => {
     const user = userEvent.setup()
     signedIn = true
-    __fake.failNextCall('This account is not allowed to do that.')
     drawUnsaved()
+    await state().saveCurrent('Saved before')
+    state().addVertexAt(7, 7)
+    __fake.failNextCall('This account is not allowed to do that.')
     render(<ConfirmReplace />)
     replaceWorkingGraph({ kind: 'new' })
     await user.click(await screen.findByRole('button', { name: 'Save first' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/nothing was replaced/i)
-    expect(state().doc.vertices).toHaveLength(4)
+    expect(state().doc.vertices).toHaveLength(5)
     expect(useUi.getState().pendingReplacement).toEqual({ kind: 'new' })
   })
 
@@ -238,6 +277,8 @@ describe('found in review', () => {
     const user = userEvent.setup()
     signedIn = true
     drawUnsaved()
+    await state().saveCurrent('Saved before')
+    state().addVertexAt(7, 7)
     render(<ConfirmReplace />)
     replaceWorkingGraph({ kind: 'new' })
     const release = __fake.holdSaves()
@@ -247,7 +288,7 @@ describe('found in review', () => {
     state().addVertexAt(40, 40)
     release()
     expect(await screen.findByRole('alert')).toHaveTextContent(/changed while it was saving/i)
-    expect(state().doc.vertices).toHaveLength(5)
+    expect(state().doc.vertices).toHaveLength(6)
   })
 
   it('leaving the workbench withdraws the question', () => {
