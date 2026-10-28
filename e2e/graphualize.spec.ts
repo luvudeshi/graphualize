@@ -232,6 +232,26 @@ test('the command palette generates a graph from a typed command', async ({ page
   expect((await readState(page)).edgeCount).toBe(9)
 })
 
+test('typed edges add to the graph on screen, and undo in one step', async ({ page }) => {
+  const quick = page.getByLabel('Quick graph command')
+  await quick.fill('A-B, B-C, C-A')
+  await quick.press('Enter')
+  await expect.poll(async () => (await readState(page)).edgeCount).toBe(3)
+  await expect(quick).toHaveValue('')
+
+  await quick.fill('c-D:4')
+  await quick.press('Enter')
+  await expect.poll(async () => (await readState(page)).edgeCount).toBe(4)
+  const state = await readState(page)
+  expect(state.vertices.map((v) => v.label)).toEqual(['A', 'B', 'C', 'D'])
+  expect(state.weighted).toBe(true)
+  await expect(page.getByText('Added 1 edge and 1 vertex. Turned on weights.')).toBeVisible()
+
+  await page.getByRole('button', { name: /^Undo/ }).click()
+  await expect.poll(async () => (await readState(page)).edgeCount).toBe(3)
+  expect((await readState(page)).weighted).toBe(false)
+})
+
 test('Dijkstra refuses to run on a negative weight and names Bellman-Ford', async ({ page }) => {
   await page.getByLabel('Quick graph command').fill('C4')
   await page.getByLabel('Quick graph command').press('Enter')

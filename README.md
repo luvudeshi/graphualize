@@ -153,6 +153,18 @@ inspector's quick-input box takes the same shorthand as the palette:
 that makes the result weighted: `K6 w2-20` for random whole-number weights from
 2 to 20, or `grid(4,5) w=len` for weights from the drawn edge lengths.
 
+Both also take edges. `A-B, B-C, C-A`, `A-B B-C`, `a->b->c` (a path) or
+`A-B:4` (a weight) adds those edges to the graph on screen as one undo step,
+and the status bar says what happened ("Added 3 edges and 1 vertex"); in the
+palette the first row previews it before Enter. A graph command always wins,
+so `K5` is never read as a vertex. Labels match exactly first, then ignoring
+case when only one vertex fits; anything else becomes a new vertex, placed
+beside its neighbours or, for a separate piece, in the middle of the view
+without landing on the graph. An arrow makes an edgeless graph directed, but
+once an undirected graph has edges it is read as a plain edge, so nothing you
+already drew changes meaning. A weight turns weights on, and edges that are
+already there are skipped and named.
+
 ## What it computes
 
 ### Overview
