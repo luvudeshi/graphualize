@@ -248,6 +248,13 @@ your write-up. PNG is captured from the canvas at 2× and matches the screen
 exactly. Both offer a light or dark drawing and an optional transparent
 background.
 
+**TikZ.** For write-ups in LaTeX, the same drawing comes out as TikZ source:
+one named node per vertex, edges drawn between names (bent apart when they run
+in parallel, looped above a vertex for a self-loop), weights as edge labels and
+the highlight as one style per role, so restyling the cycle means editing one
+line. Copy it into a document, or tick **Standalone document** for a `.tex`
+file that compiles as it is on Overleaf.
+
 File → Save keeps a graph in the browser's local storage when you are signed
 out, and in your Google account when you are signed in. Nothing is autosaved:
 the working document is not restored on reload, and the browser warns before
@@ -379,6 +386,10 @@ nothing. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full picture.
   the exporter's own geometry, so a graph with many parallel edges can bundle
   slightly differently from the screen. PNG is the exact screen; SVG is the
   clean vector version of it.
+- **TikZ export is checked, not compiled.** The tests assert on its structure —
+  escaped labels, balanced braces, paired environments — but the suite runs no
+  LaTeX. Labels outside Latin script need an engine and font that can typeset
+  them (LuaLaTeX or XeLaTeX rather than pdfLaTeX).
 - **Keyboard editing on the canvas** covers nudging, deleting, placing a vertex
   at the centre of the view (`A`) and every command in the palette, but a vertex
   cannot yet be placed at an arbitrary point without the mouse. Colour is backed
@@ -404,9 +415,7 @@ The next three things worth building, in order:
    for connectivity; exposing it as a step-through algorithm with residual
    capacities on the edges is a natural next lesson.
 
-After those: a Kuratowski-subgraph witness for non-planarity, and TikZ output
-for people writing their answers up in LaTeX — the SVG exporter already has the
-geometry, so it is mostly a second backend behind the same code.
+After those: a Kuratowski-subgraph witness for non-planarity.
 
 ## Licence
 

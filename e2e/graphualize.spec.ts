@@ -310,6 +310,23 @@ test('the drawing exports as SVG', async ({ page }) => {
   await expect(dialog.getByRole('button', { name: /Download .*\.png/ })).toBeVisible()
 })
 
+test('the drawing exports as TikZ for LaTeX', async ({ page }) => {
+  await page.getByLabel('Quick graph command').fill('C4')
+  await page.getByLabel('Quick graph command').press('Enter')
+  await expect.poll(async () => (await readState(page)).vertices.length).toBe(4)
+
+  await page.getByRole('button', { name: 'File' }).click()
+  await page.getByRole('menuitem', { name: /^Export/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Export graph' })
+  await dialog.getByRole('button', { name: 'Drawing' }).click()
+  await dialog.getByRole('button', { name: 'TikZ' }).click()
+  await expect(dialog.locator('pre')).toContainText('\\begin{tikzpicture}')
+  await expect(dialog.locator('pre')).not.toContainText('\\documentclass')
+  await dialog.getByLabel('Standalone document').check()
+  await expect(dialog.locator('pre')).toContainText('\\documentclass[tikz')
+  await expect(dialog.getByRole('button', { name: /Download .*\.tex/ })).toBeVisible()
+})
+
 test('the layout collapses sensibly at tablet width', async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 800 })
   await expect(page.getByTestId('graph-canvas')).toBeVisible()
