@@ -93,6 +93,27 @@ describe('Export dialog, TikZ', () => {
     expect(source(dialog)).not.toContain('on cycle')
   })
 
+  it('says when the labels need LuaLaTeX or XeLaTeX rather than pdfLaTeX', async () => {
+    state().replaceDocument(docFromEdges(['東京-大阪', 'α-β′']), 'Rail', { title: 'Rail' })
+    const user = userEvent.setup()
+    const dialog = await openTikz(user)
+    const note = within(dialog).getByRole('note')
+    expect(note).toHaveTextContent('(東 京 大 阪)')
+    expect(note).toHaveTextContent('compile with LuaLaTeX or XeLaTeX, with a CJK setup')
+    // Greek letters and primes are written as math, which compiles anywhere.
+    expect(note).not.toHaveTextContent('α')
+    expect(source(dialog)).toContain('{$\\alpha$};')
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Standalone document' }))
+    expect(source(dialog).split('\n')[0]).toBe('% !TEX program = lualatex')
+  })
+
+  it('has nothing to add when pdfLaTeX typesets every label', async () => {
+    const dialog = await openTikz(userEvent.setup())
+    expect(within(dialog).queryByRole('note')).toBeNull()
+    expect(source(dialog)).not.toContain('LuaLaTeX')
+  })
+
   it('still offers SVG and PNG first', async () => {
     const user = userEvent.setup()
     render(<ExportDialog open />)

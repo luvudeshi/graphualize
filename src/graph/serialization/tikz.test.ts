@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Graph } from '../model/graph'
 import { docFromEdges } from '../model/builder'
-import { escapeLatex, toTikz } from './tikz'
+import { escapeLatex, toTikz, unicodeLabels } from './tikz'
 
 const g = (spec: string[], options?: { directed?: boolean; weighted?: boolean }) =>
   new Graph(docFromEdges(spec, options))
@@ -115,6 +115,89 @@ describe('TikZ export', () => {
     const tikz = toTikz(new Graph(doc))
     expect(tikz).toContain('(v1) at (0,0) {x\\_1 \\{\\&\\} 100\\%};')
     expect(bracesBalance(tikz)).toBe(true)
+  })
+
+  it('writes Greek letters and primes as math, so they compile under pdfLaTeX', () => {
+    expect(escapeLatex('α')).toBe('$\\alpha$')
+    expect(escapeLatex('Δx')).toBe('$\\Delta$x')
+    expect(escapeLatex('v′ w″')).toBe("v$'$ w$''$")
+    // Neighbours share one formula, so the prime sits on the letter; a space
+    // between them is kept, since math mode would drop it.
+    expect(escapeLatex('αβ′ γ')).toBe("$\\alpha\\beta'$ $\\gamma$")
+    // Each to the letter whose glyph it is.
+    expect(escapeLatex('ε ϵ φ ϕ')).toBe('$\\varepsilon$ $\\epsilon$ $\\varphi$ $\\phi$')
+    // An escaped dollar next to the formula is a control symbol, never `$$`.
+    expect(escapeLatex('$α_1')).toBe('\\$$\\alpha$\\_1')
+
+    const graph = g(['α-v′', 'Ω-v″'])
+    expect(unicodeLabels(graph)).toEqual({ characters: [], cjk: false })
+    const tikz = toTikz(graph, { standalone: true })
+    expect(lines(tikz, '\\node').map((line) => line.slice(line.indexOf('{')))).toEqual([
+      '{$\\alpha$};',
+      "{v$'$};",
+      '{$\\Omega$};',
+      "{v$''$};",
+    ])
+    // Nothing is left that needs another engine.
+    expect(tikz.split('\n')[0]).toBe('\\documentclass[tikz, border=4pt]{standalone}')
+    expect(tikz).not.toContain('LuaLaTeX')
+    expect(bracesBalance(tikz)).toBe(true)
+  })
+
+  it('points a standalone document whose labels need it at LuaLaTeX', () => {
+    const tikz = toTikz(g(['東京-大阪']), { standalone: true, title: 'Rail' })
+    const all = tikz.split('\n')
+    // The magic comment has to come first for an editor to see it.
+    expect(all[0]).toBe('% !TEX program = lualatex')
+    expect(all[1]).toBe('% Rail')
+    expect(all[2]).toMatch(/^% Some labels .* compile with LuaLaTeX or XeLaTeX .*Overleaf/)
+    expect(all[3]).toMatch(/^% The Chinese, Japanese or Korean labels .*\\usepackage\{luatexja\}/)
+    expect(all[4]).toBe('\\documentclass[tikz, border=4pt]{standalone}')
+    expect(tikz).toContain('{東京};')
+    expect(bracesBalance(tikz)).toBe(true)
+    expect(environmentsPair(tikz)).toBe(true)
+  })
+
+  it('notes in a bare picture that its labels need LuaLaTeX or XeLaTeX', () => {
+    const tikz = toTikz(g(['東京-大阪']), { title: 'Rail' })
+    const all = tikz.split('\n')
+    expect(all.slice(0, 2)).toEqual(['% Rail', '% Needs \\usepackage{tikz} in the preamble.'])
+    expect(all[2]).toMatch(/^% Some labels .* compile with LuaLaTeX or XeLaTeX/)
+    expect(all[3]).toContain('\\usepackage{luatexja}')
+    expect(all[4]).toBe('\\begin{tikzpicture}[')
+    // A magic comment only works in the main file, not in a pasted picture.
+    expect(tikz).not.toContain('!TEX')
+  })
+
+  it('asks for a CJK setup only when a label is Chinese, Japanese or Korean', () => {
+    const tikz = toTikz(g(['Москва-Kazan']), { standalone: true })
+    expect(tikz.split('\n')[0]).toBe('% !TEX program = lualatex')
+    expect(tikz).toContain('compile with LuaLaTeX or XeLaTeX')
+    expect(tikz).not.toContain('luatexja')
+  })
+
+  it('lists what pdfLaTeX may not typeset, each character once', () => {
+    expect(unicodeLabels(g(['東京-α′', 'Ŋ-東', 'ą']))).toEqual({
+      characters: ['東', '京', 'Ŋ', 'ą'],
+      cjk: true,
+    })
+    // Omicron and the Greek capitals that look Latin have no LaTeX command.
+    expect(unicodeLabels(g(['Ħ-ο', 'Α']))).toEqual({ characters: ['Ħ', 'ο', 'Α'], cjk: false })
+    expect(unicodeLabels(g(['서울', 'カナ']))).toMatchObject({ cjk: true })
+  })
+
+  it('leaves labels pdfLaTeX typesets, and any title, as they were', () => {
+    const graph = g(['Erdős-Rényi', 'Čech-Łoś', 'Kőnig-Gödel', 'x×y-90°'])
+    expect(unicodeLabels(graph)).toEqual({ characters: [], cjk: false })
+    // The title is only a comment, which TeX skips without reading it.
+    const tikz = toTikz(graph, { standalone: true, title: '路線図' })
+    expect(tikz.split('\n').slice(0, 2)).toEqual([
+      '% 路線図',
+      '\\documentclass[tikz, border=4pt]{standalone}',
+    ])
+    expect(tikz).toContain('{Erdős};')
+    expect(tikz).not.toContain('LuaLaTeX')
+    expect(toTikz(graph)).not.toContain('LuaLaTeX')
   })
 
   it('keeps the title inside its comment', () => {

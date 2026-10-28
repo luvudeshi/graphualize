@@ -19,6 +19,7 @@ import {
   downloadDataUrl,
   type DrawingOptions,
 } from '../state/drawing'
+import { unicodeLabels } from '../graph/serialization/tikz'
 
 const DATA_FORMATS = Object.keys(EXPORT_LABELS) as ExportFormat[]
 
@@ -79,6 +80,7 @@ const ExportBody = () => {
   const name = useEditor((s) => s.name)
   // Subscribing to the document keeps the preview in step with the canvas.
   useEditor((s) => s.doc)
+  const graph = useEditor((s) => s.graph)
   const highlighted = useEditor((s) => s.activeWitness !== null || s.algorithm !== null)
   const notify = useEditor((s) => s.notify)
 
@@ -95,6 +97,9 @@ const ExportBody = () => {
     tab === 'drawing' && picture === 'tikz'
       ? currentTikz({ withHighlight: drawing.withHighlight, standalone })
       : ''
+  // Labels pdfLaTeX, Overleaf's default, may not typeset; the source says so
+  // in a comment too, but a comment is easy to miss before the compile fails.
+  const unicode = tikz ? unicodeLabels(graph) : null
 
   // What Copy and the main Download act on in the view that is showing.
   const output =
@@ -223,6 +228,17 @@ const ExportBody = () => {
               ? ' The highlight currently on screen is included.'
               : ''}
           </p>
+          {unicode && unicode.characters.length > 0 && (
+            <p
+              role="note"
+              className="mb-3 rounded-md border px-2.5 py-1.5 text-[0.75rem] leading-relaxed text-[var(--gz-warning)]"
+            >
+              Some labels use characters pdfLaTeX, Overleaf's default, may not typeset (
+              {unicode.characters.slice(0, 5).join(' ')}
+              {unicode.characters.length > 5 ? ' …' : ''}): compile with LuaLaTeX or XeLaTeX
+              {unicode.cjk ? ', with a CJK setup such as luatexja' : ''}.
+            </p>
+          )}
           {picture === 'svg' ? (
             /* The preview is the exact string that will be downloaded; the
                child selectors only scale it down to fit the dialog. */
