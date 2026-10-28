@@ -20,7 +20,7 @@ src/
     algorithms/          step emitters for the visualiser
     generators/          named families and random models
     transformations/     complement, line graph, contraction, ...
-    serialization/       versioned JSON plus DOT/CSV/matrix/GraphML, and SVG out
+    serialization/       versioned JSON plus DOT/CSV/matrix/GraphML, and SVG/TikZ out
     analysis.ts          assembles PropertyResults into inspector sections
     layout.ts            position generators (circle, grid, BFS, force, ...)
     cache.ts             LRU memoisation keyed on a graph's structure
@@ -331,7 +331,7 @@ says so instead of navigating into a browser error page.
 
 ## Exporting the drawing
 
-There are two exporters and they are deliberately different things.
+There are two kinds of exporter and they are deliberately different things.
 
 `graph/serialization/svg.ts` is part of the pure library: it takes a `Graph` and
 returns an SVG string, with no Cytoscape and no DOM anywhere in it. It does its
@@ -342,10 +342,19 @@ user text. That is why the output is editable in Illustrator or Inkscape and why
 it is unit-testable: the tests parse it with `DOMParser` and assert on the
 resulting document rather than on a string.
 
+`graph/serialization/tikz.ts` is a second backend on the same geometry: the
+same bundles and spacing, turned into `bend left`/`bend right` angles, and the
+same stacked loops — except that it measures a bend's side against the bundle's
+first edge, so arcs u→v and v→u separate. Vertices become nodes named by their
+order and edges are drawn between names, so TikZ clips each line at the node
+rim itself. Its styles live in the picture's own options rather than a global
+`\tikzset`, and a highlight arrives as roles, each one style with its colour.
+
 `state/drawing.ts` is the impure half. It reads the on-screen witness or
 algorithm step, maps each element's semantic mode through the same
 `modeColor`/`canvasTheme` tables the canvas uses, and hands the result to the SVG
-exporter as plain colours — so the highlight in the file is the highlight on the
+exporter as plain colours, or to the TikZ exporter as roles plus the light
+theme's colour for each — so the highlight in the file is the highlight on the
 screen, without the library learning what a theme is. PNG goes the other way
 entirely: `cy.png()` on the live instance, which is by definition exactly what
 is on screen.

@@ -14,12 +14,21 @@ import {
 import {
   currentPng,
   currentSvg,
+  currentTikz,
   defaultDrawingOptions,
   downloadDataUrl,
   type DrawingOptions,
 } from '../state/drawing'
 
 const DATA_FORMATS = Object.keys(EXPORT_LABELS) as ExportFormat[]
+
+/** SVG and PNG share one preview; TikZ is source, so it is shown as text. */
+type PictureFormat = 'svg' | 'tikz'
+
+const PICTURE_LABELS: Record<PictureFormat, string> = {
+  svg: 'SVG / PNG',
+  tikz: 'TikZ',
+}
 
 const TabButton = ({
   active,
@@ -76,13 +85,27 @@ const ExportBody = () => {
   const [tab, setTab] = useState<'data' | 'drawing'>('data')
   const [format, setFormat] = useState<ExportFormat>('json')
   const [drawing, setDrawing] = useState<DrawingOptions>(defaultDrawingOptions)
+  const [picture, setPicture] = useState<PictureFormat>('svg')
+  const [standalone, setStandalone] = useState(false)
 
   const slug = name.replace(/[^\w-]+/g, '-').toLowerCase() || 'graph'
   const dataText = exportText(format)
-  const svg = tab === 'drawing' ? currentSvg(drawing) : ''
+  const svg = tab === 'drawing' && picture === 'svg' ? currentSvg(drawing) : ''
+  const tikz =
+    tab === 'drawing' && picture === 'tikz'
+      ? currentTikz({ withHighlight: drawing.withHighlight, standalone })
+      : ''
+
+  // What Copy and the main Download act on in the view that is showing.
+  const output =
+    tab === 'data'
+      ? { text: dataText, filename: `${slug}.${EXPORT_EXTENSIONS[format]}` }
+      : picture === 'svg'
+        ? { text: svg, filename: `${slug}.svg` }
+        : { text: tikz, filename: `${slug}.tex` }
 
   const copyCurrent = async () => {
-    const ok = await copyToClipboard(tab === 'data' ? dataText : svg)
+    const ok = await copyToClipboard(output.text)
     notify(ok ? 'Copied to clipboard.' : 'Clipboard is not available.', ok ? 'success' : 'error')
   }
 
@@ -107,7 +130,7 @@ const ExportBody = () => {
           <button type="button" className="gz-btn border px-3" onClick={() => void copyCurrent()}>
             Copy
           </button>
-          {tab === 'drawing' && (
+          {tab === 'drawing' && picture === 'svg' && (
             <button type="button" className="gz-btn border px-3" onClick={downloadPng}>
               Download {slug}.png
             </button>
@@ -115,13 +138,9 @@ const ExportBody = () => {
           <button
             type="button"
             className="gz-btn gz-btn-primary px-3"
-            onClick={() =>
-              tab === 'data'
-                ? downloadText(`${slug}.${EXPORT_EXTENSIONS[format]}`, dataText)
-                : downloadText(`${slug}.svg`, svg)
-            }
+            onClick={() => downloadText(output.filename, output.text)}
           >
-            Download {slug}.{tab === 'data' ? EXPORT_EXTENSIONS[format] : 'svg'}
+            Download {output.filename}
           </button>
         </>
       }
@@ -150,21 +169,36 @@ const ExportBody = () => {
         </>
       ) : (
         <>
+          <div className="mb-3 flex flex-wrap gap-1">
+            {(Object.keys(PICTURE_LABELS) as PictureFormat[]).map((id) => (
+              <TabButton key={id} active={id === picture} onClick={() => setPicture(id)}>
+                {PICTURE_LABELS[id]}
+              </TabButton>
+            ))}
+          </div>
           <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Toggle
-              checked={drawing.appearance === 'dark'}
-              onChange={(next) =>
-                setDrawing({ ...drawing, appearance: next ? 'dark' : 'light' })
-              }
-            >
-              Dark drawing
-            </Toggle>
-            <Toggle
-              checked={drawing.transparent}
-              onChange={(next) => setDrawing({ ...drawing, transparent: next })}
-            >
-              Transparent background
-            </Toggle>
+            {picture === 'svg' ? (
+              <>
+                <Toggle
+                  checked={drawing.appearance === 'dark'}
+                  onChange={(next) =>
+                    setDrawing({ ...drawing, appearance: next ? 'dark' : 'light' })
+                  }
+                >
+                  Dark drawing
+                </Toggle>
+                <Toggle
+                  checked={drawing.transparent}
+                  onChange={(next) => setDrawing({ ...drawing, transparent: next })}
+                >
+                  Transparent background
+                </Toggle>
+              </>
+            ) : (
+              <Toggle checked={standalone} onChange={setStandalone}>
+                Standalone document
+              </Toggle>
+            )}
             <Toggle
               checked={drawing.withHighlight}
               onChange={(next) => setDrawing({ ...drawing, withHighlight: next })}
@@ -173,20 +207,35 @@ const ExportBody = () => {
             </Toggle>
           </div>
           <p className="mb-3 text-[0.75rem] leading-relaxed text-[var(--gz-faint)]">
-            SVG is drawn from the document — real circles, lines and text, so it stays sharp and
-            can be edited in Illustrator, Inkscape or LaTeX. PNG is captured from the canvas at 2x,
-            so it matches the screen exactly.
+            {picture === 'svg' ? (
+              <>
+                SVG is drawn from the document — real circles, lines and text, so it stays sharp
+                and can be edited in Illustrator, Inkscape or LaTeX. PNG is captured from the canvas
+                at 2x, so it matches the screen exactly.
+              </>
+            ) : (
+              <>
+                TikZ source to paste into a LaTeX document. As a standalone document it compiles on
+                its own, on Overleaf or anywhere else.
+              </>
+            )}
             {highlighted && drawing.withHighlight
               ? ' The highlight currently on screen is included.'
               : ''}
           </p>
-          {/* The preview is the exact string that will be downloaded; the
-              child selectors only scale it down to fit the dialog. */}
-          <div
-            className="flex max-h-80 items-center justify-center overflow-hidden rounded-lg border p-3 [&>svg]:h-auto [&>svg]:max-h-72 [&>svg]:w-auto [&>svg]:max-w-full"
-            style={{ background: drawing.transparent ? undefined : 'var(--gz-bg)' }}
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
+          {picture === 'svg' ? (
+            /* The preview is the exact string that will be downloaded; the
+               child selectors only scale it down to fit the dialog. */
+            <div
+              className="flex max-h-80 items-center justify-center overflow-hidden rounded-lg border p-3 [&>svg]:h-auto [&>svg]:max-h-72 [&>svg]:w-auto [&>svg]:max-w-full"
+              style={{ background: drawing.transparent ? undefined : 'var(--gz-bg)' }}
+              dangerouslySetInnerHTML={{ __html: svg }}
+            />
+          ) : (
+            <pre className="gz-scroll gz-num max-h-80 whitespace-pre rounded-lg border bg-[var(--gz-bg)] p-3 text-[0.75rem] leading-relaxed">
+              {tikz}
+            </pre>
+          )}
         </>
       )}
     </Dialog>
