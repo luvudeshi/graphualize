@@ -6,14 +6,18 @@ export interface Route {
   name: RouteName
   /** A graph command carried in the URL, e.g. `#/graph?g=K5`. */
   command: string | null
+  /** A whole graph carried in the URL by a share link, `#/graph?d=…`. */
+  shared: string | null
 }
 
-const parse = (hash: string): Route => {
+export const parseRoute = (hash: string): Route => {
   const raw = hash.replace(/^#/, '')
   const [path, query] = raw.split('?')
-  const command = query ? new URLSearchParams(query).get('g') : null
-  if (path === '/graph' || path === '/editor') return { name: 'editor', command }
-  return { name: 'home', command: null }
+  const params = new URLSearchParams(query ?? '')
+  if (path === '/graph' || path === '/editor') {
+    return { name: 'editor', command: params.get('g'), shared: params.get('d') }
+  }
+  return { name: 'home', command: null, shared: null }
 }
 
 /**
@@ -23,11 +27,11 @@ const parse = (hash: string): Route => {
  */
 export const useRoute = (): Route => {
   const [route, setRoute] = useState<Route>(() =>
-    parse(typeof window === 'undefined' ? '' : window.location.hash),
+    parseRoute(typeof window === 'undefined' ? '' : window.location.hash),
   )
 
   useEffect(() => {
-    const onHashChange = () => setRoute(parse(window.location.hash))
+    const onHashChange = () => setRoute(parseRoute(window.location.hash))
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
@@ -44,3 +48,10 @@ export const navigate = (path: string): void => {
 export const openEditor = (command?: string): void => {
   navigate(command ? `/graph?g=${encodeURIComponent(command)}` : '/graph')
 }
+
+/**
+ * The hash of a share link. A share code is base64url plus a `.`, all of which
+ * is safe in a URL as it stands, so it is not escaped and the link stays as
+ * short as the code.
+ */
+export const shareHash = (code: string): string => `#/graph?d=${code}`

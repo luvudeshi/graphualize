@@ -26,6 +26,9 @@ interface UiState {
   pendingReplacement: Replacement | null
   askToReplace: (replacement: Replacement) => void
   clearReplacement: () => void
+  /** A share link the clipboard refused, shown for copying by hand. */
+  shareLink: string | null
+  showShareLink: (url: string | null) => void
 }
 
 export const useUi = create<UiState>((set) => ({
@@ -35,4 +38,6 @@ export const useUi = create<UiState>((set) => ({
   pendingReplacement: null,
   askToReplace: (replacement) => set({ pendingReplacement: replacement }),
   clearReplacement: () => set({ pendingReplacement: null }),
+  shareLink: null,
+  showShareLink: (url) => set({ shareLink: url }),
 }))

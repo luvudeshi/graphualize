@@ -11,6 +11,7 @@ import { navigate } from '../app/router'
 import { AccountMenu } from '../auth/AccountMenu'
 import { useTheme } from '../hooks/useTheme'
 import { replaceWorkingGraph } from '../state/replace'
+import { copyShareLink } from '../state/share'
 
 export const MenuBar = () => {
   const openDialog = useUi((s) => s.openDialog)
@@ -68,6 +69,12 @@ export const MenuBar = () => {
     },
     { id: 'import', label: 'Import...', separatorBefore: true, onSelect: () => openDialog('import') },
     { id: 'export', label: 'Export...', onSelect: () => openDialog('export') },
+    {
+      id: 'share',
+      label: 'Copy share link',
+      disabled: graph.order === 0,
+      onSelect: () => void copyShareLink(),
+    },
   ]
 
   const editItems: MenuItem[] = [
