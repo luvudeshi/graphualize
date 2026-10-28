@@ -70,12 +70,17 @@ const useScrolled = (threshold = 8): boolean => {
 /**
  * A button rather than an `#examples` link: the URL hash is the router's, and a
  * fragment there would be read as a route.
+ *
+ * Scrolling alone would leave keyboard and screen reader users back in the
+ * hero, so focus follows the view to the section's heading. It is moved
+ * without scrolling, which would otherwise cut the smooth scroll short.
  */
 const scrollToExamples = () => {
   document.getElementById('examples')?.scrollIntoView?.({
     behavior: prefersReducedMotion() ? 'auto' : 'smooth',
     block: 'start',
   })
+  document.getElementById('home-examples')?.focus({ preventScroll: true })
 }
 
 /**
@@ -161,7 +166,7 @@ export const HomePage = () => {
             className="gz-home-rise mt-6 flex flex-wrap items-center justify-center gap-1.5"
             style={rise(210)}
           >
-            <span className="basis-full pb-1 text-[0.75rem] text-[var(--gz-faint)] sm:basis-auto sm:pb-0 sm:pr-1">
+            <span className="basis-full pb-1 text-[0.75rem] text-[var(--gz-muted)] sm:basis-auto sm:pb-0 sm:pr-1">
               or open
             </span>
             {QUICK_START.map((command) => (
@@ -207,7 +212,8 @@ export const HomePage = () => {
           aria-labelledby="home-examples"
           className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-24 pt-24 sm:px-8 sm:pb-32 sm:pt-32"
         >
-          <h2 id="home-examples" className="gz-home-h2 text-center">
+          {/* Focusable from script only, so "Browse examples" can take focus here. */}
+          <h2 id="home-examples" tabIndex={-1} className="gz-home-h2 text-center">
             Start from a classic.
           </h2>
           <ExampleGallery />

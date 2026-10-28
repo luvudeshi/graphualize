@@ -11,18 +11,20 @@ const SignInButton = ({ compact }: { compact: boolean }) => {
   const status = useAuth((s) => s.status)
   const signIn = useAuth((s) => s.signInWithGoogle)
   const pending = status === 'signingIn'
+  const label = pending ? 'Opening Google…' : 'Continue with Google'
 
   return (
     <button
       type="button"
       onClick={() => void signIn()}
       disabled={pending}
+      // A compact button hides its words on a phone, leaving only the logo, so
+      // it says them to assistive technology instead.
+      aria-label={compact ? label : undefined}
       className={`gz-btn border ${compact ? 'px-2' : 'px-3'} gap-2 disabled:opacity-60`}
     >
       <GoogleIcon />
-      <span className={compact ? 'hidden sm:inline' : ''}>
-        {pending ? 'Opening Google…' : 'Continue with Google'}
-      </span>
+      <span className={compact ? 'hidden sm:inline' : ''}>{label}</span>
     </button>
   )
 }

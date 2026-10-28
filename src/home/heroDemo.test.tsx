@@ -159,6 +159,80 @@ describe('the live demo', () => {
     expect(pressed()).toHaveTextContent(/furthest pair is A and H/)
   })
 
+  it('stops the tour on the row the visitor picked', () => {
+    render(<HeroDemo />)
+    // A click with no pointer movement or focus, so only the pick can hold it.
+    fireEvent.click(within(list()).getByRole('button', { name: /Diameter/ }))
+    act(() => void vi.advanceTimersByTime(10_000))
+    expect(pressed()).toHaveTextContent(/^Diameter/)
+    // The visitor took over, so the control offers the tour back.
+    fireEvent.click(screen.getByRole('button', { name: 'Resume the tour' }))
+    act(() => void vi.advanceTimersByTime(3400))
+    expect(pressed()).toHaveTextContent(/^Eulerian/)
+  })
+
+  it('holds still while a row has focus, even once the pointer has gone', () => {
+    const { container } = render(<HeroDemo />)
+    const root = container.firstElementChild!
+    fireEvent.pointerEnter(root)
+    act(() => within(list()).getByRole('button', { name: /Bipartite/ }).focus())
+    fireEvent.pointerLeave(root)
+    act(() => void vi.advanceTimersByTime(10_000))
+    expect(pressed()).toHaveTextContent(/^Bipartite/)
+  })
+
+  it('holds still when a row loses focus to a press on the canvas', () => {
+    const { container } = render(<HeroDemo />)
+    const root = container.firstElementChild!
+    fireEvent.pointerEnter(root)
+    const row = within(list()).getByRole('button', { name: /Bipartite/ })
+    act(() => row.focus())
+    // Pressing on the canvas to drag a vertex: focus goes nowhere, but the
+    // pointer is still in the demo.
+    act(() => row.blur())
+    act(() => void vi.advanceTimersByTime(10_000))
+    expect(pressed()).toHaveTextContent(/^Bipartite/)
+  })
+
+  it('holds still while focus moves between rows, and moves on once it leaves', () => {
+    render(<HeroDemo />)
+    const rows = within(list()).getAllByRole('button')
+    act(() => rows[0]!.focus())
+    act(() => rows[1]!.focus())
+    act(() => void vi.advanceTimersByTime(10_000))
+    expect(pressed()).toHaveTextContent(/^Bipartite/)
+    act(() => rows[1]!.blur())
+    act(() => void vi.advanceTimersByTime(3400))
+    expect(pressed()).toHaveTextContent(/^Bridges/)
+  })
+
+  it('announces only the rows the visitor picks, never the tour itself', () => {
+    render(<HeroDemo />)
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('')
+    act(() => void vi.advanceTimersByTime(3400 * 3))
+    expect(pressed()).toHaveTextContent(/^Diameter/)
+    expect(status).toHaveTextContent('')
+
+    fireEvent.click(within(list()).getByRole('button', { name: /Bridges/ }))
+    expect(status).toHaveTextContent(/^Bridges: 3\./)
+  })
+
+  it('keeps the announcement out of the list of properties', () => {
+    render(<HeroDemo />)
+    expect(within(list()).getAllByRole('listitem')).toHaveLength(5)
+    expect(list()).not.toContainElement(screen.getByRole('status'))
+  })
+
+  it('writes its instruction and counts in a tone that is readable as text', () => {
+    render(<HeroDemo />)
+    // --gz-faint is below WCAG AA contrast as text; it is for decoration only.
+    for (const text of [screen.getByText('Drag a vertex'), screen.getByText(/vertices · \d+ edges/)]) {
+      expect(text.className).toContain('text-[var(--gz-muted)]')
+      expect(text.className).not.toContain('--gz-faint')
+    }
+  })
+
   it('does not tour at all with reduced motion, so offers nothing to pause', () => {
     prefersReducedMotion(true)
     render(<HeroDemo />)

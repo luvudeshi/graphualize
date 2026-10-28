@@ -205,6 +205,35 @@ describe('HomePage', () => {
     }
   })
 
+  it('takes focus to the examples along with the view', async () => {
+    const user = userEvent.setup()
+    const original = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = vi.fn()
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus')
+    try {
+      render(<HomePage />)
+      await user.click(screen.getByRole('button', { name: 'Browse examples' }))
+      const heading = screen.getByRole('heading', { name: 'Start from a classic.' })
+      expect(heading).toHaveFocus()
+      // Focus must not scroll as well, or it would cut the smooth scroll short.
+      expect(focus.mock.contexts.at(-1)).toBe(heading)
+      expect(focus).toHaveBeenLastCalledWith({ preventScroll: true })
+    } finally {
+      Element.prototype.scrollIntoView = original
+    }
+  })
+
+  it('writes its labels and example sizes in a tone that is readable as text', () => {
+    const { container } = render(<HomePage />)
+    // --gz-faint is below WCAG AA contrast as text; it is for decoration only.
+    const counts = [...container.querySelectorAll('#examples .gz-num')]
+    expect(counts).toHaveLength(EXAMPLES.length)
+    for (const text of [screen.getByText('or open'), ...counts]) {
+      expect(text.className).toContain('text-[var(--gz-muted)]')
+      expect(text.className).not.toContain('--gz-faint')
+    }
+  })
+
   it('switches the theme from the header', async () => {
     const user = userEvent.setup()
     render(<HomePage />)

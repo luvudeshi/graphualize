@@ -84,7 +84,7 @@ export const ExampleGallery = () => {
                       {example.blurb}
                     </span>
                   )}
-                  <span className="gz-num mt-1 flex items-center gap-2.5 text-[0.6875rem] text-[var(--gz-faint)]">
+                  <span className="gz-num mt-1 flex items-center gap-2.5 text-[0.6875rem] text-[var(--gz-muted)]">
                     <span className="inline-flex items-center gap-1">
                       <VertexGlyph />
                       {vertices}
