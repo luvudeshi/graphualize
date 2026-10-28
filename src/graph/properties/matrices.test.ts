@@ -23,6 +23,7 @@ import {
   symmetricEigenvalues,
 } from './linalg'
 import {
+  SPANNING_TREE_VERTEX_LIMIT,
   SPECTRUM_VERTEX_LIMIT,
   adjacencySpectrum,
   algebraicConnectivity,
@@ -916,5 +917,25 @@ describe('size gates', () => {
   it('still counts spanning trees above the spectrum limit', () => {
     const big = g(bigSpec)
     expect(spanningTreeCount(big).value).toBe(1n)
+  })
+
+  it('declines to count spanning trees when the count would hold up the app', () => {
+    // 400 vertices and 10,000 edges, as a share link may carry: each vertex
+    // joined to the 25 after it round a circle. Counting this took seconds.
+    const spec: string[] = []
+    for (let i = 0; i < 400; i++) {
+      for (let step = 1; step <= 25; step++) spec.push(`p${i}-p${(i + step) % 400}`)
+    }
+    const result = spanningTreeCount(g(spec))
+    expect(result.value).toBeNull()
+    expect(result.display).toBe('Not computed (too large)')
+    expect(result.exactness).toBe('not-computed')
+    expect(result.explanation).toContain('400 vertices and 10000 edges')
+  })
+
+  it('still counts a sparse graph at the vertex limit, which is quick', () => {
+    expect(spanningTreeCount(g(cycleSpec(SPANNING_TREE_VERTEX_LIMIT))).value).toBe(
+      BigInt(SPANNING_TREE_VERTEX_LIMIT),
+    )
   })
 })

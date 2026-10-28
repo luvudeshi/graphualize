@@ -139,6 +139,16 @@ describe('typing edges into the quick box', () => {
     expect(state().status?.tone).toBe('error')
   })
 
+  it('refuses more bare labels than the longest typed edge list could name', () => {
+    const bare = Array.from({ length: 999 }, (_, i) => `x${i}`)
+    expect(addTypedEdges(['A-B', ...bare].join(', '))).toBe('failed')
+    expect(state().doc.vertices).toHaveLength(0)
+    expect(state().status).toMatchObject({
+      text: 'That names 1001 vertices, more than the quick box takes. Use File → Import for long lists.',
+      tone: 'error',
+    })
+  })
+
   it('leaves input that is not an edge list for the caller to report', () => {
     expect(runQuickInput('banana')).toBe('unrecognised')
     expect(runQuickInput('A-')).toBe('unrecognised')
@@ -192,5 +202,22 @@ describe('previewing an edge list', () => {
   it('is null for anything that is not an edge list', () => {
     expect(previewEdgeList('K5')).toBeNull()
     expect(previewEdgeList('dijkstra')).toBeNull()
+  })
+
+  it('turns away a list too long for the quick box without planning it', () => {
+    const edges = Array.from({ length: 501 }, (_, i) => `v${i}-v${i + 1}`).join(', ')
+    const labels = ['A-B', ...Array.from({ length: 999 }, (_, i) => `x${i}`)].join(', ')
+    for (const input of [edges, labels]) {
+      expect(previewEdgeList(input)).toEqual({
+        plan: null,
+        title: 'Too long for the quick box',
+        notes: ['use File → Import'],
+      })
+    }
+  })
+
+  it('still previews as many labels as the quick box takes', () => {
+    const labels = ['A-B', ...Array.from({ length: 998 }, (_, i) => `x${i}`)].join(', ')
+    expect(previewEdgeList(labels)?.title).toBe('Add 1 edge, 1000 new vertices')
   })
 })
