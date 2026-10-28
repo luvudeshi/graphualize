@@ -332,7 +332,7 @@ describe('Petersen graph', () => {
   })
 
   it('labels all ten vertices distinctly', () => {
-    const doc = generate('petersen')
+    const doc = generate('petersen', {})
     expect(new Set(doc.vertices.map((v) => v.label)).size).toBe(10)
   })
 
@@ -352,7 +352,7 @@ describe('Petersen graph', () => {
   })
 
   it('draws a pentagon outside a pentagram', () => {
-    const doc = generate('petersen')
+    const doc = generate('petersen', {})
     const radii = doc.vertices.map((v) => Math.hypot(v.x, v.y))
     const outer = radii.slice(0, 5)
     const inner = radii.slice(5)

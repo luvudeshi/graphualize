@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { docFromEdges } from '../graph/model/builder'
 import { Graph } from '../graph/model/graph'
+import type { GraphWitness } from '../graph/model/types'
 
 // Signed in, saving goes to the account, so the store is tested against an
 // in-memory stand-in for the cloud. Signed out it goes to this browser, which
@@ -160,7 +161,7 @@ describe('undo and redo', () => {
 
 describe('witnesses and algorithms', () => {
   it('toggles a witness off when the same row is clicked twice', () => {
-    const witness = { type: 'vertices', vertexIds: [] } as const
+    const witness: GraphWitness = { type: 'vertices', vertexIds: [] }
     state().setWitness('bipartite', witness)
     expect(state().activeWitness?.rowId).toBe('bipartite')
     state().setWitness('bipartite', witness)

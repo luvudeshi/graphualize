@@ -196,7 +196,10 @@ describe('copying a share link', () => {
 
   it('asks for the clipboard during the click where ClipboardItem exists, for Safari', async () => {
     class FakeClipboardItem {
-      constructor(readonly items: Record<string, Promise<Blob>>) {}
+      readonly items: Record<string, Promise<Blob>>
+      constructor(items: Record<string, Promise<Blob>>) {
+        this.items = items
+      }
     }
     vi.stubGlobal('ClipboardItem', FakeClipboardItem)
     const written: string[] = []
@@ -221,7 +224,10 @@ describe('copying a share link', () => {
     openedFromDisk()
     // Both clipboard routes, so neither can be handed a link.
     vi.stubGlobal('ClipboardItem', class {
-      constructor(readonly items: Record<string, Promise<Blob>>) {}
+      readonly items: Record<string, Promise<Blob>>
+      constructor(items: Record<string, Promise<Blob>>) {
+        this.items = items
+      }
     })
     const written: string[] = []
     const write = vi.fn(async (items: Array<{ items: Record<string, Promise<Blob>> }>) => {
