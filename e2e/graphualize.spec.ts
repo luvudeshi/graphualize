@@ -142,6 +142,13 @@ test('flow 3: Dijkstra steps through a weighted example to the right distances',
   await expect(player).toContainText('C=5')
   await expect(player).toContainText('D=7')
   await expect(player).toContainText('G=10')
+
+  // Choosing a target restarts the run, which now ends on the path to it.
+  await player.getByRole('combobox', { name: 'To vertex' }).selectOption({ label: 'G' })
+  await expect(player).toContainText('Start at A')
+  const targeted = await readState(page)
+  await page.getByRole('slider', { name: 'Algorithm step' }).fill(String(targeted.stepCount - 1))
+  await expect(player).toContainText('Distance to G')
 })
 
 test('flow 4: without an account, saving keeps the graph in this browser', async ({ page }) => {
@@ -223,6 +230,26 @@ test('the command palette generates a graph from a typed command', async ({ page
 
   await expect.poll(async () => (await readState(page)).vertices.length).toBe(6)
   expect((await readState(page)).edgeCount).toBe(9)
+})
+
+test('typed edges add to the graph on screen, and undo in one step', async ({ page }) => {
+  const quick = page.getByLabel('Quick graph command')
+  await quick.fill('A-B, B-C, C-A')
+  await quick.press('Enter')
+  await expect.poll(async () => (await readState(page)).edgeCount).toBe(3)
+  await expect(quick).toHaveValue('')
+
+  await quick.fill('c-D:4')
+  await quick.press('Enter')
+  await expect.poll(async () => (await readState(page)).edgeCount).toBe(4)
+  const state = await readState(page)
+  expect(state.vertices.map((v) => v.label)).toEqual(['A', 'B', 'C', 'D'])
+  expect(state.weighted).toBe(true)
+  await expect(page.getByText('Added 1 edge and 1 vertex. Turned on weights.')).toBeVisible()
+
+  await page.getByRole('button', { name: /^Undo/ }).click()
+  await expect.poll(async () => (await readState(page)).edgeCount).toBe(3)
+  expect((await readState(page)).weighted).toBe(false)
 })
 
 test('Dijkstra refuses to run on a negative weight and names Bellman-Ford', async ({ page }) => {
@@ -308,6 +335,23 @@ test('the drawing exports as SVG', async ({ page }) => {
   await expect(dialog.locator('svg circle')).toHaveCount(4)
   await expect(dialog.getByRole('button', { name: /Download .*\.svg/ })).toBeVisible()
   await expect(dialog.getByRole('button', { name: /Download .*\.png/ })).toBeVisible()
+})
+
+test('the drawing exports as TikZ for LaTeX', async ({ page }) => {
+  await page.getByLabel('Quick graph command').fill('C4')
+  await page.getByLabel('Quick graph command').press('Enter')
+  await expect.poll(async () => (await readState(page)).vertices.length).toBe(4)
+
+  await page.getByRole('button', { name: 'File' }).click()
+  await page.getByRole('menuitem', { name: /^Export/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Export graph' })
+  await dialog.getByRole('button', { name: 'Drawing' }).click()
+  await dialog.getByRole('button', { name: 'TikZ' }).click()
+  await expect(dialog.locator('pre')).toContainText('\\begin{tikzpicture}')
+  await expect(dialog.locator('pre')).not.toContainText('\\documentclass')
+  await dialog.getByLabel('Standalone document').check()
+  await expect(dialog.locator('pre')).toContainText('\\documentclass[tikz')
+  await expect(dialog.getByRole('button', { name: /Download .*\.tex/ })).toBeVisible()
 })
 
 test('the layout collapses sensibly at tablet width', async ({ page }) => {

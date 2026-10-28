@@ -13,15 +13,18 @@
 
 import type { Graph } from '../model/graph'
 import type { VertexId } from '../model/types'
-import type { AlgorithmDefinition, AlgorithmOptions, AlgorithmRun } from './types'
+import type { AlgorithmDefinition, AlgorithmOptions, AlgorithmRun, VertexOrdering } from './types'
 import { emptyRun, formatList } from './types'
 import { StepRecorder } from './shared'
 
 const ID = 'greedy-coloring'
 const TITLE = 'Greedy colouring'
 
-type Ordering = NonNullable<AlgorithmOptions['ordering']>
+type Ordering = VertexOrdering
 
+const DEFAULT_ORDERING: Ordering = 'largest-first'
+
+/** Prose names, for the first frame and the summary. */
 const ORDERING_NAMES: Record<Ordering, string> = {
   document: 'document order',
   'largest-first': 'largest first (highest degree first)',
@@ -94,7 +97,7 @@ const run = (graph: Graph, options: AlgorithmOptions): AlgorithmRun => {
     return emptyRun(ID, TITLE, `${TITLE} needs at least one vertex, and this graph is empty.`)
   }
 
-  const ordering: Ordering = options.ordering ?? 'largest-first'
+  const ordering: Ordering = options.ordering ?? DEFAULT_ORDERING
   const adj = adjacency(graph)
   const planned = ordering === 'dsatur' ? [] : staticOrder(graph, adj, ordering)
 
@@ -212,5 +215,13 @@ export const greedyColoringAlgorithm: AlgorithmDefinition = {
   description:
     'Walks the vertices in a chosen order and gives each the smallest colour none of its neighbours is already using. Edge direction is ignored.',
   needsSource: false,
+  // Short menu labels, in the same order as `ORDERING_NAMES`.
+  orderings: [
+    { id: 'document', label: 'Document order' },
+    { id: 'largest-first', label: 'Largest first' },
+    { id: 'smallest-last', label: 'Smallest last' },
+    { id: 'dsatur', label: 'DSATUR' },
+  ],
+  defaultOrdering: DEFAULT_ORDERING,
   run,
 }

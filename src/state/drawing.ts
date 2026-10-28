@@ -3,7 +3,8 @@ import { getCanvasInstance } from '../canvas/instance'
 import { canvasTheme, modeColor } from '../canvas/theme'
 import { emptyHighlight, stepToHighlight, witnessToHighlight } from '../canvas/highlight'
 import { LIGHT_SVG_THEME, toSvg, type SvgTheme } from '../graph/serialization/svg'
-import type { EdgeId, VertexId } from '../graph/model/types'
+import { toTikz } from '../graph/serialization/tikz'
+import type { EdgeId, HighlightMode, HighlightRequest, VertexId } from '../graph/model/types'
 
 const isDark = (): boolean =>
   typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
@@ -36,6 +37,18 @@ export const defaultDrawingOptions = (): DrawingOptions => ({
   withHighlight: true,
 })
 
+/** The algorithm step or witness on screen, or nothing when it is left out. */
+const currentHighlight = (withHighlight: boolean): HighlightRequest => {
+  const state = useEditor.getState()
+  return !withHighlight
+    ? emptyHighlight()
+    : state.algorithm
+      ? (stepToHighlight(state.algorithm.steps[state.algorithm.index] ?? { type: '', description: '' }))
+      : state.activeWitness
+        ? witnessToHighlight(state.activeWitness.witness, state.graph)
+        : emptyHighlight()
+}
+
 /**
  * The current drawing as SVG, optionally carrying the highlight that is on
  * screen — so "export the picture with the odd cycle marked" is one click.
@@ -44,14 +57,7 @@ export const currentSvg = (options: DrawingOptions): string => {
   const state = useEditor.getState()
   const dark = options.appearance === 'dark'
   const theme = canvasTheme(dark)
-
-  const highlight = !options.withHighlight
-    ? emptyHighlight()
-    : state.algorithm
-      ? (stepToHighlight(state.algorithm.steps[state.algorithm.index] ?? { type: '', description: '' }))
-      : state.activeWitness
-        ? witnessToHighlight(state.activeWitness.witness, state.graph)
-        : emptyHighlight()
+  const highlight = currentHighlight(options.withHighlight)
 
   const highlightVertices: Record<VertexId, string> = {}
   for (const [id, mode] of Object.entries(highlight.vertices ?? {})) {
@@ -72,6 +78,44 @@ export const currentSvg = (options: DrawingOptions): string => {
     highlightVertices,
     highlightEdges,
     vertexFills,
+    dimmed: Boolean(highlight.dimOthers),
+    title: state.name,
+  })
+}
+
+export interface TikzDrawingOptions {
+  /** Include whatever witness or algorithm step is highlighted on screen. */
+  withHighlight: boolean
+  /** A whole document that compiles as it is, rather than a bare picture. */
+  standalone: boolean
+}
+
+/**
+ * The current drawing as TikZ, carrying the on-screen highlight the same way
+ * the SVG does: each role keeps the colour it has on the canvas. A LaTeX
+ * document is read on a page, so these are always the light theme's colours,
+ * whatever the app's appearance.
+ */
+export const currentTikz = (options: TikzDrawingOptions): string => {
+  const state = useEditor.getState()
+  const theme = canvasTheme(false)
+  const highlight = currentHighlight(options.withHighlight)
+
+  const roleColors: Partial<Record<HighlightMode, string>> = {}
+  for (const mode of [
+    ...Object.values(highlight.vertices ?? {}),
+    ...Object.values(highlight.edges ?? {}),
+  ]) {
+    roleColors[mode] = modeColor(theme, mode)
+  }
+
+  return toTikz(state.graph, {
+    standalone: options.standalone,
+    highlightVertices: highlight.vertices,
+    highlightEdges: highlight.edges,
+    roleColors,
+    vertexClasses: highlight.colors,
+    classColors: theme.palette,
     dimmed: Boolean(highlight.dimOthers),
     title: state.name,
   })

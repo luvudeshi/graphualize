@@ -47,6 +47,39 @@ export const buildDemoDocument = (): GraphDocument => {
 
 export const buildDemoGraph = (): Graph => new Graph(buildDemoDocument())
 
+export type DemoLayout = 'wide' | 'compact'
+
+/**
+ * A second drawing of the same graph, folded so the tail hooks back under the
+ * two triangles. The long left-to-right chain above is roughly three times as
+ * wide as it is tall, which on a phone-width stage shrinks every vertex to a
+ * dot; this one is close to 4:3 and stays legible. Only positions differ — the
+ * vertices and edges, and so every property the page names, are the same.
+ */
+const COMPACT_LAYOUT: Placed[] = [
+  { label: 'A', x: -140, y: -90 },
+  { label: 'B', x: -140, y: 42 },
+  { label: 'C', x: -44, y: -24 },
+  { label: 'D', x: 52, y: -24 },
+  { label: 'E', x: 148, y: -90 },
+  { label: 'F', x: 148, y: 42 },
+  { label: 'G', x: 84, y: 126 },
+  { label: 'H', x: -20, y: 126 },
+]
+
+/** Where each vertex goes in the given drawing, keyed by label. */
+export const demoPositions = (layout: DemoLayout): Map<string, { x: number; y: number }> =>
+  new Map(
+    (layout === 'compact' ? COMPACT_LAYOUT : LAYOUT).map(({ label, x, y }) => [label, { x, y }]),
+  )
+
+/**
+ * Which drawing suits a stage of this size. The wide one needs a landscape
+ * stage with room to spare; anything narrower or squarer gets the compact one.
+ */
+export const demoLayoutFor = (width: number, height: number): DemoLayout =>
+  width >= 560 && width >= height * 1.45 ? 'wide' : 'compact'
+
 /** The inspector rows the tour steps through, in order. */
 export const DEMO_ROW_IDS = [
   'bipartite',

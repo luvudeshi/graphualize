@@ -115,7 +115,9 @@ odd-degree vertices, or a realising shortest path on the canvas.
 does, then demonstrates it. The graph in the hero is live — it runs the same
 analysis library as the workbench, cycles through five properties and draws the
 witness for each one, and you can drag its vertices around to watch the
-mathematics stay put. A unit test asserts that the demo graph genuinely has the
+mathematics stay put. The tour holds still while you point at it and has a pause
+button of its own, and on a phone the demo switches to a compact drawing of the
+same graph. A unit test asserts that the demo graph genuinely has the
 properties the surrounding copy claims (three bridges, four articulation
 vertices, diameter 5, an odd cycle of length 3), so the marketing cannot drift
 away from the mathematics.
@@ -147,7 +149,21 @@ menu bar and the command palette can also reach.
 Double-click a vertex to rename it, or an edge to change its weight. The
 inspector's quick-input box takes the same shorthand as the palette:
 `K5`, `C8`, `P12`, `K3,4`, `S6`, `W7`, `Q4`, `grid(3,4)`, `G(20,0.2)`,
-`tree(12)`, `random(10,3)`, `petersen`.
+`tree(12)`, `random(10,3)`, `petersen`. Any of them can end in a weight suffix
+that makes the result weighted: `K6 w2-20` for random whole-number weights from
+2 to 20, or `grid(4,5) w=len` for weights from the drawn edge lengths.
+
+Both also take edges. `A-B, B-C, C-A`, `A-B B-C`, `a->b->c` (a path) or
+`A-B:4` (a weight) adds those edges to the graph on screen as one undo step,
+and the status bar says what happened ("Added 3 edges and 1 vertex"); in the
+palette the first row previews it before Enter. A graph command always wins,
+so `K5` is never read as a vertex. Labels match exactly first, then ignoring
+case when only one vertex fits; anything else becomes a new vertex, placed
+beside its neighbours or, for a separate piece, in the middle of the view
+without landing on the graph. An arrow makes an edgeless graph directed, but
+once an undirected graph has edges it is read as a plain edge, so nothing you
+already drew changes meaning. A weight turns weights on, and edges that are
+already there are skipped and named.
 
 ## What it computes
 
@@ -208,6 +224,12 @@ panel below shows the algorithm's own state: the BFS queue, the DFS recursion
 path, Dijkstra's priority queue and tentative distances, Kruskal's sorted edge
 list, Prim's candidate edges, the current indegrees for a topological sort.
 
+Beside the algorithm's name the player holds the run's own choices: **From**
+for the algorithms that start somewhere, **To** for Dijkstra, which then ends on
+the shortest path to that vertex, and **Order** for greedy colouring. Changing
+one restarts the run from its first step. A vertex you selected before starting
+is still where the run begins.
+
 Dijkstra refuses to run on a graph with a negative edge and says to use
 Bellman–Ford instead; Bellman–Ford extracts and highlights a negative cycle when
 one exists.
@@ -220,12 +242,20 @@ random models: Erdős–Rényi G(*n*,*p*), a uniformly random labelled tree via 
 Prüfer sequence, and a random *d*-regular graph via the configuration model.
 Random generators take a seed and are fully deterministic.
 
+Any generated graph can come with edge weights: **Unit** (every edge 1),
+**Random** (whole numbers in a range, 1–9 by default, drawn from the same seed
+so an exercise can be rebuilt exactly), or **Length** (the drawn length of each
+edge, scaled so the median edge weighs 10). Unit weights make Dijkstra, Prim and
+Kruskal behave like BFS; the other two give them real choices to make.
+
 ## Transformations
 
 Complement, transpose, induced subgraph, delete selected vertices or edges,
-contract an edge, subdivide an edge, line graph, graph square, and conversion to
-the underlying undirected graph. Each integrates with undo/redo and reports what
-it did.
+contract an edge, subdivide an edge, line graph, graph square, conversion to
+the underlying undirected graph, random weights (1–9) for the graph on screen,
+and weights from its drawn edge lengths. Each integrates with undo/redo and
+reports what it did. Random weights are seeded by the graph itself, so undo and
+redo give back the same numbers and running it again rolls a fresh set.
 
 ## Import and export
 
@@ -245,6 +275,23 @@ the odd cycle you highlighted is still highlighted in the file you paste into
 your write-up. PNG is captured from the canvas at 2× and matches the screen
 exactly. Both offer a light or dark drawing and an optional transparent
 background.
+
+**TikZ.** For write-ups in LaTeX, the same drawing comes out as TikZ source:
+one named node per vertex, edges drawn between names (bent apart when they run
+in parallel, looped above a vertex for a self-loop), weights as edge labels and
+the highlight as one style per role, so restyling the cycle means editing one
+line. Copy it into a document, or tick **Standalone document** for a `.tex`
+file that compiles as it is on Overleaf.
+
+**Links.** File → Copy share link (also in the command palette) copies a URL
+that carries the whole graph — labels, positions, edges, weights and the
+directed/weighted flags — in its `#/graph?d=…` fragment, compressed where the
+browser can. Nothing is uploaded: the fragment never leaves the browser, so
+whoever opens the link gets the graph straight out of the URL, as a new graph
+they can undo. Links carry up to 2,000 vertices and 10,000 edges; a graph past
+that, or one whose link would be longer than 100,000 characters, is reported
+rather than turned into a link that cannot open. Where the clipboard is
+unavailable the link is shown, selected, to copy by hand.
 
 File → Save keeps a graph in the browser's local storage when you are signed
 out, and in your Google account when you are signed in. Nothing is autosaved:
@@ -377,6 +424,10 @@ nothing. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full picture.
   the exporter's own geometry, so a graph with many parallel edges can bundle
   slightly differently from the screen. PNG is the exact screen; SVG is the
   clean vector version of it.
+- **TikZ export is checked, not compiled.** The tests assert on its structure —
+  escaped labels, balanced braces, paired environments — but the suite runs no
+  LaTeX. Labels outside Latin script need an engine and font that can typeset
+  them (LuaLaTeX or XeLaTeX rather than pdfLaTeX).
 - **Keyboard editing on the canvas** covers nudging, deleting, placing a vertex
   at the centre of the view (`A`) and every command in the palette, but a vertex
   cannot yet be placed at an arbitrary point without the mouse. Colour is backed
@@ -402,9 +453,7 @@ The next three things worth building, in order:
    for connectivity; exposing it as a step-through algorithm with residual
    capacities on the edges is a natural next lesson.
 
-After those: a Kuratowski-subgraph witness for non-planarity, and TikZ output
-for people writing their answers up in LaTeX — the SVG exporter already has the
-geometry, so it is mostly a second backend behind the same code.
+After those: a Kuratowski-subgraph witness for non-planarity.
 
 ## Licence
 

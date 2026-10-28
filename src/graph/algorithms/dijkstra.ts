@@ -236,6 +236,7 @@ export const dijkstraAlgorithm: AlgorithmDefinition = {
   description:
     'Settles vertices in order of distance from the source, so the cheapest route to each one is fixed the moment it is reached. Needs non-negative weights.',
   needsSource: true,
+  acceptsTarget: true,
   prefersWeighted: true,
   precondition: (graph) => negativeWeightRefusal(graph),
   run,

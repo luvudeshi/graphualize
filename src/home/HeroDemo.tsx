@@ -1,30 +1,84 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import cytoscape, { type Core } from 'cytoscape'
 import { useTheme } from '../hooks/useTheme'
 import { canvasTheme, modeColor } from '../canvas/theme'
 import { buildStylesheet } from '../canvas/style'
 import { witnessToHighlight } from '../canvas/highlight'
 import { analyzeCore, analyzeMetrics, type InspectorRow } from '../graph/analysis'
+import type { HighlightMode, HighlightRequest } from '../graph/model/types'
 import { prefersReducedMotion } from '../utils/platform'
-import { buildDemoDocument, DEMO_ROW_IDS } from './demoGraph'
+import {
+  buildDemoDocument,
+  DEMO_ROW_IDS,
+  demoLayoutFor,
+  demoPositions,
+  type DemoLayout,
+} from './demoGraph'
 import { Graph } from '../graph/model/graph'
+import { PauseIcon, PlayIcon } from '../components/Icons'
 
 const CYCLE_MS = 3400
+
+/** Room around the drawing. The compact layout is only used on small stages. */
+const FIT_PADDING: Record<DemoLayout, number> = { wide: 48, compact: 28 }
+const MAX_ZOOM = 1.15
+
+interface TourStop {
+  row: InspectorRow
+  highlight: HighlightRequest | null
+  /** The mode the witness is drawn in, so the row's swatch matches the canvas. */
+  mode: HighlightMode | null
+}
+
+const MoveIcon = () => (
+  <svg
+    width={12}
+    height={12}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3" />
+  </svg>
+)
 
 /**
  * The homepage demo is the real thing: the same graph library computes these
  * properties, the same witness-to-highlight code draws them, and the vertices
  * are draggable — moving one recomputes nothing, which is the point.
+ *
+ * It tours its properties on a timer, pausing while the pointer or focus is
+ * inside it, and has an explicit pause control as well, because content that
+ * moves on its own should always be stoppable. Picking a row stops the tour
+ * too: the visitor has taken over, and the row they chose stays chosen. With
+ * reduced motion there is no tour at all, so there is nothing to pause.
  */
 export const HeroDemo = () => {
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<Core | null>(null)
   const [active, setActive] = useState(0)
-  const [paused, setPaused] = useState(false)
+  // Pointer and focus are tracked apart: a row keeps focus after the pointer
+  // has left, and pressing on the canvas to drag a vertex takes focus off a
+  // row while the pointer is still in the demo. Either one holds the tour.
+  const [pointerInside, setPointerInside] = useState(false)
+  const [focusInside, setFocusInside] = useState(false)
+  const [stopped, setStopped] = useState(false)
+  /**
+   * The row the visitor picked, which is the only kind of change worth saying
+   * out loud. The tour moving on by itself is not announced, or a screen
+   * reader would be interrupted every few seconds for as long as the page
+   * stays open.
+   */
+  const [announced, setAnnounced] = useState<InspectorRow | null>(null)
+  const [still] = useState(prefersReducedMotion)
   const { dark } = useTheme()
   const theme = useMemo(() => canvasTheme(dark), [dark])
 
-  const { doc, graph, rows } = useMemo(() => {
+  const { doc, graph, stops } = useMemo(() => {
     const document = buildDemoDocument()
     const built = new Graph(document)
     const all = [
@@ -34,7 +88,14 @@ export const HeroDemo = () => {
     const picked = DEMO_ROW_IDS.map((id) => all.find((row) => row.id === id)).filter(
       (row): row is InspectorRow => Boolean(row),
     )
-    return { doc: document, graph: built, rows: picked }
+    const tour = picked.map((row): TourStop => {
+      if (!row.witness) return { row, highlight: null, mode: null }
+      const highlight = witnessToHighlight(row.witness, built)
+      const mode =
+        Object.values(highlight.edges ?? {})[0] ?? Object.values(highlight.vertices ?? {})[0]
+      return { row, highlight, mode: mode ?? null }
+    })
+    return { doc: document, graph: built, stops: tour }
   }, [])
 
   /* Mount the canvas once. */
@@ -63,12 +124,27 @@ export const HeroDemo = () => {
     })
     cyRef.current = instance
 
+    // The document is drawn wide. A narrow stage swaps in the compact drawing
+    // of the same graph, and swaps back if the stage widens again.
+    const labels = new Map(doc.vertices.map((v) => [v.id, v.label]))
+    let layout: DemoLayout = 'wide'
     const fit = () => {
       instance.resize()
-      instance.fit(instance.elements(), 44)
-      if (instance.zoom() > 1.15) {
+      const wanted = demoLayoutFor(instance.width(), instance.height())
+      if (wanted !== layout) {
+        layout = wanted
+        const positions = demoPositions(wanted)
+        instance.batch(() => {
+          instance.nodes().forEach((node) => {
+            const at = positions.get(labels.get(node.id()) ?? '')
+            if (at) node.position({ ...at })
+          })
+        })
+      }
+      instance.fit(instance.elements(), FIT_PADDING[layout])
+      if (instance.zoom() > MAX_ZOOM) {
         instance.zoom({
-          level: 1.15,
+          level: MAX_ZOOM,
           renderedPosition: { x: instance.width() / 2, y: instance.height() / 2 },
         })
         instance.center(instance.elements())
@@ -92,17 +168,16 @@ export const HeroDemo = () => {
         directed: false,
         weighted: false,
         showLabels: true,
-        reducedMotion: prefersReducedMotion(),
+        reducedMotion: still,
       }),
     )
-  }, [theme])
+  }, [theme, still])
 
   /* Highlight the witness of the active row. */
   useEffect(() => {
     const instance = cyRef.current
-    const row = rows[active]
-    if (!instance || !row?.witness) return
-    const highlight = witnessToHighlight(row.witness, graph)
+    const highlight = stops[active]?.highlight
+    if (!instance || !highlight) return
     instance.batch(() => {
       instance.nodes().forEach((node) => {
         const mode = highlight.vertices?.[node.id()]
@@ -117,79 +192,130 @@ export const HeroDemo = () => {
         edge.toggleClass('dimmed', Boolean(highlight.dimOthers) && !mode)
       })
     })
-  }, [active, rows, graph, theme])
+  }, [active, stops, theme])
 
-  /* Advance the tour, unless the visitor is interacting or prefers stillness. */
+  /* Advance the tour, unless the visitor is interacting, stopped it, or prefers stillness. */
+  const touring = !pointerInside && !focusInside && !stopped && !still && stops.length > 1
   useEffect(() => {
-    if (paused || prefersReducedMotion() || rows.length < 2) return
+    if (!touring) return
     const handle = window.setInterval(() => {
-      setActive((index) => (index + 1) % rows.length)
+      setActive((index) => (index + 1) % stops.length)
     }, CYCLE_MS)
     return () => window.clearInterval(handle)
-  }, [paused, rows.length])
+  }, [touring, stops.length])
 
-  const current = rows[active]
+  const pick = (index: number) => {
+    setActive(index)
+    setStopped(true)
+    setAnnounced(stops[index]?.row ?? null)
+  }
+
+  const toggleTour = () => {
+    // A resumed tour goes back to running silently.
+    if (stopped) setAnnounced(null)
+    setStopped(!stopped)
+  }
 
   return (
     <div
-      className="grid gap-4 lg:grid-cols-[1.35fr_1fr]"
-      onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
+      className="gz-demo"
+      onPointerEnter={() => setPointerInside(true)}
+      onPointerLeave={() => setPointerInside(false)}
+      onFocus={() => setFocusInside(true)}
+      onBlur={(event) => {
+        // Moving from one row to the next is not leaving.
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocusInside(false)
+      }}
     >
-      <div
-        className="relative h-[240px] overflow-hidden rounded-xl border sm:h-[300px]"
-        style={{ background: theme.background }}
-      >
-        <div ref={containerRef} className="h-full w-full" aria-hidden />
-        <span className="pointer-events-none absolute bottom-2 left-3 text-[0.6875rem] text-[var(--gz-faint)]">
-          drag a vertex — the mathematics does not change
+      <div className="flex h-11 items-center gap-2.5 border-b px-4">
+        <span className="gz-demo-live" aria-hidden />
+        <span className="text-[0.8125rem] font-medium tracking-[-0.01em]">Live analysis</span>
+        <span className="gz-num hidden text-[0.75rem] text-[var(--gz-muted)] sm:inline">
+          · {graph.order} vertices · {graph.size} edges
         </span>
+        <span className="ml-auto flex items-center gap-1.5 text-[0.75rem] text-[var(--gz-muted)]">
+          <MoveIcon />
+          Drag a vertex
+        </span>
+        {!still && (
+          <button
+            type="button"
+            onClick={toggleTour}
+            aria-label={stopped ? 'Resume the tour' : 'Pause the tour'}
+            className="gz-demo-control ml-1.5"
+          >
+            {stopped ? <PlayIcon width={13} height={13} /> : <PauseIcon width={13} height={13} />}
+          </button>
+        )}
       </div>
 
-      <ul className="flex flex-col gap-1" aria-label="Properties of the example graph">
-        {rows.map((row, index) => {
-          const selected = index === active
-          return (
-            <li key={row.id}>
-              <button
-                type="button"
-                onClick={() => setActive(index)}
-                aria-pressed={selected}
-                className={`w-full rounded-lg border-l-2 px-3 py-2 text-left transition-colors ${
-                  selected
-                    ? 'border-[var(--gz-accent)] bg-[var(--gz-accent-soft)]'
-                    : 'border-transparent hover:bg-[color-mix(in_oklab,var(--gz-border)_45%,transparent)]'
-                }`}
-              >
-                <span className="flex items-baseline justify-between gap-3">
-                  <span className="text-[0.8125rem] text-[var(--gz-muted)]">{row.label}</span>
-                  <span
-                    className={`gz-num font-medium ${
-                      row.status === 'success'
-                        ? 'text-[var(--gz-success)]'
-                        : row.status === 'warning'
-                          ? 'text-[var(--gz-warning)]'
-                          : ''
-                    }`}
+      <div className="grid md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_23rem]">
+        <div className="gz-demo-canvas relative h-[300px] sm:h-[340px] md:h-[384px] lg:h-[364px]">
+          <div ref={containerRef} className="h-full w-full" aria-hidden />
+        </div>
+
+        <div className="border-t p-2.5 md:border-l md:border-t-0 md:p-3">
+          <p className="gz-label px-3 pb-2 pt-2">Properties</p>
+          <ul className="flex flex-col gap-1" aria-label="Properties of the example graph">
+            {stops.map(({ row, mode }, index) => {
+              const selected = index === active
+              const swatch = mode ? modeColor(theme, mode) : 'var(--gz-accent)'
+              return (
+                <li key={row.id}>
+                  <button
+                    type="button"
+                    onClick={() => pick(index)}
+                    aria-pressed={selected}
+                    className="gz-demo-row"
+                    style={{ '--gz-row': swatch } as CSSProperties}
                   >
-                    {row.value}
-                  </span>
-                </span>
-                {selected && row.explanation && (
-                  <span className="mt-1 block text-[0.75rem] leading-relaxed text-[var(--gz-text)]">
-                    {row.explanation}
-                  </span>
-                )}
-              </button>
-            </li>
-          )
-        })}
-        <li aria-live="polite" className="sr-only">
-          {current ? `${current.label}: ${current.value}. ${current.explanation ?? ''}` : ''}
-        </li>
-      </ul>
+                    <span className="flex items-center gap-3">
+                      <span className="gz-demo-swatch" aria-hidden />
+                      <span
+                        className={`flex-1 text-[0.8125rem] ${
+                          selected ? 'font-medium text-[var(--gz-text)]' : 'text-[var(--gz-muted)]'
+                        }`}
+                      >
+                        {row.label}
+                      </span>
+                      <span
+                        className={`gz-num font-medium ${
+                          row.status === 'success'
+                            ? 'text-[var(--gz-success)]'
+                            : row.status === 'warning'
+                              ? 'text-[var(--gz-warning)]'
+                              : ''
+                        }`}
+                      >
+                        {row.value}
+                      </span>
+                    </span>
+                    {selected && row.explanation && (
+                      // Two lines are reserved whether or not they are needed,
+                      // so the list does not jump as the tour moves on.
+                      <span className="gz-anim-in mt-1.5 block min-h-[3em] pl-5 text-[0.8125rem] leading-[1.5] text-[var(--gz-muted)]">
+                        {row.explanation}
+                      </span>
+                    )}
+                    {selected && touring && (
+                      <span
+                        className="gz-demo-progress"
+                        style={{ animationDuration: `${CYCLE_MS}ms` }}
+                        aria-hidden
+                      />
+                    )}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          <p role="status" aria-live="polite" className="sr-only">
+            {announced
+              ? `${announced.label}: ${announced.value}. ${announced.explanation ?? ''}`
+              : ''}
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

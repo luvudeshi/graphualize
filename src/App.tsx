@@ -11,6 +11,7 @@ import { ExamplesDialog } from './components/ExamplesDialog'
 import { ExportDialog, ImportDialog } from './components/TransferDialogs'
 import { DocumentsDialog } from './components/DocumentsDialog'
 import { ConfirmReplace } from './components/ConfirmReplace'
+import { ShareLinkDialog } from './components/ShareLinkDialog'
 import { replaceWorkingGraph } from './state/replace'
 import { AboutDialog, ShortcutsDialog } from './components/HelpDialogs'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -19,8 +20,9 @@ import { useEditor } from './state/store'
 import { useUi } from './state/ui'
 import { useShortcuts } from './hooks/useShortcuts'
 import { useTheme } from './hooks/useTheme'
-import { useRoute } from './app/router'
+import { useRoute, type Route } from './app/router'
 import { loadExample, runGraphCommand } from './state/actions'
+import { openSharedGraph } from './state/share'
 import { ChevronIcon } from './components/Icons'
 import { useAuth } from './auth/store'
 import { ConfirmLeave } from './components/ConfirmLeave'
@@ -51,6 +53,7 @@ const Dialogs = () => {
       <ExportDialog open={dialog === 'export'} />
       <DocumentsDialog open={dialog === 'documents'} />
       <ConfirmReplace />
+      <ShareLinkDialog />
       <AboutDialog open={dialog === 'about'} />
       <ShortcutsDialog
         open={dialog === 'shortcuts' || shortcutsOpen}
@@ -63,6 +66,24 @@ const Dialogs = () => {
   )
 }
 
+/** Runs a `?g=` command: a generator, an example, or a saved graph. */
+const runArrivalCommand = (command: string) => {
+  if (command.startsWith('doc:') || command.startsWith('local:')) {
+    // openDocument reports both success and failure itself, so this branch
+    // deliberately says nothing more.
+    // Through the same guard as File → Open: a link, a bookmark or Back can
+    // land here while the canvas holds unsaved work.
+    const local = command.startsWith('local:')
+    const id = command.slice(local ? 'local:'.length : 'doc:'.length)
+    const name = useEditor.getState().documents.find((entry) => entry.id === id)?.name
+    replaceWorkingGraph({ kind: 'open', id, source: local ? 'local' : 'cloud', name })
+  } else {
+    const example = command.startsWith('example:') ? command.slice('example:'.length) : null
+    const ok = example ? loadExample(example) : runGraphCommand(command)
+    if (!ok) useEditor.getState().notify(`Could not open "${command}".`, 'error')
+  }
+}
+
 /**
  * Runs a graph named in the URL once, then drops it from the address bar so a
  * reload does not overwrite whatever the user has drawn since.
@@ -71,35 +92,37 @@ const Dialogs = () => {
  *   `#/graph?g=example:petersen` one of the built-in examples
  *   `#/graph?g=doc:<uuid>`       a graph saved to the signed-in account
  *   `#/graph?g=local:doc-1a2b3c` a graph saved in this browser
+ *   `#/graph?d=1z.…`             a whole graph, carried by a share link
+ *
+ * A share link wins if both are present, being the more specific of the two.
+ * It is opened like a generator command — an undoable replacement, so it needs
+ * no unsaved-work guard — and reports both outcomes itself once decoded.
+ *
+ * Every arrival runs exactly once, including one that comes while the
+ * workbench is already open: a link pasted into this tab changes only the
+ * hash. `useRoute` parses a fresh route on every hashchange, so the route
+ * object itself is the arrival. StrictMode's second run of this effect sees
+ * the same one and does nothing — which matters for `doc:` and `local:`, whose
+ * one-shot pre-approval must not be spent twice — while the same link pasted
+ * again later is a new arrival, and opens again.
  */
-const useArrivalCommand = (command: string | null) => {
-  const handled = useRef(false)
+const useArrivalCommand = (arrival: Route) => {
+  const handled = useRef<Route | null>(null)
   useEffect(() => {
-    if (handled.current || !command) return
-    handled.current = true
+    const { command, shared } = arrival
+    if (handled.current === arrival || (!command && !shared)) return
+    handled.current = arrival
 
-    if (command.startsWith('doc:') || command.startsWith('local:')) {
-      // openDocument reports both success and failure itself, so this branch
-      // deliberately says nothing more.
-      // Through the same guard as File → Open: a link, a bookmark or Back can
-      // land here while the canvas holds unsaved work.
-      const local = command.startsWith('local:')
-      const id = command.slice(local ? 'local:'.length : 'doc:'.length)
-      const name = useEditor.getState().documents.find((entry) => entry.id === id)?.name
-      replaceWorkingGraph({ kind: 'open', id, source: local ? 'local' : 'cloud', name })
-    } else {
-      const example = command.startsWith('example:') ? command.slice('example:'.length) : null
-      const ok = example ? loadExample(example) : runGraphCommand(command)
-      if (!ok) useEditor.getState().notify(`Could not open "${command}".`, 'error')
-    }
+    if (shared) void openSharedGraph(shared)
+    else if (command) runArrivalCommand(command)
 
     window.history.replaceState(null, '', `${window.location.pathname}#/graph`)
-  }, [command])
+  }, [arrival])
 }
 
-const Editor = ({ command }: { command: string | null }) => {
+const Editor = ({ arrival }: { arrival: Route }) => {
   useShortcuts()
-  useArrivalCommand(command)
+  useArrivalCommand(arrival)
   const wide = useIsWide()
   const inspectorOpen = useEditor((s) => s.inspectorOpen)
   const setInspectorOpen = useEditor((s) => s.setInspectorOpen)
@@ -184,7 +207,11 @@ export const App = () => {
 
   return (
     <ErrorBoundary>
-      {route.name === 'home' ? <HomePage /> : <Editor command={route.command} />}
+      {route.name === 'home' ? (
+        <HomePage />
+      ) : (
+        <Editor arrival={route} />
+      )}
     </ErrorBoundary>
   )
 }

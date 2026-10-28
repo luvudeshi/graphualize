@@ -8,9 +8,17 @@ import { GENERATORS, defaultParams } from '../graph/generators'
 import { parseGraphCommand } from '../graph/generators/commands'
 import { EXAMPLES } from '../graph/examples'
 import { LAYOUT_LABELS, type LayoutName } from '../graph/layout'
-import { applyGenerator, applyTransformById, loadExample, runGraphCommand } from '../state/actions'
-import { SparkIcon } from './Icons'
+import {
+  addTypedEdges,
+  applyGenerator,
+  applyTransformById,
+  loadExample,
+  previewEdgeList,
+  runGraphCommand,
+} from '../state/actions'
+import { EdgeIcon, SparkIcon } from './Icons'
 import { replaceWorkingGraph } from '../state/replace'
+import { copyShareLink } from '../state/share'
 
 interface Command {
   id: string
@@ -92,6 +100,13 @@ const buildCommands = (): Command[] => {
       run: () => useUi.getState().openDialog('export'),
     },
     {
+      id: 'file.share',
+      label: 'Copy share link',
+      group: 'File',
+      hint: 'A link that opens this graph for anyone, with nothing uploaded',
+      run: () => void copyShareLink(),
+    },
+    {
       id: 'help.shortcuts',
       label: 'Keyboard shortcuts',
       group: 'Help',
@@ -157,6 +172,25 @@ const buildCommands = (): Command[] => {
   return commands
 }
 
+/**
+ * Whether the query is a command's own name rather than an edge list.
+ *
+ * "bellman-ford", "force-directed" and "r-ary" all parse as edges, but someone
+ * typing them in the palette wants the command. So a query that appears in a
+ * command's label, starting at a word, means that command; "A-B" appears in
+ * none, so it stays an edge list.
+ */
+const namesACommand = (query: string, commands: readonly Command[]): boolean => {
+  const needle = query.toLowerCase().replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ')
+  return commands.some(({ label }) => {
+    const haystack = label.toLowerCase()
+    for (let at = haystack.indexOf(needle); at !== -1; at = haystack.indexOf(needle, at + 1)) {
+      if (at === 0 || !/[\p{L}\p{N}]/u.test(haystack[at - 1]!)) return true
+    }
+    return false
+  })
+}
+
 export const CommandPalette = () => {
   const open = useEditor((s) => s.commandPaletteOpen)
   return open ? <PaletteBody /> : null
@@ -171,8 +205,21 @@ const PaletteBody = () => {
   const listId = useId()
   const optionId = (index: number) => `${listId}-option-${index}`
   const commands = useMemo(() => buildCommands(), [])
+  const doc = useEditor((s) => s.doc)
 
-  const parsed = query.trim() ? parseGraphCommand(query.trim()) : null
+  const trimmed = query.trim()
+  const parsed = trimmed ? parseGraphCommand(trimmed) : null
+  // A graph command wins outright; failing that, an edge list gets the first
+  // row — unless the query is really a command's name that happens to read as
+  // one, like "bellman-ford".
+  const edgePreview = useMemo(
+    () =>
+      trimmed && !parseGraphCommand(trimmed) && !namesACommand(trimmed, commands)
+        ? previewEdgeList(trimmed, doc)
+        : null,
+    [trimmed, commands, doc],
+  )
+  const lead = parsed || edgePreview ? 1 : 0
 
   const results = useMemo(() => {
     const scored = commands
@@ -192,7 +239,7 @@ const PaletteBody = () => {
     return scored.slice(0, 40)
   }, [commands, query])
 
-  const total = results.length + (parsed ? 1 : 0)
+  const total = results.length + lead
 
   useEffect(() => {
     listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({
@@ -202,11 +249,16 @@ const PaletteBody = () => {
 
   const runAt = (index: number) => {
     if (parsed && index === 0) {
-      runGraphCommand(query.trim())
+      runGraphCommand(trimmed)
       setOpen(false)
       return
     }
-    const entry = results[parsed ? index - 1 : index]
+    if (edgePreview && index === 0) {
+      addTypedEdges(trimmed)
+      setOpen(false)
+      return
+    }
+    const entry = results[index - lead]
     if (!entry) return
     setOpen(false)
     entry.command.run()
@@ -255,7 +307,7 @@ const PaletteBody = () => {
               event.preventDefault()
             }
           }}
-          placeholder="Search commands, or type K5, C8, G(20,0.2)..."
+          placeholder="Search commands, or type K5, K6 w1-9 or A-B, B-C..."
           aria-label="Command search"
           className="w-full border-b bg-transparent px-4 py-3 text-[0.9375rem] outline-none placeholder:text-[var(--gz-faint)]"
           spellCheck={false}
@@ -286,8 +338,30 @@ const PaletteBody = () => {
               <span className="gz-num text-[0.6875rem] text-[var(--gz-faint)]">Enter</span>
             </div>
           )}
+          {edgePreview && (
+            <div
+              id={optionId(0)}
+              role="option"
+              aria-selected={active === 0}
+              data-active={active === 0}
+              onMouseMove={() => setActive(0)}
+              onClick={() => runAt(0)}
+              className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left ${
+                active === 0 ? 'bg-[var(--gz-accent-soft)]' : ''
+              }`}
+            >
+              <EdgeIcon className="shrink-0 text-[var(--gz-accent)]" />
+              <span className="min-w-0 flex-1 truncate text-[0.875rem]">
+                <span className="font-medium">{edgePreview.title}</span>
+                {edgePreview.notes.length > 0 && (
+                  <span className="text-[var(--gz-muted)]"> · {edgePreview.notes.join(' · ')}</span>
+                )}
+              </span>
+              <span className="gz-num text-[0.6875rem] text-[var(--gz-faint)]">Enter</span>
+            </div>
+          )}
           {results.map((entry, index) => {
-            const position = parsed ? index + 1 : index
+            const position = index + lead
             const parts = highlightParts(entry.command.label, entry.positions)
             return (
               <div

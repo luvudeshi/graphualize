@@ -11,6 +11,7 @@ import { navigate } from '../app/router'
 import { AccountMenu } from '../auth/AccountMenu'
 import { useTheme } from '../hooks/useTheme'
 import { replaceWorkingGraph } from '../state/replace'
+import { copyShareLink } from '../state/share'
 
 export const MenuBar = () => {
   const openDialog = useUi((s) => s.openDialog)
@@ -68,6 +69,14 @@ export const MenuBar = () => {
     },
     { id: 'import', label: 'Import...', separatorBefore: true, onSelect: () => openDialog('import') },
     { id: 'export', label: 'Export...', onSelect: () => openDialog('export') },
+    {
+      id: 'share',
+      label: 'Copy share link',
+      // Not disabled on a page opened from disk, where no link can be made: a
+      // greyed-out item cannot say why, so choosing it says so instead.
+      disabled: graph.order === 0,
+      onSelect: () => void copyShareLink(),
+    },
   ]
 
   const editItems: MenuItem[] = [
@@ -141,7 +150,8 @@ export const MenuBar = () => {
   const transformItems: MenuItem[] = TRANSFORMS.map((transform, index) => ({
     id: transform.id,
     label: transform.name,
-    separatorBefore: index === 3 || index === 6,
+    // Index 10 starts the edge-weight transforms.
+    separatorBefore: index === 3 || index === 6 || index === 10,
     disabled: Boolean(
       transform.precondition?.(graph, { selectedVertices, selectedEdges }),
     ),

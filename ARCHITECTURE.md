@@ -20,7 +20,7 @@ src/
     algorithms/          step emitters for the visualiser
     generators/          named families and random models
     transformations/     complement, line graph, contraction, ...
-    serialization/       versioned JSON plus DOT/CSV/matrix/GraphML, and SVG out
+    serialization/       versioned JSON plus DOT/CSV/matrix/GraphML, and SVG/TikZ out
     analysis.ts          assembles PropertyResults into inspector sections
     layout.ts            position generators (circle, grid, BFS, force, ...)
     cache.ts             LRU memoisation keyed on a graph's structure
@@ -162,6 +162,12 @@ Algorithms are deterministic: ties break on document order, and nothing calls
 sentence the status bar should show — that is how Dijkstra refuses a negative
 weight and names Bellman–Ford.
 
+A definition also declares which options it understands — `needsSource`,
+`acceptsTarget`, and `orderings` with a `defaultOrdering` — and the player offers
+exactly those beside the title. Changing one calls `setAlgorithmOptions`, which
+re-runs from step 0 with the merged options. Since runs are deterministic that is
+the run a fresh start would give, so the player still keeps no algorithm state.
+
 ## State
 
 One Zustand store (`state/store.ts`) holds the document, selection, tool,
@@ -211,6 +217,17 @@ double-invoked effects in development) and then erased from the URL with
 `history.replaceState`, so a reload does not silently regenerate the graph over
 whatever the user has since drawn.
 
+`#/graph?d=…` is a share link: the whole document, packed by
+`graph/serialization/link.ts` into a compact positional JSON, deflated with
+`CompressionStream` where available and base64url-encoded behind a version and
+codec prefix (`1z.` or `1j.`). It arrives from anyone, so decoding checks the
+length first, caps how far a compressed payload may inflate, validates every
+slot, then expands the result into a saved file and reads it with the same
+`parseGraphualizeJson` that opens files — and never throws. Opening one is an
+undoable `replaceDocument` with a title, like a generator command. The copied
+URL is built from protocol, host and path only, never the query string, which
+can briefly hold an OAuth `?code=` on the way back from sign-in.
+
 The two routes want different scroll behaviour: the workbench is a fixed
 viewport with its own scrolling panels, the home page is a document. `App` sets
 `document.documentElement.dataset.route`, and three CSS rules relax the
@@ -220,12 +237,23 @@ rather than with an inner scroll container is what makes browser find-in-page,
 
 ## The home page
 
-`home/HomePage.tsx` is a marketing page that markets by demonstrating.
+`home/HomePage.tsx` is a marketing page that markets by demonstrating, and keeps
+its own words to a headline, one sentence and labels.
 `home/HeroDemo.tsx` mounts a small Cytoscape instance and runs the *real*
 `analyzeCore` / `analyzeMetrics` over a hand-laid eight-vertex graph, stepping
 through five properties and drawing each witness with the same
-`witnessToHighlight` pipeline the workbench uses. It pauses on hover and focus,
-respects `prefers-reduced-motion`, and leaves the vertices draggable.
+`witnessToHighlight` pipeline the workbench uses. It pauses on hover and focus
+and has a pause control of its own, does not tour at all under
+`prefers-reduced-motion`, and leaves the vertices draggable. A stage too narrow
+for the long left-to-right drawing gets a compact drawing of the same graph
+(`demoPositions` in `home/demoGraph.ts`); only positions change, so nothing is
+recomputed.
+
+The example gallery draws every thumbnail from the example's own document
+(`home/thumbnail.ts`) rather than shipping pictures, so a card cannot disagree
+with the graph it opens. Styles used only by the home page live in
+`home/home.css`, built from the same `--gz-*` tokens as everything else, so both
+themes follow without a second palette.
 
 Because the demo runs the real library, the copy around it can go stale in a way
 a screenshot cannot. `home/home.test.tsx` therefore asserts that the demo graph
@@ -331,7 +359,7 @@ says so instead of navigating into a browser error page.
 
 ## Exporting the drawing
 
-There are two exporters and they are deliberately different things.
+There are two kinds of exporter and they are deliberately different things.
 
 `graph/serialization/svg.ts` is part of the pure library: it takes a `Graph` and
 returns an SVG string, with no Cytoscape and no DOM anywhere in it. It does its
@@ -342,10 +370,19 @@ user text. That is why the output is editable in Illustrator or Inkscape and why
 it is unit-testable: the tests parse it with `DOMParser` and assert on the
 resulting document rather than on a string.
 
+`graph/serialization/tikz.ts` is a second backend on the same geometry: the
+same bundles and spacing, turned into `bend left`/`bend right` angles, and the
+same stacked loops — except that it measures a bend's side against the bundle's
+first edge, so arcs u→v and v→u separate. Vertices become nodes named by their
+order and edges are drawn between names, so TikZ clips each line at the node
+rim itself. Its styles live in the picture's own options rather than a global
+`\tikzset`, and a highlight arrives as roles, each one style with its colour.
+
 `state/drawing.ts` is the impure half. It reads the on-screen witness or
 algorithm step, maps each element's semantic mode through the same
 `modeColor`/`canvasTheme` tables the canvas uses, and hands the result to the SVG
-exporter as plain colours — so the highlight in the file is the highlight on the
+exporter as plain colours, or to the TikZ exporter as roles plus the light
+theme's colour for each — so the highlight in the file is the highlight on the
 screen, without the library learning what a theme is. PNG goes the other way
 entirely: `cy.png()` on the live instance, which is by definition exactly what
 is on screen.

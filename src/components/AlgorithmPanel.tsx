@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { useEditor } from '../state/store'
 import { useInterval } from '../hooks/useDeferred'
 import { useTheme } from '../hooks/useTheme'
 import { canvasTheme } from '../canvas/theme'
-import type { AlgorithmStep } from '../graph/algorithms/types'
+import { algorithmById } from '../graph/algorithms'
+import type { AlgorithmOptions, AlgorithmStep, VertexOrdering } from '../graph/algorithms/types'
 import {
   CloseIcon,
   PauseIcon,
@@ -54,6 +56,89 @@ const Legend = ({ dark, step }: { dark: boolean; step?: AlgorithmStep }) => {
         </li>
       ))}
     </ul>
+  )
+}
+
+const OPTION_LABEL = 'flex shrink-0 items-center gap-1 text-[0.75rem] text-[var(--gz-muted)]'
+const OPTION_SELECT = 'gz-input w-auto max-w-[8rem] py-0.5 text-[0.75rem]'
+
+/**
+ * The run's own choices, beside its title: where it starts, where it is
+ * heading and, for colouring, the vertex order. Only the choices the algorithm
+ * understands appear. Changing one restarts the run from its first step; runs
+ * are deterministic, so that is exactly the run those options produce.
+ */
+const RunOptions = ({
+  algorithmId,
+  options,
+}: {
+  algorithmId: string
+  options: AlgorithmOptions
+}) => {
+  const graph = useEditor((s) => s.graph)
+  const setOptions = useEditor((s) => s.setAlgorithmOptions)
+  const vertices = useMemo(
+    () => graph.vertexIds.map((id) => ({ id, label: graph.label(id) })),
+    [graph],
+  )
+  const def = algorithmById(algorithmId)
+  if (!def) return null
+
+  const vertexOptions = vertices.map((v) => (
+    <option key={v.id} value={v.id}>
+      {v.label}
+    </option>
+  ))
+
+  return (
+    <>
+      {def.needsSource && (
+        <label className={OPTION_LABEL} title="Start vertex">
+          From
+          <select
+            aria-label="From vertex"
+            value={options.source ?? ''}
+            onChange={(event) => setOptions({ source: event.target.value })}
+            className={OPTION_SELECT}
+          >
+            {vertexOptions}
+          </select>
+        </label>
+      )}
+      {def.acceptsTarget && (
+        <label className={OPTION_LABEL} title="Target vertex (optional)">
+          To
+          <select
+            aria-label="To vertex"
+            value={options.target ?? ''}
+            onChange={(event) => setOptions({ target: event.target.value || undefined })}
+            className={OPTION_SELECT}
+          >
+            <option value="" aria-label="None">
+              —
+            </option>
+            {vertexOptions}
+          </select>
+        </label>
+      )}
+      {def.orderings && (
+        <label className={OPTION_LABEL} title="The order the vertices are coloured in">
+          Order
+          <select
+            aria-label="Order of vertices"
+            value={options.ordering ?? def.defaultOrdering ?? def.orderings[0]?.id}
+            onChange={(event) => setOptions({ ordering: event.target.value as VertexOrdering })}
+            className={OPTION_SELECT}
+          >
+            {def.orderings.map((ordering) => (
+              <option key={ordering.id} value={ordering.id}>
+                {ordering.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+    </>
   )
 }
 
@@ -138,12 +223,15 @@ export const AlgorithmPanel = () => {
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
+          {/* Wraps on a narrow screen, so the description drops to its own line
+              instead of truncating to nothing beside the choices. */}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="shrink-0 text-[0.8125rem] font-semibold">{session.title}</span>
+            <RunOptions algorithmId={session.algorithmId} options={session.options} />
             <span className="gz-num shrink-0 text-[0.6875rem] text-[var(--gz-faint)]">
               {session.index + 1}/{session.steps.length}
             </span>
-            <span className="truncate text-[0.8125rem] text-[var(--gz-text)]">
+            <span className="min-w-0 flex-[1_1_8rem] truncate text-[0.8125rem] text-[var(--gz-text)]">
               {step?.description}
             </span>
           </div>

@@ -5,6 +5,10 @@
  * fully laid-out {@link GraphDocument}. Nothing here touches React, Cytoscape,
  * or `Math.random`: the random families take their entropy from a seeded
  * mulberry32 stream so the same seed always rebuilds the same graph.
+ *
+ * Edge weights are a separate concern (see `./weights`): {@link generate}
+ * applies the requested weighting after layout, so every family gets unit,
+ * random or length weights without knowing about any of them.
  */
 
 import { Graph } from '../model/graph'
@@ -19,6 +23,11 @@ import {
   forceLayout,
   gridLayout,
 } from '../layout'
+import { mulberry32, randomBelow, type Rng } from './random'
+import { weighEdges, weightingProblem, type EdgeWeighting } from './weights'
+
+export type { Rng } from './random'
+export type { EdgeWeighting } from './weights'
 
 /* ------------------------------------------------------------------ */
 /* Public types                                                        */
@@ -39,6 +48,12 @@ export interface GenerateOptions {
   seed?: number
   directed?: boolean
   weighted?: boolean
+  /**
+   * How to weigh the edges. Setting it makes the result weighted whatever
+   * `weighted` says. Applied by {@link generate} once the graph is laid out,
+   * because Length reads the final positions; random weights use `seed`.
+   */
+  weights?: EdgeWeighting
 }
 
 export interface GeneratorDefinition {
@@ -68,32 +83,12 @@ export class GeneratorError extends Error {
 /* Randomness                                                          */
 /* ------------------------------------------------------------------ */
 
-export type Rng = () => number
-
-/**
- * mulberry32: 32 bits of state, excellent distribution for our sizes, and
- * trivially reproducible. Returns values in [0, 1).
- */
-const mulberry32 = (seed: number): Rng => {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 const DEFAULT_SEED = 20240817
 
-const rngFor = (options?: GenerateOptions): Rng =>
-  mulberry32(Number.isFinite(options?.seed) ? (options?.seed as number) : DEFAULT_SEED)
+const seedOf = (options?: GenerateOptions): number =>
+  Number.isFinite(options?.seed) ? (options?.seed as number) : DEFAULT_SEED
 
-/** Uniform integer in [0, bound). */
-const randomBelow = (rand: Rng, bound: number): number => {
-  const i = Math.floor(rand() * bound)
-  return i >= bound ? bound - 1 : i
-}
+const rngFor = (options?: GenerateOptions): Rng => mulberry32(seedOf(options))
 
 /* ------------------------------------------------------------------ */
 /* Parameter plumbing                                                  */
@@ -158,7 +153,10 @@ const builderFor = (options?: GenerateOptions): GraphBuilder =>
     weighted: options?.weighted ?? false,
   })
 
-/** Weighted documents get an explicit unit weight so the UI has something to show. */
+/**
+ * Weighted documents get an explicit unit weight so the UI has something to
+ * show. Any other weighting is applied afterwards by {@link generate}.
+ */
 const unitWeight = (options?: GenerateOptions): number | undefined =>
   options?.weighted ? 1 : undefined
 
@@ -873,7 +871,13 @@ export const generate = (
 ): GraphDocument => {
   const def = BY_ID.get(id)
   if (!def) throw new GeneratorError(`There is no generator called "${id}".`)
-  return def.generate(params, options)
+  const weighting = options?.weights
+  if (!weighting) return def.generate(params, options)
+  // Checked before building, so a bad range fails fast and in plain words.
+  const problem = weightingProblem(weighting)
+  if (problem) throw new GeneratorError(problem)
+  const doc = def.generate(params, { ...options, weighted: true })
+  return weighEdges(doc, weighting, seedOf(options))
 }
 
 /** Convenience for a UI that wants to warn before building something huge. */

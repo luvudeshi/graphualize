@@ -1,6 +1,7 @@
 import { useEditor } from './store'
 import { GeneratorError, generate, generatorById } from '../graph/generators'
 import { parseGraphCommand } from '../graph/generators/commands'
+import { describeWeighting, type EdgeWeighting } from '../graph/generators/weights'
 import { applyTransform as runTransform, TransformError } from '../graph/transformations'
 import { exampleById } from '../graph/examples'
 import {
@@ -15,6 +16,13 @@ import {
   serializeGraph,
 } from '../graph/serialization'
 import type { GraphDocument } from '../graph/model/types'
+import {
+  applyEdgeListPlan,
+  parseEdgeList,
+  planEdgeList,
+  type EdgeListPlan,
+} from '../graph/model/builder'
+import { getCanvasInstance } from '../canvas/instance'
 
 const MAX_GENERATED_ELEMENTS = 4000
 
@@ -35,10 +43,16 @@ const generatorLabel = (shortName: string, params: Record<string, number>): stri
   return label
 }
 
+/**
+ * `weights` decides the new graph's weighted mode: leave it out to keep the
+ * document's (weight 1 on every edge when weighted, as always), pass `null`
+ * for an unweighted graph, or pass a scheme for a weighted one.
+ */
 export const applyGenerator = (
   id: string,
   params: Record<string, number>,
   seed = 1,
+  weights?: EdgeWeighting | null,
 ): boolean => {
   const state = useEditor.getState()
   const def = generatorById(id)
@@ -54,19 +68,24 @@ export const applyGenerator = (
     )
     return false
   }
+  const weighted = weights === undefined ? state.doc.weighted : weights !== null
   try {
     const doc = generate(id, params, {
       seed,
       directed: state.doc.directed,
-      weighted: state.doc.weighted,
+      weighted,
+      weights: weights ?? undefined,
     })
     const label = generatorLabel(def.shortName, params)
     state.replaceDocument(
-      { ...doc, directed: state.doc.directed, weighted: state.doc.weighted },
+      { ...doc, directed: state.doc.directed, weighted },
       `Generate ${label}`,
       { title: label },
     )
-    state.notify(`Generated ${label}`, 'success')
+    state.notify(
+      weights ? `Generated ${label} with ${describeWeighting(weights)}` : `Generated ${label}`,
+      'success',
+    )
     return true
   } catch (error) {
     state.notify(
@@ -77,11 +96,177 @@ export const applyGenerator = (
   }
 }
 
-/** Handles the quick-input syntax: `K5`, `C8`, `K3,4`, `G(20,0.2)`, ... */
+/** Handles the quick-input syntax: `K5`, `C8`, `K3,4`, `G(20,0.2)`, `K6 w1-9`, ... */
 export const runGraphCommand = (input: string, seed = 1): boolean => {
   const parsed = parseGraphCommand(input)
   if (!parsed) return false
-  return applyGenerator(parsed.generatorId, parsed.params, seed)
+  return applyGenerator(parsed.generatorId, parsed.params, seed, parsed.weights)
+}
+
+/**
+ * `done`: it happened. `failed`: the input was understood, but could not be
+ * carried out, and the status bar already says why. `unrecognised`: it is
+ * neither a graph command nor an edge list, and nothing has been said yet.
+ */
+export type QuickInputOutcome = 'done' | 'failed' | 'unrecognised'
+
+/**
+ * More edges than this is a file rather than something typed, and File →
+ * Import reads edge lists of any length.
+ */
+const MAX_TYPED_EDGES = 500
+
+const counted = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
+const listed = (items: readonly string[]): string =>
+  items.length <= 1
+    ? (items[0] ?? '')
+    : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+
+/** "A–B and B–C", or a count once naming them all would not fit a status bar. */
+const skippedEdges = (names: readonly string[]): string =>
+  names.length <= 3 ? listed(names) : counted(names.length, 'edge')
+
+const quoted = (labels: readonly string[]) => listed(labels.map((label) => `“${label}”`))
+
+const edgeListLabel = (plan: EdgeListPlan): string =>
+  plan.newEdges.length
+    ? `Add ${counted(plan.newEdges.length, 'edge')}`
+    : `Add ${counted(plan.newVertices.length, 'vertex', 'vertices')}`
+
+/** The status-bar report of an edge list that has been added. */
+const describeAdded = (plan: EdgeListPlan): string => {
+  const edges = plan.newEdges.length
+  const vertices = plan.newVertices.length
+  const added =
+    edges && vertices
+      ? `Added ${counted(edges, 'edge')} and ${counted(vertices, 'vertex', 'vertices')}`
+      : edges
+        ? `Added ${counted(edges, 'edge')}`
+        : vertices
+          ? `Added ${counted(vertices, 'vertex', 'vertices')}`
+          : 'Nothing added'
+  const notes: string[] = []
+  if (plan.switchedToDirected) notes.push('Switched to directed for the arrows.')
+  if (plan.enabledWeights) notes.push('Turned on weights.')
+  if (plan.arrowsIgnored) {
+    notes.push(
+      'The graph is undirected, so arrows are read as plain edges; switch on Directed for arcs.',
+    )
+  }
+  if (plan.duplicates.length) {
+    notes.push(`Skipped ${skippedEdges(plan.duplicates)}, already in the graph.`)
+  }
+  if (plan.ambiguous.length) {
+    notes.push(
+      `${quoted(plan.ambiguous)} matched more than one vertex up to case, so ${
+        plan.ambiguous.length === 1 ? 'it is a new vertex' : 'they are new vertices'
+      }.`,
+    )
+  }
+  return notes.length ? `${added}. ${notes.join(' ')}` : added
+}
+
+export interface EdgeListPreview {
+  plan: EdgeListPlan
+  /** What pressing Enter would do: "Add 3 edges, 1 new vertex". */
+  title: string
+  /** Side effects worth knowing before pressing it, each a short phrase. */
+  notes: string[]
+}
+
+/**
+ * What typing `input` would add to `doc`, without adding it — the command
+ * palette's first row. Null when `input` is not an edge list.
+ */
+export const previewEdgeList = (
+  input: string,
+  doc: GraphDocument = useEditor.getState().doc,
+): EdgeListPreview | null => {
+  const parsed = parseEdgeList(input)
+  if (!parsed) return null
+  const plan = planEdgeList(doc, parsed)
+  const edges = plan.newEdges.length
+  const vertices = plan.newVertices.length
+  const created = counted(vertices, 'new vertex', 'new vertices')
+  const title = edges
+    ? `Add ${counted(edges, 'edge')}${vertices ? `, ${created}` : ''}`
+    : vertices
+      ? `Add ${created}`
+      : 'Nothing to add'
+  const notes: string[] = []
+  if (plan.switchedToDirected) notes.push('switches to directed')
+  if (plan.enabledWeights) notes.push('turns on weights')
+  if (plan.arrowsIgnored) notes.push('arrows read as plain edges')
+  if (plan.duplicates.length) notes.push(`${skippedEdges(plan.duplicates)} already there`)
+  if (plan.ambiguous.length) {
+    notes.push(`${quoted(plan.ambiguous)} ${plan.ambiguous.length === 1 ? 'is' : 'are'} ambiguous`)
+  }
+  return { plan, title, notes }
+}
+
+/** The middle and extent of what the canvas shows, in graph coordinates. */
+const visibleArea = () => {
+  const instance = getCanvasInstance()
+  if (!instance) return null
+  const extent = instance.extent()
+  return {
+    centre: { x: (extent.x1 + extent.x2) / 2, y: (extent.y1 + extent.y2) / 2 },
+    contains: (p: { x: number; y: number }, margin = 24) =>
+      p.x - margin >= extent.x1 &&
+      p.x + margin <= extent.x2 &&
+      p.y - margin >= extent.y1 &&
+      p.y + margin <= extent.y2,
+  }
+}
+
+/**
+ * Adds a typed edge list — `A-B, B-C`, `a->b->c`, `A-B:4` — to the graph on
+ * screen as one undo step, and reports the result in the status bar.
+ *
+ * `parseEdgeList` defines the syntax and `planEdgeList` how labels, arrows,
+ * weights and duplicates are treated. This is an edit, not a replacement: the
+ * graph keeps its name and its saved entry. What was added is selected, and
+ * the view only refits when a new vertex landed somewhere off screen.
+ */
+export const addTypedEdges = (input: string): QuickInputOutcome => {
+  const state = useEditor.getState()
+  const parsed = parseEdgeList(input)
+  if (!parsed) return 'unrecognised'
+  if (parsed.edges.length > MAX_TYPED_EDGES) {
+    state.notify(
+      `That is ${parsed.edges.length} edges, more than the quick box takes. Use File → Import for long edge lists.`,
+      'error',
+    )
+    return 'failed'
+  }
+
+  const plan = planEdgeList(state.doc, parsed)
+  if (!plan.newEdges.length && !plan.newVertices.length) {
+    state.notify(describeAdded(plan))
+    return 'done'
+  }
+
+  const view = visibleArea()
+  const result = applyEdgeListPlan(state.doc, plan, { anchor: view?.centre })
+  const created = new Set(result.vertexIds)
+  const offScreen = result.document.vertices.some(
+    (v) => created.has(v.id) && !(view?.contains(v) ?? false),
+  )
+  state.replaceDocument(result.document, edgeListLabel(plan), { relayout: offScreen })
+  state.select(result.vertexIds, result.edgeIds)
+  state.notify(describeAdded(plan), 'success')
+  return 'done'
+}
+
+/**
+ * The inspector's quick box. A graph command always wins — `K5` is the
+ * complete graph, never a vertex called "K5" — and anything else is tried as
+ * an edge list to add to the current graph.
+ */
+export const runQuickInput = (input: string, seed = 1): QuickInputOutcome => {
+  if (parseGraphCommand(input)) return runGraphCommand(input, seed) ? 'done' : 'failed'
+  return addTypedEdges(input)
 }
 
 export const applyTransformById = (id: string): boolean => {

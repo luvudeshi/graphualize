@@ -5,13 +5,21 @@
  * `K5`, `C8`, `K3,4`, `Q4`, `G(20,0.2)`, `3x4` — and turns it into a generator
  * id plus parameters. Parsing is deliberately total: unrecognised input comes
  * back as `null` rather than an exception, because the caller is typing.
+ *
+ * Any command may end in a weight suffix: `K6 w2-20` (random whole-number
+ * weights from 2 to 20) or `grid(4,5) w=len` (weights from the drawn edge
+ * lengths). Either one makes the generated graph weighted.
  */
+
+import type { EdgeWeighting } from './weights'
 
 export interface ParsedGeneratorCommand {
   generatorId: string
   params: Record<string, number>
-  /** Normalised echo of the input, e.g. `K3,4`. */
+  /** Normalised echo of the input, e.g. `K3,4` or `K6 w2-20`. */
   canonical: string
+  /** Present only when the command carried a weight suffix. */
+  weights?: EdgeWeighting
 }
 
 /** Trims trailing zeros so `0.20` echoes back as `0.2`. */
@@ -134,20 +142,64 @@ const RULES: Rule[] = [
 ]
 
 /**
+ * The optional weight suffix, matched against the compacted input, so
+ * `K6 w2-20` arrives here as `k6w2-20`. Random ranges may be written `w2-20`
+ * or `w=2-20`, and either end may be negative (`w-3-9`), which is how a
+ * Bellman–Ford exercise starts. Nothing in the base vocabulary contains `-`
+ * or `=` or ends in `len`, so stripping a suffix can never change how an
+ * existing command reads.
+ */
+const WEIGHT_SUFFIX = /w(?:=?(-?\d+)-(-?\d+)|=?(len|length))$/
+
+interface WeightSuffix {
+  weights: EdgeWeighting
+  /** Normalised spelling, appended to the canonical echo. */
+  canonical: string
+}
+
+const splitWeightSuffix = (compact: string): { base: string; suffix: WeightSuffix | null } => {
+  const match = WEIGHT_SUFFIX.exec(compact)
+  if (!match) return { base: compact, suffix: null }
+  const base = compact.slice(0, match.index)
+  if (match[3] !== undefined) {
+    return { base, suffix: { weights: { kind: 'length' }, canonical: 'w=len' } }
+  }
+  const min = Number(match[1])
+  const max = Number(match[2])
+  return {
+    base,
+    suffix: {
+      weights: { kind: 'random', min, max },
+      canonical: `w${formatNumber(min)}-${formatNumber(max)}`,
+    },
+  }
+}
+
+/**
  * Parses one quick-input command. Case-insensitive, and every space is
  * ignored, so `k 3 , 4` and `K3,4` mean the same thing. Returns `null` for
  * anything the vocabulary does not cover — including syntactically valid but
  * mathematically impossible requests, which are rejected later by the
- * generator itself with a message worth showing.
+ * generator itself with a message worth showing. A weight range the wrong way
+ * round (`w9-1`) is one of those: it parses, and the generator explains.
  */
 export const parseGraphCommand = (input: string): ParsedGeneratorCommand | null => {
   if (typeof input !== 'string') return null
   const compact = input.replace(/\s+/g, '').toLowerCase()
   if (!compact) return null
 
+  const { base, suffix } = splitWeightSuffix(compact)
+  if (!base) return null
   for (const rule of RULES) {
-    const match = rule.pattern.exec(compact)
-    if (match) return rule.build(match.slice(1))
+    const match = rule.pattern.exec(base)
+    if (!match) continue
+    const parsed = rule.build(match.slice(1))
+    if (!parsed || !suffix) return parsed
+    return {
+      ...parsed,
+      canonical: `${parsed.canonical} ${suffix.canonical}`,
+      weights: suffix.weights,
+    }
   }
   return null
 }

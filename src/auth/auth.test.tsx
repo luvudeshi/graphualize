@@ -324,6 +324,24 @@ describe('the account menu', () => {
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument()
   })
 
+  it('names the compact sign-in button even where its words are hidden', () => {
+    // Below the `sm` breakpoint the compact button's label is `hidden`, which
+    // jsdom knows nothing about without the rule itself.
+    const phone = document.createElement('style')
+    phone.textContent = '.hidden { display: none; }'
+    document.head.append(phone)
+    try {
+      useAuth.setState({ status: 'signedOut', profile: null })
+      const { rerender } = render(<AccountMenu compact />)
+      expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument()
+      useAuth.setState({ status: 'signingIn' })
+      rerender(<AccountMenu compact />)
+      expect(screen.getByRole('button', { name: 'Opening Google…' })).toBeDisabled()
+    } finally {
+      phone.remove()
+    }
+  })
+
   it('shows nothing rather than a sign-in button while the session loads', () => {
     // Otherwise every refresh flashes "Continue with Google" at a user who is
     // already signed in.
