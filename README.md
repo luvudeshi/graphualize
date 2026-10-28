@@ -210,6 +210,12 @@ panel below shows the algorithm's own state: the BFS queue, the DFS recursion
 path, Dijkstra's priority queue and tentative distances, Kruskal's sorted edge
 list, Prim's candidate edges, the current indegrees for a topological sort.
 
+Beside the algorithm's name the player holds the run's own choices: **From**
+for the algorithms that start somewhere, **To** for Dijkstra, which then ends on
+the shortest path to that vertex, and **Order** for greedy colouring. Changing
+one restarts the run from its first step. A vertex you selected before starting
+is still where the run begins.
+
 Dijkstra refuses to run on a graph with a negative edge and says to use
 Bellman–Ford instead; Bellman–Ford extracts and highlights a negative cycle when
 one exists.

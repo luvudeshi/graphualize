@@ -142,6 +142,13 @@ test('flow 3: Dijkstra steps through a weighted example to the right distances',
   await expect(player).toContainText('C=5')
   await expect(player).toContainText('D=7')
   await expect(player).toContainText('G=10')
+
+  // Choosing a target restarts the run, which now ends on the path to it.
+  await player.getByRole('combobox', { name: 'To vertex' }).selectOption({ label: 'G' })
+  await expect(player).toContainText('Start at A')
+  const targeted = await readState(page)
+  await page.getByRole('slider', { name: 'Algorithm step' }).fill(String(targeted.stepCount - 1))
+  await expect(player).toContainText('Distance to G')
 })
 
 test('flow 4: without an account, saving keeps the graph in this browser', async ({ page }) => {

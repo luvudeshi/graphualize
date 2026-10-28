@@ -205,6 +205,101 @@ describe('witnesses and algorithms', () => {
   })
 })
 
+describe('algorithm run options', () => {
+  /** A-B-C-D costs 4, beating the direct A-C:5; C is 3 from A the other way round. */
+  const weighted = () => {
+    state().replaceDocument(
+      docFromEdges(['A-B:1', 'B-C:2', 'A-C:5', 'C-D:1'], { weighted: true }),
+      'Weighted',
+    )
+    const [a, b, c, d] = state().graph.vertexIds as [string, string, string, string]
+    return { a, b, c, d }
+  }
+  const resultValue = (label: string) =>
+    state().algorithm?.result?.find((row) => row.label === label)?.value
+
+  it('still starts from the selected vertex when no source is named', () => {
+    const { c } = weighted()
+    state().select([c], [])
+    state().startAlgorithm('bfs')
+    expect(state().algorithm!.options.source).toBe(c)
+    expect(state().algorithm!.steps[0]!.activeVertices).toEqual([c])
+  })
+
+  it('passes a target through to Dijkstra', () => {
+    const { a, d } = weighted()
+    state().startAlgorithm('dijkstra', { source: a, target: d })
+    const session = state().algorithm!
+    expect(session.options).toMatchObject({ source: a, target: d })
+    expect(resultValue('Path to D')).toBe('A → B → C → D')
+    expect(resultValue('Distance to D')).toBe('4')
+    expect(session.steps.at(-1)!.description).toBe('Shortest path A → B → C → D = 4')
+  })
+
+  it('restarts from the first step with a new source, keeping the target', () => {
+    const { a, c, d } = weighted()
+    state().startAlgorithm('dijkstra', { source: a, target: d })
+    state().goToStep(4)
+    state().setPlaying(true)
+
+    state().setAlgorithmOptions({ source: c })
+    const session = state().algorithm!
+    expect(session.index).toBe(0)
+    expect(session.playing).toBe(false)
+    expect(session.options).toMatchObject({ source: c, target: d })
+    expect(session.steps[0]!.description).toBe('Start at C')
+    expect(resultValue('Source')).toBe('C')
+    expect(resultValue('Path to D')).toBe('C → D')
+    expect(resultValue('Distance to D')).toBe('1')
+  })
+
+  it('produces exactly the run a fresh start with those options would', () => {
+    const { a, b, c } = weighted()
+    state().startAlgorithm('dijkstra', { source: a })
+    state().setAlgorithmOptions({ target: b })
+    state().setAlgorithmOptions({ source: c })
+    const rerun = state().algorithm!
+
+    state().stopAlgorithm()
+    state().startAlgorithm('dijkstra', { source: c, target: b })
+    expect(JSON.stringify(rerun.steps)).toBe(JSON.stringify(state().algorithm!.steps))
+    expect(rerun.result).toEqual(state().algorithm!.result)
+  })
+
+  it('drops the target again when it is cleared', () => {
+    const { a, d } = weighted()
+    state().startAlgorithm('dijkstra', { source: a, target: d })
+    state().setAlgorithmOptions({ target: undefined })
+    expect(state().algorithm!.options.target).toBeUndefined()
+    expect(resultValue('Path to D')).toBeUndefined()
+    expect(state().algorithm!.steps.at(-1)!.description).toBe(
+      'Done: every vertex has a final distance',
+    )
+  })
+
+  it('makes the colouring order explicit and re-runs with another', () => {
+    // A star drawn leaves-first: document order spends a colour on the leaves
+    // before reaching the hub, largest-first colours the hub first.
+    state().replaceDocument(docFromEdges(['B-A', 'C-A', 'D-A']), 'Star')
+    state().startAlgorithm('greedy-coloring')
+    expect(state().algorithm!.options.ordering).toBe('largest-first')
+    expect(resultValue('Order')).toBe('A, B, C, D')
+
+    state().goToStep(2)
+    state().setAlgorithmOptions({ ordering: 'document' })
+    expect(state().algorithm!.index).toBe(0)
+    expect(state().algorithm!.options.ordering).toBe('document')
+    expect(resultValue('Ordering')).toBe('document order')
+    expect(resultValue('Order')).toBe('B, A, C, D')
+  })
+
+  it('does nothing without a running algorithm', () => {
+    weighted()
+    state().setAlgorithmOptions({ source: state().graph.vertexIds[1] })
+    expect(state().algorithm).toBeNull()
+  })
+})
+
 describe('staying consistent with the graph on screen', () => {
   it('drops an active witness when the structure changes', () => {
     state().replaceDocument(docFromEdges(['A-B', 'B-C', 'C-A', 'C-D']), 'Triangle with a tail')

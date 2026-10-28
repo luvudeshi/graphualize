@@ -761,6 +761,28 @@ describe('registry', () => {
       expect(typeof a.needsSource).toBe('boolean')
     }
   })
+
+  it('declares the options the player offers, and only real ones', () => {
+    expect(ALGORITHMS.filter((a) => a.needsSource).map((a) => a.id)).toEqual([
+      'bfs',
+      'dfs',
+      'dijkstra',
+      'bellman-ford',
+      'prim',
+    ])
+    expect(ALGORITHMS.filter((a) => a.acceptsTarget).map((a) => a.id)).toEqual(['dijkstra'])
+    expect(ALGORITHMS.filter((a) => a.orderings).map((a) => a.id)).toEqual(['greedy-coloring'])
+
+    const { orderings, defaultOrdering } = greedyColoringAlgorithm
+    expect(orderings!.map((o) => o.id)).toEqual(['document', 'largest-first', 'smallest-last', 'dsatur'])
+    expect(orderings!.map((o) => o.id)).toContain(defaultOrdering)
+
+    // Leaving the order out is the same run as asking for the default.
+    const { graph } = build(['A-B', 'B-C', 'C-A', 'C-D'])
+    expect(JSON.stringify(greedyColoringAlgorithm.run(graph, {}).steps)).toBe(
+      JSON.stringify(greedyColoringAlgorithm.run(graph, { ordering: defaultOrdering }).steps),
+    )
+  })
 })
 
 describe('degenerate input', () => {

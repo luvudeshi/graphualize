@@ -162,6 +162,12 @@ Algorithms are deterministic: ties break on document order, and nothing calls
 sentence the status bar should show — that is how Dijkstra refuses a negative
 weight and names Bellman–Ford.
 
+A definition also declares which options it understands — `needsSource`,
+`acceptsTarget`, and `orderings` with a `defaultOrdering` — and the player offers
+exactly those beside the title. Changing one calls `setAlgorithmOptions`, which
+re-runs from step 0 with the merged options. Since runs are deterministic that is
+the run a fresh start would give, so the player still keeps no algorithm state.
+
 ## State
 
 One Zustand store (`state/store.ts`) holds the document, selection, tool,

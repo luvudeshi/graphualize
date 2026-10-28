@@ -35,11 +35,14 @@ export interface AlgorithmStep {
   colors?: Record<VertexId, number>
 }
 
+/** The orders greedy colouring can visit the vertices in. */
+export type VertexOrdering = 'document' | 'largest-first' | 'smallest-last' | 'dsatur'
+
 export interface AlgorithmOptions {
   source?: VertexId
   target?: VertexId
   /** Greedy colouring vertex order. */
-  ordering?: 'document' | 'largest-first' | 'smallest-last' | 'dsatur'
+  ordering?: VertexOrdering
 }
 
 export interface AlgorithmRun {
@@ -65,9 +68,21 @@ export interface AlgorithmDefinition {
   category: AlgorithmCategory
   /** One sentence, shown in the algorithm list. */
   description: string
-  /** True when the user must pick a start vertex first. */
+  /** True when the run starts from a vertex; the player then offers a "From" choice. */
   needsSource: boolean
-  needsTarget?: boolean
+  /**
+   * True when the run can also be given a target vertex. The target is always
+   * optional: without one the run covers the whole graph, with one it adds a
+   * final frame and summary rows for that vertex. The player offers a "To" choice.
+   */
+  acceptsTarget?: boolean
+  /**
+   * The vertex orders the run understands, in menu order with a short label
+   * each. When present the player offers an "Order" choice.
+   */
+  orderings?: readonly { id: VertexOrdering; label: string }[]
+  /** The order used when none is given; one of `orderings`. */
+  defaultOrdering?: VertexOrdering
   /** Requires the document to be in weighted mode to be meaningful. */
   prefersWeighted?: boolean
   /**

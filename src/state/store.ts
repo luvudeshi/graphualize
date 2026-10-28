@@ -185,6 +185,13 @@ export interface EditorState {
   clearWitness: () => void
 
   startAlgorithm: (algorithmId: string, options?: AlgorithmOptions) => void
+  /**
+   * Restarts the running algorithm from its first step with `changes` merged
+   * into its options: the player's From, To and Order choices. Pass
+   * `target: undefined` to drop a target. Runs are deterministic, so this
+   * shows exactly what starting afresh with those options would.
+   */
+  setAlgorithmOptions: (changes: AlgorithmOptions) => void
   stopAlgorithm: () => void
   stepForward: () => void
   stepBackward: () => void
@@ -797,10 +804,14 @@ export const useEditor = create<EditorState>((set, get) => {
       const def = algorithmById(algorithmId)
       const state = get()
       if (!def) return
+      // A selected vertex is the source unless the caller named one. The
+      // ordering is made explicit too, so the player's Order choice can show
+      // what the run actually used.
       const resolved: AlgorithmOptions = {
         ...options,
         source: options.source ?? state.selectedVertices[0] ?? state.graph.vertexIds[0],
       }
+      if (def.orderings) resolved.ordering = options.ordering ?? def.defaultOrdering
       const blocked = def.precondition?.(state.graph, resolved)
       if (blocked) {
         get().notify(blocked, 'error')
@@ -823,6 +834,12 @@ export const useEditor = create<EditorState>((set, get) => {
           options: resolved,
         },
       })
+    },
+
+    setAlgorithmOptions: (changes) => {
+      const session = get().algorithm
+      if (!session) return
+      get().startAlgorithm(session.algorithmId, { ...session.options, ...changes })
     },
 
     stopAlgorithm: () => set({ algorithm: null }),
