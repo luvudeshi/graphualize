@@ -20,7 +20,7 @@ import { useEditor } from './state/store'
 import { useUi } from './state/ui'
 import { useShortcuts } from './hooks/useShortcuts'
 import { useTheme } from './hooks/useTheme'
-import { useRoute } from './app/router'
+import { useRoute, type Route } from './app/router'
 import { loadExample, runGraphCommand } from './state/actions'
 import { openSharedGraph } from './state/share'
 import { ChevronIcon } from './components/Icons'
@@ -97,23 +97,32 @@ const runArrivalCommand = (command: string) => {
  * A share link wins if both are present, being the more specific of the two.
  * It is opened like a generator command — an undoable replacement, so it needs
  * no unsaved-work guard — and reports both outcomes itself once decoded.
+ *
+ * Every arrival runs exactly once, including one that comes while the
+ * workbench is already open: a link pasted into this tab changes only the
+ * hash. `useRoute` parses a fresh route on every hashchange, so the route
+ * object itself is the arrival. StrictMode's second run of this effect sees
+ * the same one and does nothing — which matters for `doc:` and `local:`, whose
+ * one-shot pre-approval must not be spent twice — while the same link pasted
+ * again later is a new arrival, and opens again.
  */
-const useArrivalCommand = (command: string | null, shared: string | null) => {
-  const handled = useRef(false)
+const useArrivalCommand = (arrival: Route) => {
+  const handled = useRef<Route | null>(null)
   useEffect(() => {
-    if (handled.current || (!command && !shared)) return
-    handled.current = true
+    const { command, shared } = arrival
+    if (handled.current === arrival || (!command && !shared)) return
+    handled.current = arrival
 
     if (shared) void openSharedGraph(shared)
     else if (command) runArrivalCommand(command)
 
     window.history.replaceState(null, '', `${window.location.pathname}#/graph`)
-  }, [command, shared])
+  }, [arrival])
 }
 
-const Editor = ({ command, shared }: { command: string | null; shared: string | null }) => {
+const Editor = ({ arrival }: { arrival: Route }) => {
   useShortcuts()
-  useArrivalCommand(command, shared)
+  useArrivalCommand(arrival)
   const wide = useIsWide()
   const inspectorOpen = useEditor((s) => s.inspectorOpen)
   const setInspectorOpen = useEditor((s) => s.setInspectorOpen)
@@ -201,7 +210,7 @@ export const App = () => {
       {route.name === 'home' ? (
         <HomePage />
       ) : (
-        <Editor command={route.command} shared={route.shared} />
+        <Editor arrival={route} />
       )}
     </ErrorBoundary>
   )

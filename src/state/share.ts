@@ -22,9 +22,28 @@ export type ShareLinkResult = { ok: true; url: string } | { ok: false; reason: s
 export const LONG_SHARE_LINK = 2000
 
 /**
+ * Why this page cannot make share links, or null when it can.
+ *
+ * A link is only as good as the address it starts with. The single-file build
+ * (`npm run build:single`) is opened from disk, at a `file://` URL: a path on
+ * the sender's own machine that nobody else can open, and that names their
+ * folders besides. Such a page makes no link at all rather than one that leaks
+ * where it lives and leads nowhere.
+ */
+export const shareLinkUnavailable = (): string | null => {
+  const { protocol } = window.location
+  return protocol === 'http:' || protocol === 'https:'
+    ? null
+    : 'Share links need the web version of Graphualize; use File → Export to send this graph.'
+}
+
+/**
  * The full URL for a share code. Built from the protocol, host and path only:
  * the query string can hold things that must never travel in a link someone
  * else will open, such as an OAuth `?code=` on the way back from sign-in.
+ *
+ * Only meaningful on a page served over http(s); {@link createShareLink}
+ * checks {@link shareLinkUnavailable} before it gets here.
  */
 export const shareUrlFor = (code: string): string => {
   const { protocol, host, pathname } = window.location
@@ -33,6 +52,10 @@ export const shareUrlFor = (code: string): string => {
 
 /** A link to the graph on screen, or the sentence explaining why there is none. */
 export const createShareLink = async (): Promise<ShareLinkResult> => {
+  // Checked first: on a page opened from disk, drawing a graph would not help.
+  const unavailable = shareLinkUnavailable()
+  if (unavailable) return { ok: false, reason: unavailable }
+
   const { name, doc } = useEditor.getState()
   if (doc.vertices.length === 0) {
     return { ok: false, reason: 'There is nothing to share yet. Draw a graph first.' }
@@ -84,7 +107,8 @@ export const copiedMessage = (url: string): string =>
  * File → Copy share link. Puts a link to the graph on screen on the clipboard
  * and says so in the status bar; when no clipboard route works — no API at
  * all, or permission refused — the link is shown in a dialog to copy by hand.
- * A graph too large for a link is reported, never truncated into a broken one.
+ * A graph too large for a link is reported, never truncated into a broken one,
+ * and so is a page opened from disk, which cannot make links at all.
  *
  * Resolves to true when the link reached the clipboard.
  */

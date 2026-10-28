@@ -72,6 +72,8 @@ export const MenuBar = () => {
     {
       id: 'share',
       label: 'Copy share link',
+      // Not disabled on a page opened from disk, where no link can be made: a
+      // greyed-out item cannot say why, so choosing it says so instead.
       disabled: graph.order === 0,
       onSelect: () => void copyShareLink(),
     },
