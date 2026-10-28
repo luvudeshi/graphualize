@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -34,6 +35,14 @@ const workingClipboard = () => {
   const writeText = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())
   setClipboard({ writeText })
   return writeText
+}
+
+/**
+ * Serves the page from disk, as the single-file build is. jsdom cannot
+ * navigate to `file://`, so `location` is stood in for, until `afterEach`.
+ */
+const openedFromDisk = () => {
+  vi.stubGlobal('location', new URL('file:///Users/alice/Downloads/Graphualize.html#/graph'))
 }
 
 const triangle = (): GraphDocument => {
@@ -207,6 +216,31 @@ describe('copying a share link', () => {
     expect(written).toHaveLength(1)
     expect(labelsOf((await graphIn(written[0]!)).document)).toEqual(['A', 'B', 'C'])
   })
+
+  it('makes no link on a page opened from disk, which would carry a local path nobody can open', async () => {
+    openedFromDisk()
+    // Both clipboard routes, so neither can be handed a link.
+    vi.stubGlobal('ClipboardItem', class {
+      constructor(readonly items: Record<string, Promise<Blob>>) {}
+    })
+    const written: string[] = []
+    const write = vi.fn(async (items: Array<{ items: Record<string, Promise<Blob>> }>) => {
+      written.push(await (await items[0]!.items['text/plain']!).text())
+    })
+    const writeText = vi.fn(() => Promise.resolve())
+    setClipboard({ write, writeText } as unknown as Clipboard)
+    state().replaceDocument(triangle(), 'Triangle')
+
+    expect(await copyShareLink()).toBe(false)
+
+    expect(written).toEqual([])
+    expect(writeText).not.toHaveBeenCalled()
+    expect(useUi.getState().shareLink).toBeNull()
+    expect(state().status).toMatchObject({
+      tone: 'error',
+      text: 'Share links need the web version of Graphualize; use File → Export to send this graph.',
+    })
+  })
 })
 
 describe('where copying a share link lives', () => {
@@ -226,6 +260,22 @@ describe('where copying a share link lives', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
     expect((await graphIn(writeText.mock.calls[0]![0])).name).toBe('From the menu')
     await waitFor(() => expect(state().status?.text).toBe('Link copied'))
+  })
+
+  it('says why there is no link when chosen on a page opened from disk', async () => {
+    const user = userEvent.setup()
+    const writeText = workingClipboard()
+    openedFromDisk()
+    state().replaceDocument(triangle(), 'Triangle')
+    render(<MenuBar />)
+
+    await user.click(screen.getByRole('button', { name: 'File' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Copy share link' }))
+
+    await waitFor(() =>
+      expect(state().status).toMatchObject({ tone: 'error', text: expect.stringMatching(/^Share links need the web version/) }),
+    )
+    expect(writeText).not.toHaveBeenCalled()
   })
 
   it('is in the command palette', async () => {
@@ -305,5 +355,51 @@ describe('arriving at the workbench by share link', () => {
     expect(state().doc.vertices).toHaveLength(0)
     expect(state().past).toHaveLength(0)
     expect(window.location.hash).toBe('#/graph')
+  })
+
+  it('opens each link pasted into a workbench that is already open, once', async () => {
+    const first = await codeFor(triangle(), 'First')
+    const second = await codeFor(docFromEdges(['X-Y']), 'Second')
+    window.history.replaceState(null, '', `/${shareHash(first)}`)
+    render(<App />)
+    await waitFor(() => expect(state().name).toBe('First'))
+    expect(window.location.hash).toBe('#/graph')
+
+    // Pasted into the same tab: only the hash changes, and the page stays.
+    window.location.hash = shareHash(second)
+    await waitFor(() => expect(state().name).toBe('Second'))
+    expect(labelsOf(state().doc)).toEqual(['X', 'Y'])
+    await waitFor(() => expect(window.location.hash).toBe('#/graph'))
+    expect(state().past).toHaveLength(2)
+
+    // The same link again, after an edit, is a new arrival too.
+    act(() => state().replaceDocument(triangle(), 'Edited'))
+    window.location.hash = shareHash(second)
+    await waitFor(() => expect(labelsOf(state().doc)).toEqual(['X', 'Y']))
+    await waitFor(() => expect(window.location.hash).toBe('#/graph'))
+    expect(state().past).toHaveLength(4)
+
+    // And so is a graph command.
+    window.location.hash = '#/graph?g=K5'
+    await waitFor(() => expect(state().doc.vertices).toHaveLength(5))
+    await waitFor(() => expect(window.location.hash).toBe('#/graph'))
+    expect(state().past).toHaveLength(5)
+  })
+
+  it('runs an arrival once under StrictMode, whose effects run twice', async () => {
+    window.history.replaceState(null, '', '/#/graph?g=K5')
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    )
+    await waitFor(() => expect(state().doc.vertices).toHaveLength(5))
+    expect(window.location.hash).toBe('#/graph')
+
+    window.location.hash = '#/graph?g=C6'
+    await waitFor(() => expect(state().doc.vertices).toHaveLength(6))
+    expect(window.location.hash).toBe('#/graph')
+    // One undoable step each: neither ran twice.
+    expect(state().past).toHaveLength(2)
   })
 })

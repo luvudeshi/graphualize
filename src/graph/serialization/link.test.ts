@@ -8,6 +8,7 @@ import {
   decodeShareCode,
   encodeShareCode,
   type ShareDecodeResult,
+  type ShareInput,
 } from './link'
 
 /* ------------------------------------------------------------------ */
@@ -77,6 +78,36 @@ const noise = (seed: number) => {
   return () => {
     state = (Math.imul(state, 1103515245) + 12345) >>> 0
     return state
+  }
+}
+
+/**
+ * A graph whose share payload — the JSON a link inflates back into — is
+ * exactly `bytes` long: vertices at the origin with CJK labels, three bytes a
+ * character yet so repetitive that deflate packs a megabyte into a short code.
+ */
+const graphWithPayload = (bytes: number): ShareInput => {
+  const name = 'g'
+  const payload = (labels: string[]) =>
+    new TextEncoder().encode(JSON.stringify({ v: labels.map((label) => [label, 0, 0]), e: [], n: name }))
+      .length
+  // Any size from 0 to 600 bytes, in at most 200 characters.
+  const labelOf = (size: number) => '東'.repeat(Math.floor(size / 3)) + ['', 'a', 'é'][size % 3]
+  const perVertex = payload(['', '']) - payload([''])
+  const order = Math.ceil(bytes / (perVertex + 600))
+  // Spread over every label, with at least a byte each: an empty label would
+  // be renamed on the way in, and the round trip would not match.
+  const extra = bytes - payload(Array<string>(order).fill('')) - order
+  const labels = Array.from({ length: order }, (_, i) => labelOf(1 + Math.min(599, Math.max(0, extra - 599 * i))))
+  if (payload(labels) !== bytes) throw new Error(`built a ${payload(labels)}-byte payload, not ${bytes}`)
+  return {
+    name,
+    doc: {
+      vertices: labels.map((label, i) => ({ id: `v${i}`, label, x: 0, y: 0 })),
+      edges: [],
+      directed: false,
+      weighted: false,
+    },
   }
 }
 
@@ -249,6 +280,21 @@ describe('share links the encoder refuses', () => {
     const result = await encodeShareCode({ name: 'huge', doc: builder.build() })
     expect(result.ok).toBe(false)
     expect(!result.ok && result.reason).toMatch(/characters long, and links are limited to 100,000/)
+  })
+
+  it('refuses a graph that would unpack to more than a link may carry, though it packs small', async () => {
+    // Exactly at the limit: a short code, and every recipient can open it.
+    const fits = graphWithPayload(SHARE_LINK_LIMITS.json)
+    const code = await encode(fits.doc, fits.name)
+    expect(code.length).toBeLessThan(SHARE_LINK_LIMITS.code)
+    const result = await decoded(code)
+    expect(result.document.vertices.map((v) => v.label)).toEqual(fits.doc.vertices.map((v) => v.label))
+
+    // One byte more still packs into a short code, but no decoder would open it.
+    const over = graphWithPayload(SHARE_LINK_LIMITS.json + 1)
+    const refusedResult = await encodeShareCode(over)
+    expect(refusedResult.ok).toBe(false)
+    expect(!refusedResult.ok && refusedResult.reason).toMatch(/1,000,001 bytes of data, and a link carries at most 1,000,000/)
   })
 })
 

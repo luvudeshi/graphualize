@@ -35,7 +35,10 @@ export const SHARE_LINK_VERSION = 1
 export const SHARE_LINK_LIMITS = {
   /** Longest code accepted or produced, in characters. */
   code: 100_000,
-  /** Most a compressed code may inflate to, in bytes. A deflate bomb stops here. */
+  /**
+   * Most a compressed code may inflate to, in bytes. A deflate bomb stops here,
+   * and the encoder refuses a graph whose JSON is larger.
+   */
   json: 1_000_000,
   vertices: 2_000,
   edges: 10_000,
@@ -233,6 +236,14 @@ export const encodeShareCode = async (input: ShareInput): Promise<ShareEncodeRes
     if (typeof compact === 'string') return { ok: false, reason: compact }
 
     const bytes = new TextEncoder().encode(JSON.stringify(compact))
+    // Repetitive text can deflate a payload larger than this into a code short
+    // enough to copy, but the decoder stops inflating here: no one could open it.
+    if (bytes.length > SHARE_LINK_LIMITS.json) {
+      return {
+        ok: false,
+        reason: `it holds ${count(bytes.length)} bytes of data, and a link carries at most ${count(SHARE_LINK_LIMITS.json)}.`,
+      }
+    }
     const plain = `${SHARE_LINK_VERSION}j.${toBase64Url(bytes)}`
     const packed = await deflate(bytes)
     const zipped = packed ? `${SHARE_LINK_VERSION}z.${toBase64Url(packed)}` : null
