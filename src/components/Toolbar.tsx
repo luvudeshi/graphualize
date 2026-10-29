@@ -1,3 +1,4 @@
+import { useId, type SyntheticEvent } from 'react'
 import { useEditor, type Tool } from '../state/store'
 import {
   CursorIcon,
@@ -10,6 +11,7 @@ import {
   UndoIcon,
   VertexIcon,
 } from './Icons'
+import '../styles/tools.css'
 
 interface ToolSpec {
   id: Tool
@@ -25,6 +27,24 @@ const TOOLS: ToolSpec[] = [
   { id: 'edge', label: 'Edge', hint: 'Click or drag between vertices', shortcut: 'E', Icon: EdgeIcon },
   { id: 'erase', label: 'Erase', hint: 'Click to delete', shortcut: 'X', Icon: EraseIcon },
 ]
+
+/**
+ * One square of the rail. Its tooltip is a paper tag drawn by the page rather
+ * than the browser's own, so it is set in the book's face; the tag is hidden
+ * from assistive technology and its words reach it as the button's name and
+ * description instead.
+ */
+/**
+ * The rail scrolls when the window is too short for it, so it clips what
+ * overflows it; the tag is therefore pinned to the viewport (position: fixed)
+ * and told where its button is each time it is about to show.
+ */
+const placeTip = (event: SyntheticEvent<HTMLButtonElement>) => {
+  const button = event.currentTarget
+  const rect = button.getBoundingClientRect()
+  button.style.setProperty('--gz-tip-x', `${rect.right}px`)
+  button.style.setProperty('--gz-tip-y', `${rect.top + rect.height / 2}px`)
+}
 
 const RailButton = ({
   active,
@@ -42,23 +62,33 @@ const RailButton = ({
   disabled?: boolean
   onClick: () => void
   children: React.ReactNode
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    aria-pressed={active}
-    aria-label={shortcut ? `${label} (${shortcut})` : label}
-    title={hint ? `${label} — ${hint}${shortcut ? ` (${shortcut})` : ''}` : label}
-    className={`group relative flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
-      active
-        ? 'border-[var(--gz-accent)] bg-[var(--gz-accent-soft)] text-[var(--gz-accent)]'
-        : 'border-transparent text-[var(--gz-muted)] hover:border-[var(--gz-border)] hover:bg-[var(--gz-panel)] hover:text-[var(--gz-text)]'
-    } ${disabled ? 'cursor-default opacity-35 hover:border-transparent hover:bg-transparent' : ''}`}
-  >
-    {children}
-  </button>
-)
+}) => {
+  const hintId = useId()
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onPointerEnter={placeTip}
+      onFocus={placeTip}
+      disabled={disabled}
+      aria-pressed={active}
+      aria-label={shortcut ? `${label} (${shortcut})` : label}
+      aria-describedby={hint ? hintId : undefined}
+      className="gz-wb-tool"
+    >
+      {children}
+      <span className="gz-wb-tip" aria-hidden>
+        <span className="gz-wb-tip-name">{label}</span>
+        {hint && (
+          <span id={hintId} className="gz-wb-tip-hint">
+            {hint}
+          </span>
+        )}
+        {shortcut && <span className="gz-wb-tip-key">{shortcut}</span>}
+      </span>
+    </button>
+  )
+}
 
 export const Toolbar = () => {
   const tool = useEditor((s) => s.tool)
@@ -70,10 +100,7 @@ export const Toolbar = () => {
   const requestView = useEditor((s) => s.requestView)
 
   return (
-    <nav
-      aria-label="Tools"
-      className="flex w-12 shrink-0 flex-col items-center gap-1 border-r bg-[var(--gz-bg)] px-1.5 py-2"
-    >
+    <nav aria-label="Tools" className="gz-wb-rail">
       {TOOLS.map(({ id, label, hint, shortcut, Icon }) => (
         <RailButton
           key={id}
@@ -87,7 +114,7 @@ export const Toolbar = () => {
         </RailButton>
       ))}
 
-      <div className="my-1.5 h-px w-6 bg-[var(--gz-border)]" />
+      <div className="gz-wb-rail-rule" aria-hidden />
 
       <RailButton label="Undo" shortcut="Cmd Z" disabled={past === 0} onClick={undo}>
         <UndoIcon />
@@ -96,17 +123,21 @@ export const Toolbar = () => {
         <RedoIcon />
       </RailButton>
 
-      <div className="my-1.5 h-px w-6 bg-[var(--gz-border)]" />
+      {/* The view group. A phone hides it: there the plate is pinched to
+          zoom, and Fit to screen stays in the View menu. */}
+      <div className="gz-wb-rail-view">
+        <div className="gz-wb-rail-rule" aria-hidden />
 
-      <RailButton label="Zoom in" onClick={() => requestView('zoomIn')}>
-        <PlusIcon />
-      </RailButton>
-      <RailButton label="Zoom out" onClick={() => requestView('zoomOut')}>
-        <MinusIcon />
-      </RailButton>
-      <RailButton label="Fit to screen" shortcut="F" onClick={() => requestView('fit')}>
-        <FitIcon />
-      </RailButton>
+        <RailButton label="Zoom in" onClick={() => requestView('zoomIn')}>
+          <PlusIcon />
+        </RailButton>
+        <RailButton label="Zoom out" onClick={() => requestView('zoomOut')}>
+          <MinusIcon />
+        </RailButton>
+        <RailButton label="Fit to screen" shortcut="F" onClick={() => requestView('fit')}>
+          <FitIcon />
+        </RailButton>
+      </div>
     </nav>
   )
 }

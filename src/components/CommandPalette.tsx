@@ -17,16 +17,75 @@ import {
   runGraphCommand,
 } from '../state/actions'
 import { EdgeIcon, SparkIcon } from './Icons'
+import { MathName } from './GenerateDialog'
 import { replaceWorkingGraph } from '../state/replace'
 import { requestSave, requestSaveAs } from '../state/save'
 import { copyShareLink } from '../state/share'
+import '../styles/dialogs.css'
 
 interface Command {
   id: string
   label: string
   group: string
   hint?: string
+  /** The label ends in notation (Cₙ, K_{m,n}, G(n, p)) that is set as maths. */
+  maths?: boolean
   run: () => void
+}
+
+/** Indexed letters (Cn, Km,n) and calls (G(n, p)) inside a generator's label. */
+const NOTATION = /\b[A-Z][a-z](?:,[a-z])?\b|\b[A-Z]\([^)]*\)/g
+
+/**
+ * The label with its notation set as maths. Matched letters stay underlined
+ * in the plain words; a notation with any match is underlined whole. The
+ * notation's plain text is kept for screen readers by MathName.
+ */
+const LabelText = ({
+  label,
+  positions,
+  maths,
+}: {
+  label: string
+  positions: readonly number[]
+  maths?: boolean
+}) => {
+  const spans: { from: number; to: number; math: boolean }[] = []
+  let at = 0
+  if (maths) {
+    for (const match of label.matchAll(NOTATION)) {
+      const from = match.index
+      if (from > at) spans.push({ from: at, to: from, math: false })
+      spans.push({ from, to: from + match[0].length, math: true })
+      at = from + match[0].length
+    }
+  }
+  if (at < label.length) spans.push({ from: at, to: label.length, math: false })
+
+  return (
+    <>
+      {spans.map((span) => {
+        const text = label.slice(span.from, span.to)
+        if (span.math) {
+          const hit = positions.some((i) => i >= span.from && i < span.to)
+          return (
+            <span key={span.from} className={hit ? 'gz-wb-palette-hit' : ''}>
+              <MathName text={text} className="gz-wb-palette-notation" />
+            </span>
+          )
+        }
+        const runs = highlightParts(
+          text,
+          positions.filter((i) => i >= span.from && i < span.to).map((i) => i - span.from),
+        )
+        return runs.map((run, i) => (
+          <span key={`${span.from}-${i}`} className={run.hit ? 'gz-wb-palette-hit' : ''}>
+            {run.text}
+          </span>
+        ))
+      })}
+    </>
+  )
 }
 
 const buildCommands = (): Command[] => {
@@ -142,6 +201,7 @@ const buildCommands = (): Command[] => {
       label: `Generate ${generator.name}`,
       group: 'Generate',
       hint: generator.description,
+      maths: true,
       run: () => {
         if (generator.params.length === 0) applyGenerator(generator.id, {})
         else {
@@ -269,7 +329,7 @@ const PaletteBody = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[12vh]">
       <div
-        className="fixed inset-0 bg-black/30 backdrop-blur-[2px] dark:bg-black/60"
+        className="gz-wb-backdrop fixed inset-0"
         onClick={() => setOpen(false)}
         aria-hidden
       />
@@ -277,7 +337,7 @@ const PaletteBody = () => {
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className="gz-anim-pop relative z-10 w-full max-w-lg overflow-hidden rounded-xl border bg-[var(--gz-elevated)] shadow-[var(--gz-shadow)]"
+        className="gz-wb-dialog gz-wb-palette gz-anim-pop relative z-10 w-full max-w-xl overflow-hidden"
       >
         <input
           autoFocus
@@ -311,7 +371,7 @@ const PaletteBody = () => {
           }}
           placeholder="Search commands, or type K5, K6 w1-9 or A-B, B-C..."
           aria-label="Command search"
-          className="w-full border-b bg-transparent px-4 py-3 text-[0.9375rem] outline-none placeholder:text-[var(--gz-faint)]"
+          className="gz-wb-palette-input"
           spellCheck={false}
         />
         <div
@@ -319,7 +379,7 @@ const PaletteBody = () => {
           id={listId}
           role="listbox"
           aria-label="Commands"
-          className="gz-scroll max-h-[min(52vh,26rem)] p-1.5"
+          className="gz-wb-palette-list gz-scroll max-h-[min(52vh,26rem)]"
         >
           {parsed && (
             <div
@@ -329,15 +389,13 @@ const PaletteBody = () => {
               data-active={active === 0}
               onMouseMove={() => setActive(0)}
               onClick={() => runAt(0)}
-              className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left ${
-                active === 0 ? 'bg-[var(--gz-accent-soft)]' : ''
-              }`}
+              className="gz-wb-palette-row gz-wb-palette-lead"
             >
-              <SparkIcon className="shrink-0 text-[var(--gz-accent)]" />
-              <span className="flex-1 text-[0.875rem]">
-                Generate <span className="gz-num font-medium">{parsed.canonical}</span>
+              <SparkIcon className="shrink-0 text-[var(--gz-red-text)]" />
+              <span className="flex-1">
+                Generate <span className="gz-num gz-wb-palette-maths">{parsed.canonical}</span>
               </span>
-              <span className="gz-num text-[0.6875rem] text-[var(--gz-faint)]">Enter</span>
+              <span className="gz-wb-palette-hint">Enter</span>
             </div>
           )}
           {edgePreview && (
@@ -348,23 +406,23 @@ const PaletteBody = () => {
               data-active={active === 0}
               onMouseMove={() => setActive(0)}
               onClick={() => runAt(0)}
-              className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left ${
-                active === 0 ? 'bg-[var(--gz-accent-soft)]' : ''
-              }`}
+              className="gz-wb-palette-row gz-wb-palette-lead"
             >
-              <EdgeIcon className="shrink-0 text-[var(--gz-accent)]" />
-              <span className="min-w-0 flex-1 truncate text-[0.875rem]">
+              <EdgeIcon className="shrink-0 text-[var(--gz-red-text)]" />
+              <span className="min-w-0 flex-1 truncate">
                 <span className="font-medium">{edgePreview.title}</span>
                 {edgePreview.notes.length > 0 && (
-                  <span className="text-[var(--gz-muted)]"> · {edgePreview.notes.join(' · ')}</span>
+                  <span className="italic text-[var(--gz-muted)]">
+                    {' '}
+                    · {edgePreview.notes.join(' · ')}
+                  </span>
                 )}
               </span>
-              <span className="gz-num text-[0.6875rem] text-[var(--gz-faint)]">Enter</span>
+              <span className="gz-wb-palette-hint">Enter</span>
             </div>
           )}
           {results.map((entry, index) => {
             const position = index + lead
-            const parts = highlightParts(entry.command.label, entry.positions)
             return (
               <div
                 key={entry.command.id}
@@ -374,28 +432,23 @@ const PaletteBody = () => {
                 data-active={position === active}
                 onMouseMove={() => setActive(position)}
                 onClick={() => runAt(position)}
-                className={`flex w-full cursor-pointer items-baseline gap-2.5 rounded-lg px-3 py-1.5 text-left ${
-                  position === active ? 'bg-[var(--gz-accent-soft)]' : ''
-                }`}
+                className="gz-wb-palette-row"
               >
-                <span className="flex-1 truncate text-[0.875rem]">
-                  {parts.map((part, i) => (
-                    <span
-                      key={i}
-                      className={part.hit ? 'font-semibold text-[var(--gz-accent)]' : ''}
-                    >
-                      {part.text}
-                    </span>
-                  ))}
+                <span className="flex-1 truncate">
+                  <LabelText
+                    label={entry.command.label}
+                    positions={entry.positions}
+                    maths={entry.command.maths}
+                  />
                 </span>
-                <span className="shrink-0 text-[0.6875rem] text-[var(--gz-faint)]">
+                <span className="gz-wb-palette-group shrink-0">
                   {entry.command.group}
                 </span>
               </div>
             )
           })}
           {total === 0 && (
-            <p className="px-3 py-6 text-center text-[0.8125rem] text-[var(--gz-muted)]">
+            <p className="gz-wb-palette-empty">
               Nothing matches "{query}".
             </p>
           )}

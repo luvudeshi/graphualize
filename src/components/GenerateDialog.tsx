@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Dialog } from './Dialog'
 import { GENERATORS, defaultParams, estimateSize } from '../graph/generators'
 import {
@@ -28,6 +28,71 @@ const WEIGHT_MODES: { id: WeightMode; label: string; hint: string }[] = [
   },
 ]
 
+/**
+ * A generator's short name set as mathematics: Kₙ with an italic letter and a
+ * subscript, G(n, p) with italic arguments, and plain names (grid, Petersen)
+ * left roman. The accessible name stays the plain text, on the control.
+ */
+export const MathName = ({ text, className = '' }: { text: string; className?: string }) => {
+  const visual = mathVisual(text)
+  return (
+    <>
+      <span className={`gz-wb-math ${className}`} aria-hidden>
+        {visual}
+      </span>
+      <span className="sr-only">{text}</span>
+    </>
+  )
+}
+
+const mathVisual = (text: string): ReactNode => {
+  const indexed = /^([A-Z])([a-z](?:,[a-z])?)$/.exec(text)
+  if (indexed)
+    return (
+      <>
+        <i>{indexed[1]}</i>
+        <sub>
+          <i>{indexed[2]}</i>
+        </sub>
+      </>
+    )
+  const call = /^([A-Za-z]+)\((.+)\)$/.exec(text)
+  if (call) {
+    const head = call[1]!
+    return (
+      <>
+        {head.length === 1 ? <i>{head}</i> : head}(
+        {call[2]!.split(',').map((arg, i) => (
+          <span key={i}>
+            {i > 0 && ',\u2009'}
+            <i>{arg.trim()}</i>
+          </span>
+        ))}
+        )
+      </>
+    )
+  }
+  return text
+}
+
+/** The generator's name without its trailing notation, which is set beside it as maths. */
+const plainName = (name: string, shortName: string): ReactNode => {
+  const squash = (t: string) => t.replace(/\s+/g, '')
+  const words = name.split(' ')
+  const last = words[words.length - 1] ?? ''
+  if (words.length > 1 && squash(last) === squash(shortName)) return words.slice(0, -1).join(' ')
+  // "Random graph G(n, p)" ends in two words of notation.
+  const lastTwo = words.slice(-2).join('')
+  if (words.length > 2 && squash(lastTwo) === squash(shortName)) return words.slice(0, -2).join(' ')
+  // "Grid Pr × Pc": set each indexed letter as maths.
+  return words.map((word, i) => (
+    <span key={i}>
+      {i > 0 && ' '}
+      {/^[A-Z][a-z]$/.test(word) ? <MathName text={word} /> : word}
+    </span>
+  ))
+}
+
 /** An empty or half-typed field must not read as 0, so it becomes NaN and is refused. */
 const readWhole = (text: string): number => (text.trim() === '' ? Number.NaN : Number(text))
 
@@ -50,7 +115,10 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
 
   const params = values[active.id] ?? defaultParams(active)
   const setParam = (key: string, value: number) =>
-    setValues((prev) => ({ ...prev, [active.id]: { ...params, [key]: value } }))
+    setValues((prev) => ({
+      ...prev,
+      [active.id]: { ...params, [key]: value },
+    }))
 
   const estimate = estimateSize(active.id, params)
 
@@ -59,7 +127,11 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
     weightMode === 'none'
       ? null
       : weightMode === 'random'
-        ? { kind: 'random', min: readWhole(range.min), max: readWhole(range.max) }
+        ? {
+            kind: 'random',
+            min: readWhole(range.min),
+            max: readWhole(range.max),
+          }
         : { kind: weightMode }
   const weightError = weighting ? weightingProblem(weighting) : null
   const weightHint = WEIGHT_MODES.find((mode) => mode.id === weightMode)?.hint
@@ -79,58 +151,56 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
           <button
             type="button"
             className="gz-btn gz-btn-primary px-3"
+            aria-label={`Generate ${active.shortName}`}
             disabled={weightError !== null}
             onClick={() => {
               if (applyGenerator(active.id, params, weighting)) close()
             }}
           >
-            Generate {active.shortName}
+            Generate <MathName text={active.shortName} />
           </button>
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-[13rem_1fr]">
-        <div className="gz-scroll max-h-96 space-y-3 border-r pr-3">
+      <div className="gz-wb-gen grid gap-5 sm:grid-cols-[17.5rem_1fr]">
+        <nav aria-label="Generators" className="gz-wb-gen-index gz-scroll sm:max-h-[32rem] sm:pr-4">
           {(['classic', 'random'] as const).map((category) => (
-            <div key={category}>
-              <p className="gz-label mb-1">{category}</p>
-              <div className="space-y-0.5">
+            <div key={category} className="gz-wb-gen-group">
+              <p className="gz-marker gz-wb-gen-cat">{category}</p>
+              <div>
                 {GENERATORS.filter((g) => g.category === category).map((generator) => (
                   <button
                     key={generator.id}
                     type="button"
+                    aria-label={`${generator.shortName} ${generator.name}`}
+                    aria-current={generator.id === active.id ? 'true' : undefined}
                     onClick={() => setActiveId(generator.id)}
-                    className={`flex w-full items-baseline gap-2 rounded-md px-2 py-1 text-left text-[0.8125rem] transition-colors ${
-                      generator.id === active.id
-                        ? 'bg-[var(--gz-accent-soft)] text-[var(--gz-accent)]'
-                        : 'hover:bg-[color-mix(in_oklab,var(--gz-border)_50%,transparent)]'
-                    }`}
+                    className="gz-wb-gen-row"
                   >
-                    <span className="gz-num shrink-0 text-[0.6875rem] text-[var(--gz-faint)]">
-                      {generator.shortName}
+                    <span className="gz-wb-gen-name">
+                      {plainName(generator.name, generator.shortName)}
                     </span>
-                    <span className="truncate">{generator.name}</span>
+                    <MathName text={generator.shortName} className="gz-wb-gen-math" />
                   </button>
                 ))}
               </div>
             </div>
           ))}
-        </div>
+        </nav>
 
-        <div>
-          <h3 className="text-[0.875rem] font-semibold">{active.name}</h3>
-          <p className="mt-1 text-[0.8125rem] leading-relaxed text-[var(--gz-muted)]">
-            {active.description}
-          </p>
+        <div className="gz-wb-gen-detail">
+          <p className="gz-marker">{active.category}</p>
+          <h3 className="gz-wb-gen-title">
+            {plainName(active.name, active.shortName)} <MathName text={active.shortName} />
+          </h3>
+          <p className="gz-wb-gen-desc">{active.description}</p>
 
-          <div className="mt-4 space-y-3">
+          <div className="gz-wb-gen-params">
             {active.params.map((param) => (
               <label key={param.key} className="block">
-                <span className="flex items-baseline justify-between">
-                  <span className="text-[0.8125rem]">{param.label}</span>
-                  <span className="gz-num text-[0.75rem] text-[var(--gz-muted)]">
-                    {params[param.key]}
-                  </span>
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className="gz-label">{param.label}</span>
+                  <span className="gz-num gz-wb-gen-value">{params[param.key]}</span>
                 </span>
                 <input
                   type="range"
@@ -139,30 +209,24 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
                   step={param.step ?? (param.kind === 'int' ? 1 : 0.01)}
                   value={params[param.key] ?? param.default}
                   onChange={(event) => setParam(param.key, Number(event.target.value))}
-                  className="mt-1 h-1 w-full cursor-pointer appearance-none rounded-full bg-[var(--gz-border)] accent-[var(--gz-accent)]"
+                  className="gz-wb-range"
                 />
-                {param.description && (
-                  <span className="mt-0.5 block text-[0.6875rem] text-[var(--gz-faint)]">
-                    {param.description}
-                  </span>
-                )}
+                {param.description && <span className="gz-wb-hint">{param.description}</span>}
               </label>
             ))}
             {active.params.length === 0 && (
-              <p className="text-[0.8125rem] text-[var(--gz-muted)]">
-                This graph has no parameters.
-              </p>
+              <p className="gz-wb-hint">This graph has no parameters.</p>
             )}
 
             <div>
-              <span id={`${weightGroup}-label`} className="text-[0.8125rem]">
+              <span id={`${weightGroup}-label`} className="gz-label">
                 Edge weights
               </span>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <div
                   role="radiogroup"
                   aria-labelledby={`${weightGroup}-label`}
-                  className="inline-flex gap-0.5 rounded-lg border p-0.5"
+                  className="gz-wb-seg"
                 >
                   {WEIGHT_MODES.map((mode) => (
                     <label key={mode.id} className="cursor-pointer">
@@ -174,20 +238,18 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
                         onChange={() => setWeightChoice(mode.id)}
                         className="peer sr-only"
                       />
-                      <span className="block rounded-md px-2.5 py-1 text-[0.8125rem] text-[var(--gz-muted)] transition-colors hover:text-[var(--gz-text)] peer-checked:bg-[var(--gz-accent-soft)] peer-checked:text-[var(--gz-accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--gz-accent)]">
-                        {mode.label}
-                      </span>
+                      <span className="gz-wb-seg-option">{mode.label}</span>
                     </label>
                   ))}
                 </div>
                 {weightMode === 'random' && (
-                  <div className="flex items-center gap-2 text-[0.8125rem]">
+                  <div className="gz-wb-gen-range flex items-center gap-3">
                     <label className="flex items-center gap-1.5">
                       Min
                       <input
                         type="number"
                         step={1}
-                        className="gz-input gz-num w-16"
+                        className="gz-input gz-num w-[4.25rem]"
                         value={range.min}
                         onChange={(event) => setRange({ ...range, min: event.target.value })}
                       />
@@ -197,7 +259,7 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
                       <input
                         type="number"
                         step={1}
-                        className="gz-input gz-num w-16"
+                        className="gz-input gz-num w-[4.25rem]"
                         value={range.max}
                         onChange={(event) => setRange({ ...range, max: event.target.value })}
                       />
@@ -206,22 +268,17 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
                 )}
               </div>
               {weightError ? (
-                <span
-                  role="alert"
-                  className="mt-0.5 block text-[0.6875rem] text-[var(--gz-danger)]"
-                >
+                <span role="alert" className="gz-wb-hint gz-wb-hint-error">
                   {weightError}
                 </span>
               ) : (
-                <span className="mt-0.5 block text-[0.6875rem] text-[var(--gz-faint)]">
-                  {weightHint}
-                </span>
+                <span className="gz-wb-hint">{weightHint}</span>
               )}
             </div>
           </div>
 
           {estimate && (
-            <p className="mt-4 gz-num text-[0.75rem] text-[var(--gz-faint)]">
+            <p className="gz-num gz-wb-gen-estimate">
               {estimate.vertices} vertices · {estimate.edges} edges
             </p>
           )}

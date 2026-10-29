@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import '../styles/dialogs2.css'
 
 interface Props {
   children: ReactNode
@@ -27,19 +28,24 @@ export class ErrorBoundary extends Component<Props, State> {
   override render() {
     if (!this.state.error) return this.props.children
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-        <h1 className="text-[0.9375rem] font-semibold">Something went wrong in this panel.</h1>
-        <p className="max-w-md text-[0.8125rem] text-[var(--gz-muted)]">
-          {this.state.error.message || 'An unexpected error occurred.'} Your graph is still saved
-          in this browser.
-        </p>
-        <button
-          type="button"
-          className="gz-btn gz-btn-primary px-3"
-          onClick={() => this.setState({ error: null })}
-        >
-          Try again
-        </button>
+      <div className="gz-wb-dlg-erratum">
+        <div className="gz-wb-dlg-erratum-frame">
+          <p className="gz-wb-dlg-marker" aria-hidden="true">
+            Erratum.
+          </p>
+          <h1>Something went wrong in this panel.</h1>
+          <p className="gz-wb-dlg-caption">
+            {this.state.error.message || 'An unexpected error occurred.'} Your graph is still saved
+            in this browser.
+          </p>
+          <button
+            type="button"
+            className="gz-btn gz-btn-primary mt-1"
+            onClick={() => this.setState({ error: null })}
+          >
+            Try again
+          </button>
+        </div>
       </div>
     )
   }

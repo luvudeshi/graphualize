@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import cytoscape, { type Core, type EventObject, type NodeSingular } from 'cytoscape'
+import cytoscape, {
+  type Core,
+  type EdgeSingular,
+  type EventObject,
+  type NodeSingular,
+} from 'cytoscape'
 import { useEditor } from '../state/store'
 import { useTheme } from '../hooks/useTheme'
-import { canvasTheme, modeColor } from './theme'
+import { canvasTheme, highlightInk, modeColor } from './theme'
 import { buildStylesheet } from './style'
 import { emptyHighlight, stepToHighlight, witnessToHighlight } from './highlight'
 import type { HighlightRequest, VertexId } from '../graph/model/types'
@@ -13,12 +18,13 @@ import type { MenuItem } from '../components/Menu'
 import { applyTransformById } from '../state/actions'
 import { useUi } from '../state/ui'
 import { prefersReducedMotion } from '../utils/platform'
+import '../styles/canvas.css'
 
 const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i])
 
 /** Redundant, non-colour encoding for partition and colouring groups. */
-const SHAPE_BY_GROUP = ['ellipse', 'round-rectangle', 'diamond', 'hexagon']
+const SHAPE_BY_GROUP = ['ellipse', 'rectangle', 'diamond', 'hexagon']
 
 interface ContextTarget {
   kind: 'vertex' | 'edge' | 'canvas'
@@ -30,6 +36,14 @@ interface ContextTarget {
   modelX: number
   modelY: number
 }
+
+/**
+ * Above this many edges the weights go back to Cytoscape's own labels, so a
+ * large weighted graph does not re-render the overlay on every pan frame.
+ */
+const WEIGHT_SLIP_LIMIT = 400
+/** Slips whose centres fall closer than this (px) are moved along their edge. */
+const SLIP_CLEARANCE = 16
 
 const FIT_PADDING = 60
 /** Small graphs would otherwise fill the screen with enormous vertices. */
@@ -130,12 +144,28 @@ export const GraphCanvas = () => {
         setViewportTick((n) => (n + 1) % 1_000_000)
       })
     }
-    instance.on('viewport position', onViewport)
+    instance.on('viewport position add remove', onViewport)
 
     // Cytoscape only watches the window, so panels opening and closing need an
-    // explicit nudge or the canvas keeps a stale size.
+    // explicit nudge or the canvas keeps a stale size. When the plate shrinks
+    // (the algorithm player opens or grows) and a figure that was wholly in
+    // view no longer fits, refit it so no point is left under the player.
+    let lastHeight = containerRef.current.clientHeight
     const observer = new ResizeObserver(() => {
+      const box = instance.elements().renderedBoundingBox()
+      const wasInView =
+        instance.elements().length > 0 &&
+        box.x1 >= 0 &&
+        box.y1 >= 0 &&
+        box.x2 <= instance.width() &&
+        box.y2 <= lastHeight
       instance.resize()
+      const height = instance.height()
+      const shrank = height < lastHeight
+      lastHeight = height
+      if (shrank && wasInView && (box.y2 > height || box.x2 > instance.width())) {
+        fitView(instance, false)
+      }
     })
     observer.observe(containerRef.current)
 
@@ -313,11 +343,12 @@ export const GraphCanvas = () => {
       buildStylesheet(theme, {
         directed: doc.directed,
         weighted: doc.weighted,
+        weightSlips: doc.edges.length <= WEIGHT_SLIP_LIMIT,
         showLabels: true,
         reducedMotion: prefersReducedMotion(),
       }),
     )
-  }, [theme, doc.directed, doc.weighted])
+  }, [theme, doc.directed, doc.weighted, doc.edges.length <= WEIGHT_SLIP_LIMIT])
 
   /* ---------------------------------------------------------------- */
   /* Element sync                                                      */
@@ -420,8 +451,14 @@ export const GraphCanvas = () => {
         const id = n.id()
         const mode = vertexModes[id]
         const colorIndex = colors[id]
-        if (mode) n.data('hlColor', modeColor(theme, mode))
-        else n.removeData('hlColor')
+        if (mode) {
+          const fill = modeColor(theme, mode)
+          n.data('hlColor', fill)
+          n.data('hlInk', highlightInk(theme, fill))
+        } else {
+          n.removeData('hlColor')
+          n.removeData('hlInk')
+        }
         if (colorIndex !== undefined) {
           n.data('fillColor', theme.palette[colorIndex % theme.palette.length])
           n.data('inkColor', theme.paletteInk[colorIndex % theme.paletteInk.length])
@@ -517,9 +554,10 @@ export const GraphCanvas = () => {
 
   const badgeCount = Object.keys(highlight.badges ?? {}).length
   const drawingEdge = tool === 'edge' && pendingEdgeSource !== null
+  const showSlips = doc.weighted && doc.edges.length > 0 && doc.edges.length <= WEIGHT_SLIP_LIMIT
   useEffect(() => {
-    overlayActive.current = badgeCount > 0 || drawingEdge
-  }, [badgeCount, drawingEdge])
+    overlayActive.current = badgeCount > 0 || drawingEdge || showSlips
+  }, [badgeCount, drawingEdge, showSlips])
 
   const zoom = cy ? cy.zoom() : 1
   const toScreen = (x: number, y: number) => {
@@ -537,6 +575,61 @@ export const GraphCanvas = () => {
           return { id, text, x: p.x, y: p.y }
         })
     : []
+
+  /*
+   * Edge weights, set on paper slips above every line (a Cytoscape label is
+   * painted with its own edge, so later edges would strike through it). Each
+   * slip sits at its edge's midpoint; when two midpoints coincide, as the
+   * diameters of K6 do, the later slip moves along its own edge so none is
+   * hidden.
+   */
+  const weightSlips = (() => {
+    if (!cy || !showSlips) return []
+    const edgeModes = highlight.edges ?? {}
+    const anyHighlight =
+      Object.keys(highlight.vertices ?? {}).length > 0 ||
+      Object.keys(edgeModes).length > 0 ||
+      Object.keys(highlight.colors ?? {}).length > 0
+    const placed: { x: number; y: number }[] = []
+    const clear = (p: { x: number; y: number }) =>
+      placed.every((q) => Math.hypot(p.x - q.x, p.y - q.y) >= SLIP_CLEARANCE)
+    const slips: { id: string; text: string; x: number; y: number; dimmed: boolean }[] = []
+    for (const e of doc.edges) {
+      const found = cy.getElementById(e.id)
+      if (found.empty() || !found.isEdge()) continue
+      const edge = found as unknown as EdgeSingular
+      const s = edge.source().position()
+      const t = edge.target().position()
+      let mid = { x: (s.x + t.x) / 2, y: (s.y + t.y) / 2 }
+      try {
+        const m = edge.midpoint()
+        if (Number.isFinite(m.x) && Number.isFinite(m.y)) mid = m
+      } catch {
+        // Not laid out yet: the straight midpoint will do.
+      }
+      const at = toScreen(mid.x, mid.y)
+      const along = { x: (t.x - s.x) * zoom, y: (t.y - s.y) * zoom }
+      let spot = at
+      if (!clear(spot)) {
+        for (const f of [-0.12, 0.12, -0.22, 0.22]) {
+          const p = { x: at.x + along.x * f, y: at.y + along.y * f }
+          if (clear(p)) {
+            spot = p
+            break
+          }
+        }
+      }
+      placed.push(spot)
+      slips.push({
+        id: e.id,
+        text: String(e.weight ?? 1),
+        x: spot.x,
+        y: spot.y,
+        dimmed: Boolean(highlight.dimOthers) && anyHighlight && !edgeModes[e.id],
+      })
+    }
+    return slips
+  })()
 
   const ghost = (() => {
     if (!cy || tool !== 'edge' || !pendingEdgeSource || !pointer) return null
@@ -658,7 +751,7 @@ export const GraphCanvas = () => {
           : 'default'
 
   return (
-    <div className="absolute inset-0" style={{ background: theme.background }}>
+    <div className="gz-wb-canvas absolute inset-0">
       {/* Cytoscape forces `position: relative` on its container, so this uses
           percentage sizing rather than inset-0, which it would override. */}
       <div
@@ -682,22 +775,28 @@ export const GraphCanvas = () => {
               x2={ghost.to.x}
               y2={ghost.to.y}
               stroke={theme.selected}
-              strokeWidth={2}
-              strokeDasharray="5 4"
-              strokeLinecap="round"
+              strokeWidth={1.5}
+              strokeDasharray="6 4"
             />
           </svg>
         )}
+        {weightSlips.map((slip) => (
+          <span
+            key={slip.id}
+            className="gz-wb-badge gz-wb-weight absolute -translate-x-1/2 -translate-y-1/2"
+            data-dimmed={slip.dimmed || undefined}
+            style={{ left: slip.x, top: slip.y }}
+          >
+            {slip.text}
+          </span>
+        ))}
         {badgeEntries.map((badge) => (
           <span
             key={badge.id}
-            className="gz-num absolute -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[11px] font-medium shadow-sm"
+            className="gz-wb-badge absolute -translate-y-1/2"
             style={{
               left: badge.x + 22 * zoom,
               top: badge.y - 18 * zoom,
-              background: theme.dark ? '#1b1b22' : '#ffffff',
-              color: theme.vertexText,
-              border: `1px solid ${theme.dark ? '#33333d' : '#e3e3df'}`,
             }}
           >
             {badge.text}

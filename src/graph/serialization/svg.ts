@@ -19,15 +19,18 @@ export interface SvgTheme {
   edgeLabelBackground: string
 }
 
+/** The day edition of the canvas (src/canvas/theme.ts): ink on cream paper. */
 export const LIGHT_SVG_THEME: SvgTheme = {
-  background: '#ffffff',
-  vertexFill: '#ffffff',
-  vertexBorder: '#3f3f46',
-  vertexText: '#17171a',
-  edge: '#71717a',
-  edgeLabel: '#3f3f46',
-  edgeLabelBackground: '#ffffff',
+  background: '#f8f2e1',
+  vertexFill: '#f8f2e1',
+  vertexBorder: '#1d1a14',
+  vertexText: '#1d1a14',
+  edge: '#1d1a14',
+  edgeLabel: '#1d1a14',
+  edgeLabelBackground: '#f8f2e1',
 }
+
+const SERIF = "'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif"
 
 export interface SvgOptions {
   theme?: SvgTheme
@@ -130,7 +133,7 @@ export const toSvg = (graph: Graph, options: SvgOptions = {}): string => {
 
   const parts: string[] = []
   parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${round(minX)} ${round(minY)} ${round(width)} ${round(height)}" width="${round(width)}" height="${round(height)}" font-family="Inter, system-ui, sans-serif">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${round(minX)} ${round(minY)} ${round(width)} ${round(height)}" width="${round(width)}" height="${round(height)}" font-family="${SERIF}">`,
   )
   if (options.title) parts.push(`<title>${escapeXml(options.title)}</title>`)
   if (!options.transparent) {
@@ -206,7 +209,7 @@ export const toSvg = (graph: Graph, options: SvgOptions = {}): string => {
         const anchor = quadratic(start.point, control, end.point, 0.5)
         const boxWidth = 8 + label.length * 6.5
         edgeLabels.push(
-          `<g opacity="${opacity}"><rect x="${round(anchor.x - boxWidth / 2)}" y="${round(anchor.y - 9)}" width="${round(boxWidth)}" height="18" rx="4" fill="${theme.edgeLabelBackground}"/><text x="${round(anchor.x)}" y="${round(anchor.y + 4)}" text-anchor="middle" font-size="11" font-family="ui-monospace, monospace" fill="${theme.edgeLabel}">${escapeXml(label)}</text></g>`,
+          `<g opacity="${opacity}"><rect x="${round(anchor.x - boxWidth / 2)}" y="${round(anchor.y - 9)}" width="${round(boxWidth)}" height="18" fill="${theme.edgeLabelBackground}" stroke="${theme.edgeLabel}" stroke-opacity="0.35" stroke-width="0.75"/><text x="${round(anchor.x)}" y="${round(anchor.y + 4)}" text-anchor="middle" font-size="12.5" style="font-variant-numeric: lining-nums tabular-nums" fill="${theme.edgeLabel}">${escapeXml(label)}</text></g>`,
         )
       }
     })
@@ -226,7 +229,7 @@ export const toSvg = (graph: Graph, options: SvgOptions = {}): string => {
     const textFill = options.vertexFills?.[vertex.id] ? theme.vertexFill : theme.vertexText
 
     parts.push(
-      `<g opacity="${opacity}"><circle cx="${round(vertex.x)}" cy="${round(vertex.y)}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/><text x="${round(vertex.x)}" y="${round(vertex.y + 4.5)}" text-anchor="middle" font-size="13" font-weight="600" fill="${textFill}">${escapeXml(vertex.label)}</text></g>`,
+      `<g opacity="${opacity}"><circle cx="${round(vertex.x)}" cy="${round(vertex.y)}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/><text x="${round(vertex.x)}" y="${round(vertex.y + 4.5)}" text-anchor="middle" font-size="15" font-style="italic" font-weight="500" fill="${textFill}">${escapeXml(vertex.label)}</text></g>`,
     )
   }
 

@@ -19,18 +19,21 @@ export const CursorIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+/** A point of the figure, inked solid as Byrne sets a vertex, with the
+ *  construction ticks that say "place one here". */
 export const VertexIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
-    <circle cx="12" cy="12" r="5.2" />
-    <path d="M12 3.2v2M12 18.8v2M3.2 12h2M18.8 12h2" />
+    <circle cx="12" cy="12" r="4.2" fill="currentColor" />
+    <path d="M12 3.2v2.4M12 18.4v2.4M3.2 12h2.4M18.4 12h2.4" />
   </svg>
 )
 
+/** A line between two solid points, as an edge is drawn on the plates. */
 export const EdgeIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
-    <circle cx="6" cy="18" r="2.6" />
-    <circle cx="18" cy="6" r="2.6" />
-    <path d="M7.9 16.1l8.2-8.2" />
+    <path d="M6 18L18 6" />
+    <circle cx="6" cy="18" r="2.7" fill="currentColor" />
+    <circle cx="18" cy="6" r="2.7" fill="currentColor" />
   </svg>
 )
 
@@ -57,7 +60,7 @@ export const RedoIcon = (p: SVGProps<SVGSVGElement>) => (
 
 export const FitIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
-    <path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4" />
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
   </svg>
 )
 

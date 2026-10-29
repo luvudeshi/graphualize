@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { MenuItem } from './Menu'
+import { MenuItemBody, MenuRule, type MenuItem } from './Menu'
 
 export interface ContextMenuProps {
   x: number
@@ -52,8 +52,11 @@ export const ContextMenu = ({ x, y, items, onClose, label }: ContextMenuProps) =
   }, [onClose])
 
   // Keep the menu inside the viewport rather than letting it hang off an edge.
-  const width = 232
-  const height = Math.min(items.length * 30 + 12, 340)
+  const width = 240
+  const height = Math.min(
+    items.length * 30 + items.filter((item) => item.separatorBefore || item.section).length * 13 + 14,
+    360,
+  )
   const left = Math.min(x, Math.max(8, window.innerWidth - width - 8))
   const top = Math.min(y, Math.max(8, window.innerHeight - height - 8))
 
@@ -63,11 +66,11 @@ export const ContextMenu = ({ x, y, items, onClose, label }: ContextMenuProps) =
       role="menu"
       aria-label={label}
       style={{ left, top, width }}
-      className="gz-anim-pop fixed z-40 rounded-lg border bg-[var(--gz-elevated)] p-1 shadow-[var(--gz-shadow)]"
+      className="gz-wb-sheet gz-anim-pop fixed z-40"
     >
       {items.map((item) => (
         <div key={item.id}>
-          {item.separatorBefore && <div className="my-1 h-px bg-[var(--gz-border)]" />}
+          <MenuRule item={item} />
           <button
             type="button"
             role="menuitem"
@@ -76,18 +79,10 @@ export const ContextMenu = ({ x, y, items, onClose, label }: ContextMenuProps) =
               onClose()
               item.onSelect()
             }}
-            className={`flex w-full items-center gap-3 rounded-md px-2.5 py-[5px] text-left text-[0.8125rem] transition-colors ${
-              item.disabled
-                ? 'cursor-default opacity-40'
-                : 'hover:bg-[color-mix(in_oklab,var(--gz-border)_55%,transparent)] focus:bg-[color-mix(in_oklab,var(--gz-border)_55%,transparent)] focus:outline-none'
-            } ${item.danger ? 'text-[var(--gz-danger)]' : ''}`}
+            data-danger={item.danger || undefined}
+            className="gz-wb-item"
           >
-            <span className="flex-1 truncate">{item.label}</span>
-            {item.shortcut && (
-              <span className="gz-num shrink-0 text-[0.6875rem] text-[var(--gz-faint)]">
-                {item.shortcut}
-              </span>
-            )}
+            <MenuItemBody item={item} tickColumn={items.some((entry) => entry.checked !== undefined)} />
           </button>
         </div>
       ))}

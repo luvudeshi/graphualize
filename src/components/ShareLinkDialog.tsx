@@ -51,10 +51,10 @@ const ShareLinkBody = ({ url }: { url: string }) => {
       width="max-w-lg"
       footer={
         <>
-          <button type="button" className="gz-btn border px-3" onClick={close}>
+          <button type="button" className="gz-btn" onClick={close}>
             Close
           </button>
-          <button type="button" className="gz-btn gz-btn-primary px-3" onClick={() => void copy()}>
+          <button type="button" className="gz-btn gz-btn-outline" onClick={() => void copy()}>
             Copy
           </button>
         </>
@@ -66,12 +66,12 @@ const ShareLinkBody = ({ url }: { url: string }) => {
         value={url}
         onFocus={(event) => event.currentTarget.select()}
         aria-label="Share link"
-        className="gz-input gz-num"
+        className="gz-wb-dlg-code block truncate"
         spellCheck={false}
       />
       <p
         role={refused ? 'alert' : undefined}
-        className="mt-2 text-[0.75rem] text-[var(--gz-muted)]"
+        className={`gz-wb-dlg-caption mt-2 ${refused ? 'text-[var(--gz-danger)]' : ''}`}
       >
         {refused
           ? `Copying is blocked here. Select the link and press ${formatShortcut('mod+C')}.`

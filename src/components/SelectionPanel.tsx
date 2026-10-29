@@ -5,7 +5,7 @@ const Chip = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
-    className="gz-num rounded border px-1.5 py-0.5 text-[0.75rem] text-[var(--gz-muted)] transition-colors hover:border-[var(--gz-accent)] hover:text-[var(--gz-accent)]"
+    className="gz-wb-chip"
   >
     {label}
   </button>
@@ -15,7 +15,8 @@ const Action = ({ label, onClick, danger }: { label: string; onClick: () => void
   <button
     type="button"
     onClick={onClick}
-    className={`gz-btn border px-2 py-1 text-[0.75rem] ${danger ? 'text-[var(--gz-danger)]' : ''}`}
+    className="gz-wb-btn"
+    data-danger={danger || undefined}
   >
     {label}
   </button>
@@ -44,12 +45,12 @@ export const SelectionPanel = () => {
   if (vertexId) {
     const neighbours = [...new Set(graph.neighbors(vertexId).map((n) => n.to))]
     return (
-      <div className="space-y-2 px-2.5 py-2">
-        <label className="block">
-          <span className="gz-label">Label</span>
+      <div className="gz-wb-sel">
+        <label className="gz-wb-field">
+          <span className="gz-wb-field-label">Label</span>
           <input
             key={`${vertexId}:${graph.label(vertexId)}`}
-            className="gz-input mt-1"
+            className="gz-wb-input"
             defaultValue={graph.label(vertexId)}
             onBlur={(event) => renameVertex(vertexId, event.target.value)}
             onKeyDown={(event) => {
@@ -58,38 +59,39 @@ export const SelectionPanel = () => {
           />
         </label>
 
-        <dl className="grid grid-cols-3 gap-1 text-[0.75rem]">
-          <div>
-            <dt className="gz-label">Degree</dt>
-            <dd className="gz-num">{graph.degree(vertexId)}</dd>
+        <dl className="gz-wb-stats">
+          <div className="gz-wb-stat">
+            <dt>Degree</dt>
+            <span className="gz-wb-leader" aria-hidden="true" />
+            <dd className="gz-wb-num">{graph.degree(vertexId)}</dd>
           </div>
           {directed && (
             <>
-              <div>
-                <dt className="gz-label">In</dt>
-                <dd className="gz-num">{graph.inDegree(vertexId)}</dd>
+              <div className="gz-wb-stat">
+                <dt>Indegree</dt>
+                <span className="gz-wb-leader" aria-hidden="true" />
+                <dd className="gz-wb-num">{graph.inDegree(vertexId)}</dd>
               </div>
-              <div>
-                <dt className="gz-label">Out</dt>
-                <dd className="gz-num">{graph.outDegree(vertexId)}</dd>
+              <div className="gz-wb-stat">
+                <dt>Outdegree</dt>
+                <span className="gz-wb-leader" aria-hidden="true" />
+                <dd className="gz-wb-num">{graph.outDegree(vertexId)}</dd>
               </div>
             </>
           )}
         </dl>
 
         <div>
-          <span className="gz-label">Neighbours</span>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {neighbours.length === 0 && (
-              <span className="text-[0.75rem] text-[var(--gz-faint)]">none</span>
-            )}
+          <span className="gz-wb-field-label">Neighbours</span>
+          <div className="gz-wb-chips">
+            {neighbours.length === 0 && <span className="gz-wb-none">none</span>}
             {neighbours.map((id) => (
               <Chip key={id} label={graph.label(id)} onClick={() => select([id], [])} />
             ))}
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1 pt-1">
+        <div className="gz-wb-actions">
           <Action label="BFS from here" onClick={() => startAlgorithm('bfs', { source: vertexId })} />
           <Action label="DFS from here" onClick={() => startAlgorithm('dfs', { source: vertexId })} />
           <Action
@@ -106,16 +108,18 @@ export const SelectionPanel = () => {
     const edge = graph.edge(edgeId)
     if (!edge) return null
     return (
-      <div className="space-y-2 px-2.5 py-2">
-        <p className="gz-num text-[0.8125rem]">
-          {graph.label(edge.source)} {directed ? '→' : '—'} {graph.label(edge.target)}
+      <div className="gz-wb-sel">
+        <p className="gz-wb-edge-title">
+          {graph.label(edge.source)}
+          <span className="gz-wb-edge-arrow">{directed ? '→' : '—'}</span>
+          {graph.label(edge.target)}
         </p>
         {weighted && (
-          <label className="block">
-            <span className="gz-label">Weight</span>
+          <label className="gz-wb-field">
+            <span className="gz-wb-field-label">Weight</span>
             <input
               key={`${edgeId}:${edge.weight ?? 1}`}
-              className="gz-input mt-1"
+              className="gz-wb-input"
               inputMode="decimal"
               defaultValue={String(edge.weight ?? 1)}
               onBlur={(event) => {
@@ -129,7 +133,7 @@ export const SelectionPanel = () => {
             />
           </label>
         )}
-        <div className="flex flex-wrap gap-1 pt-1">
+        <div className="gz-wb-actions">
           {directed && <Action label="Reverse" onClick={() => reverseEdge(edgeId)} />}
           <Action label="Subdivide" onClick={() => applyTransformById('subdivide-edge')} />
           <Action label="Contract" onClick={() => applyTransformById('contract-edge')} />
@@ -140,11 +144,14 @@ export const SelectionPanel = () => {
   }
 
   return (
-    <div className="space-y-2 px-2.5 py-2">
-      <p className="text-[0.8125rem] text-[var(--gz-muted)]">
-        {selectedVertices.length} vertices and {selectedEdges.length} edges selected.
+    <div className="gz-wb-sel">
+      <p className="gz-wb-lede">
+        <span className="gz-wb-num">{selectedVertices.length}</span>{' '}
+        {selectedVertices.length === 1 ? 'vertex' : 'vertices'} and{' '}
+        <span className="gz-wb-num">{selectedEdges.length}</span>{' '}
+        {selectedEdges.length === 1 ? 'edge' : 'edges'} selected.
       </p>
-      <div className="flex flex-wrap gap-1">
+      <div className="gz-wb-actions">
         {selectedVertices.length > 0 && (
           <Action
             label="Induced subgraph"

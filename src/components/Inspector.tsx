@@ -8,6 +8,7 @@ import { MatrixSection } from './MatrixSection'
 import { SelectionPanel } from './SelectionPanel'
 import { ChevronIcon } from './Icons'
 import { runQuickInput } from '../state/actions'
+import '../styles/panel.css'
 
 const DEFAULT_OPEN = new Set([
   'selection',
@@ -35,39 +36,34 @@ const Section = ({
   children: ReactNode
   note?: string
 }) => (
-  <section className="border-b last:border-b-0">
-    <h3>
+  <section>
+    <h3 className="gz-wb-section-head">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={`section-${id}`}
-        className="flex w-full items-center gap-1.5 px-2.5 py-2 text-left transition-colors hover:bg-[color-mix(in_oklab,var(--gz-border)_35%,transparent)]"
+        className="gz-wb-section-btn"
       >
-        <ChevronIcon
-          width={12}
-          height={12}
-          className={`shrink-0 text-[var(--gz-faint)] transition-transform ${open ? 'rotate-90' : ''}`}
-        />
-        <span className="gz-label !text-[var(--gz-muted)]">{title}</span>
-        {count !== undefined && (
-          <span className="gz-num ml-auto text-[0.6875rem] text-[var(--gz-faint)]">{count}</span>
-        )}
+        <ChevronIcon width={11} height={11} className="gz-wb-chevron" aria-hidden="true" />
+        <span className="gz-wb-marker">{title}</span>
+        <span className="gz-wb-rule" aria-hidden="true" />
+        {count !== undefined && <span className="gz-wb-section-count gz-wb-num">{count}</span>}
       </button>
     </h3>
     {open && (
-      <div id={`section-${id}`} className="pb-1.5">
-        {note && (
-          <p className="px-2.5 pb-1 text-[0.7188rem] text-[var(--gz-faint)]">{note}</p>
-        )}
+      <div id={`section-${id}`} className="gz-wb-section-content">
+        {note && <p className="gz-wb-note">{note}</p>}
         {children}
       </div>
     )}
   </section>
 )
 
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 const RowList = ({ section }: { section: InspectorSection }) => (
-  <div className="space-y-0.5 px-1">
+  <div className="gz-wb-rows">
     {section.rows.map((row) => (
       <PropertyRow key={row.id} row={row} />
     ))}
@@ -112,29 +108,25 @@ export const Inspector = () => {
   const hasSelection = selectedVertices.length > 0 || selectedEdges.length > 0
 
   return (
-    <aside
-      aria-label="Graph inspector"
-      className="flex h-full w-full flex-col border-l bg-[var(--gz-panel)]"
-    >
-      <div className="shrink-0 border-b px-2.5 py-2">
+    <aside aria-label="Graph inspector" className="gz-wb-inspector">
+      <div className="gz-wb-head">
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           aria-label="Graph name"
-          className="w-full bg-transparent text-[0.875rem] font-semibold tracking-[-0.01em] outline-none placeholder:text-[var(--gz-faint)]"
+          className="gz-wb-name"
           placeholder="Untitled graph"
         />
-        <div className="mt-1.5 flex items-center gap-1">
+        <span className="gz-wb-count gz-wb-num">
+          {plural(graph.order, 'vertex', 'vertices')} · {plural(graph.size, 'edge', 'edges')}
+        </span>
+        <div className="gz-wb-modes">
           <button
             type="button"
             role="switch"
             aria-checked={directed}
             onClick={() => setDirected(!directed)}
-            className={`gz-chip transition-colors ${
-              directed
-                ? 'border-[var(--gz-accent)] text-[var(--gz-accent)]'
-                : 'hover:text-[var(--gz-text)]'
-            }`}
+            className="gz-wb-toggle"
           >
             Directed
           </button>
@@ -143,20 +135,13 @@ export const Inspector = () => {
             role="switch"
             aria-checked={weighted}
             onClick={() => setWeighted(!weighted)}
-            className={`gz-chip transition-colors ${
-              weighted
-                ? 'border-[var(--gz-accent)] text-[var(--gz-accent)]'
-                : 'hover:text-[var(--gz-text)]'
-            }`}
+            className="gz-wb-toggle"
           >
             Weighted
           </button>
-          <span className="gz-num ml-auto text-[0.6875rem] text-[var(--gz-faint)]">
-            {graph.order}v · {graph.size}e
-          </span>
         </div>
         <form
-          className="mt-2"
+          className="gz-wb-command-form"
           onSubmit={(event) => {
             event.preventDefault()
             const text = command.trim()
@@ -176,15 +161,15 @@ export const Inspector = () => {
           <input
             value={command}
             onChange={(event) => setCommand(event.target.value)}
-            className="gz-input gz-num"
-            placeholder="K5, C8, G(20,0.2) or A-B, B-C..."
+            className="gz-wb-command"
+            placeholder="K5, C8, G(20, 0.2) or A-B, B-C…"
             aria-label="Quick graph command"
             spellCheck={false}
           />
         </form>
       </div>
 
-      <div className="gz-scroll min-h-0 flex-1">
+      <div className="gz-scroll gz-wb-body">
         {hasSelection && (
           <Section
             id="selection"
@@ -236,7 +221,7 @@ export const Inspector = () => {
               {section ? (
                 <RowList section={section} />
               ) : (
-                <p className="px-2.5 text-[0.75rem] text-[var(--gz-faint)]">Computing...</p>
+                <p className="gz-wb-note">Computing…</p>
               )}
             </Section>
           )

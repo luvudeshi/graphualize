@@ -22,18 +22,18 @@ const NEEDS_CHIP = new Set<Exactness>([
   'not-applicable',
 ])
 
-const statusClass = (status: InspectorRow['status']) => {
-  switch (status) {
-    case 'success':
-      return 'text-[var(--gz-success)]'
-    case 'warning':
-      return 'text-[var(--gz-warning)]'
-    case 'danger':
-      return 'text-[var(--gz-danger)]'
-    default:
-      return 'text-[var(--gz-text)]'
-  }
-}
+/** Sets each arrow of a cycle on its own, so it can be spaced evenly. */
+const withArrows = (text: string) =>
+  text.split('→').flatMap((part, i) =>
+    i === 0
+      ? [part]
+      : [
+          <span key={i} className="gz-wb-why-arrow">
+            →
+          </span>,
+          part,
+        ],
+  )
 
 export const PropertyRow = ({ row }: { row: InspectorRow }) => {
   const activeWitness = useEditor((s) => s.activeWitness)
@@ -49,33 +49,21 @@ export const PropertyRow = ({ row }: { row: InspectorRow }) => {
 
   const content = (
     <>
-      <div
-        className={
-          stacked ? 'flex flex-col gap-0.5' : 'flex items-baseline justify-between gap-3'
-        }
-      >
-        <span className="text-[0.8125rem] text-[var(--gz-muted)] group-hover:text-[var(--gz-text)]">
-          {row.label}
-        </span>
-        <span className={`flex items-baseline gap-1.5 ${stacked ? '' : 'shrink-0'}`}>
-          {chip && <span className="gz-chip">{chip}</span>}
-          <span className={`gz-num font-medium break-words ${statusClass(row.status)}`}>
+      <div className="gz-wb-line" data-stacked={stacked || undefined}>
+        <span className="gz-wb-mark" data-witness={clickable || undefined} aria-hidden="true" />
+        <span className="gz-wb-row-name">{row.label}</span>
+        {!stacked && <span className="gz-wb-leader" aria-hidden="true" />}
+        <span className="gz-wb-value-wrap">
+          {chip && <span className="gz-wb-caveat">{chip}</span>}
+          <span className="gz-wb-value gz-wb-num" data-status={row.status || undefined}>
             {row.value}
           </span>
         </span>
       </div>
       {active && hasDetail && (
-        <div className="gz-anim-in mt-1.5 rounded-md border-l-2 border-[var(--gz-accent)] bg-[color-mix(in_oklab,var(--gz-accent-soft)_70%,transparent)] px-2.5 py-1.5">
-          {row.explanation && (
-            <p className="text-[0.75rem] leading-relaxed text-[var(--gz-text)]">
-              {row.explanation}
-            </p>
-          )}
-          {row.detail && (
-            <p className="mt-1 text-[0.7188rem] leading-relaxed text-[var(--gz-muted)]">
-              {row.detail}
-            </p>
-          )}
+        <div className="gz-anim-in gz-wb-why">
+          {row.explanation && <p className="gz-wb-why-text">{withArrows(row.explanation)}</p>}
+          {row.detail && <p className="gz-wb-why-detail">{row.detail}</p>}
         </div>
       )}
     </>
@@ -83,7 +71,7 @@ export const PropertyRow = ({ row }: { row: InspectorRow }) => {
 
   if (!clickable) {
     return (
-      <div className="group relative rounded-md px-2.5 py-[5px]" title={row.explanation}>
+      <div className="gz-wb-row" title={row.explanation}>
         {content}
       </div>
     )
@@ -95,11 +83,7 @@ export const PropertyRow = ({ row }: { row: InspectorRow }) => {
       onClick={() => setWitness(row.id, row.witness)}
       aria-pressed={active}
       title="Click to highlight this on the graph"
-      className={`group relative w-full rounded-md border-l-2 px-2.5 py-[5px] text-left transition-colors ${
-        active
-          ? 'border-[var(--gz-accent)] bg-[var(--gz-accent-soft)]'
-          : 'border-transparent hover:border-[color-mix(in_oklab,var(--gz-accent)_45%,transparent)] hover:bg-[color-mix(in_oklab,var(--gz-border)_45%,transparent)]'
-      }`}
+      className="gz-wb-row"
     >
       <span className="sr-only">
         {active ? 'Hide the visual explanation' : 'Show the visual explanation'}

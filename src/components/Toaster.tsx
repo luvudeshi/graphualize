@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useToast } from '../state/toast'
-import { AlertIcon, CheckIcon, CloseIcon } from './Icons'
+import { CloseIcon } from './Icons'
+import '../styles/tools.css'
+
+/**
+ * Byrne's symbols for the tone, in place of words: a cobalt disc for done, a
+ * chrome-yellow bar for a caution, a vermilion triangle for a failure.
+ */
+const GLYPH: Record<'success' | 'warning' | 'error', { glyph: string; ink?: string }> = {
+  success: { glyph: 'disc' },
+  warning: { glyph: 'bar', ink: 'yellow' },
+  error: { glyph: 'triangle' },
+}
 
 /** How long each tone stays up on its own. An error waits to be dismissed. */
 const LIFETIME: Record<'success' | 'warning' | 'error', number | null> = {
@@ -52,12 +63,7 @@ export const Toaster = () => {
     returnFocus.current = null
   }
 
-  const accent =
-    toast.tone === 'success'
-      ? 'text-[var(--gz-success)]'
-      : toast.tone === 'warning'
-        ? 'text-[var(--gz-warning)]'
-        : 'text-[var(--gz-danger)]'
+  const glyph = GLYPH[toast.tone]
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-4">
@@ -79,29 +85,21 @@ export const Toaster = () => {
         onKeyDown={(event) => {
           if (event.key === 'Escape') close(event.currentTarget)
         }}
-        className="gz-anim-pop pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border bg-[var(--gz-elevated)] px-3.5 py-3 shadow-[var(--gz-shadow)]"
+        className="gz-anim-pop gz-wb-toast"
       >
-        <span className={`mt-0.5 shrink-0 ${accent}`}>
-          {toast.tone === 'success' ? (
-            <CheckIcon width={18} height={18} />
-          ) : (
-            <AlertIcon width={18} height={18} />
-          )}
+        <span className="gz-wb-toast-glyph" aria-hidden>
+          <span className="gz-wb-sign" data-glyph={glyph.glyph} data-ink={glyph.ink} />
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[0.8125rem] font-semibold">{toast.title}</p>
-          {toast.detail && (
-            <p className="mt-0.5 text-[0.75rem] leading-relaxed text-[var(--gz-muted)]">
-              {toast.detail}
-            </p>
-          )}
+        <div className="gz-wb-toast-body">
+          <p className="gz-wb-toast-title">{toast.title}</p>
+          {toast.detail && <p className="gz-wb-toast-detail">{toast.detail}</p>}
           {toast.actions && toast.actions.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="gz-wb-toast-actions">
               {toast.actions.map((action) => (
                 <button
                   key={action.label}
                   type="button"
-                  className="gz-btn border px-2 text-[0.75rem]"
+                  className="gz-wb-toast-action"
                   onClick={(event) => {
                     close(event.currentTarget.closest('[data-testid="toast"]'))
                     action.run()
@@ -115,7 +113,7 @@ export const Toaster = () => {
         </div>
         <button
           type="button"
-          className="gz-btn -mr-1 -mt-1 shrink-0 px-1 text-[var(--gz-faint)] hover:text-[var(--gz-text)]"
+          className="gz-wb-toast-close"
           onClick={(event) => close(event.currentTarget.closest('[data-testid="toast"]'))}
           aria-label="Dismiss"
         >

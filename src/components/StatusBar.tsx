@@ -3,6 +3,7 @@ import { useEditor } from '../state/store'
 import { useAuth } from '../auth/store'
 
 import type { GraphWitness } from '../graph/model/types'
+import '../styles/tools.css'
 
 /** A short description of what is currently highlighted, for the footer chip. */
 const captionFor = (witness: GraphWitness): string => {
@@ -57,59 +58,59 @@ export const StatusBar = () => {
 
   const visible = status && status.nonce !== expiredNonce ? status : null
 
-  const tone =
-    visible?.tone === 'error'
-      ? 'text-[var(--gz-danger)]'
-      : visible?.tone === 'success'
-        ? 'text-[var(--gz-success)]'
-        : 'text-[var(--gz-text)]'
+  const savedState = syncing
+    ? { text: 'saving…', glyph: 'ring' }
+    : savedId
+      ? dirty
+        ? { text: 'unsaved changes', glyph: 'bar' }
+        : savedWhere === 'cloud'
+          ? { text: 'saved to your account', glyph: 'disc' }
+          : { text: 'saved in this browser', glyph: 'disc' }
+      : hasContent
+        ? signedOut
+          ? { text: 'not saved — saving keeps it in this browser', glyph: 'bar' }
+          : { text: 'not saved yet', glyph: 'bar' }
+        : signedOut
+          ? { text: 'not signed in', glyph: 'ring' }
+          : { text: 'not saved yet', glyph: 'ring' }
 
   return (
-    <footer className="flex h-7 shrink-0 items-center gap-3 border-t bg-[var(--gz-panel)] px-3 text-[0.6875rem]">
+    <footer className="gz-wb-status">
       {/* The live region holds only the transient message: announcing the tool
           hint on every tool change would be noise. */}
-      <span className="min-w-0 flex-1 truncate">
-        <span role="status" aria-live="polite" className={tone}>
+      <span className="gz-wb-status-line">
+        <span role="status" aria-live="polite" className="gz-wb-status-msg" data-tone={visible?.tone}>
           {/* Keyed by message, so the same sentence twice in a row (two
               saves, say) is a new node each time — and is announced each
               time — instead of an unchanged text node that is heard once. */}
           {visible && <span key={visible.nonce}>{visible.text}</span>}
         </span>
-        {!visible && <span className="text-[var(--gz-faint)]">{TOOL_HINTS[tool]}</span>}
+        {!visible && (
+          <span className="gz-wb-status-hint">
+            <span className="gz-wb-status-tool">{tool}</span> {TOOL_HINTS[tool]}
+          </span>
+        )}
       </span>
 
       {witness && (
         <button
           type="button"
           onClick={clearWitness}
-          className="gz-chip max-w-[22rem] shrink-0 overflow-hidden border-[var(--gz-accent)] text-[var(--gz-accent)]"
+          className="gz-wb-witness"
           title="Clear the highlight"
         >
-          <span className="truncate">{witnessCaption ?? 'highlighting'}</span>
-          <span aria-hidden>·</span>
-          <span>clear</span>
+          <span className="gz-wb-sign" data-glyph="triangle" aria-hidden />
+          <span className="gz-wb-witness-caption">{witnessCaption ?? 'highlighting'}</span>
+          <span className="gz-wb-witness-clear">clear</span>
         </button>
       )}
 
       {/* Where the graph is kept is the thing worth knowing at a glance:
           nothing is autosaved, and "saved" means different things signed in
           and signed out. */}
-      <span className="shrink-0 text-[var(--gz-faint)]">
-        {syncing
-          ? 'saving…'
-          : savedId
-            ? dirty
-              ? 'unsaved changes'
-              : savedWhere === 'cloud'
-                ? 'saved to your account'
-                : 'saved in this browser'
-            : hasContent
-              ? signedOut
-                ? 'not saved — saving keeps it in this browser'
-                : 'not saved yet'
-              : signedOut
-                ? 'not signed in'
-                : 'not saved yet'}
+      <span className="gz-wb-saved">
+        <span className="gz-wb-sign" data-glyph={savedState.glyph} aria-hidden />
+        {savedState.text}
       </span>
     </footer>
   )

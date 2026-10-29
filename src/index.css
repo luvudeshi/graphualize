@@ -2,43 +2,74 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * The whole app is printed in the style of Oliver Byrne's 1847 colour-plate
+ * Euclid, like the home page: cream paper, black ink and three flat
+ * primaries (vermilion, chrome yellow, cobalt), set in EB Garamond. The
+ * night edition is the same book on a deep indigo board, with the inks
+ * lifted for contrast. The Byrne inks are tokens of their own; the --gz-*
+ * roles below are built from them.
+ */
 :root {
-  --gz-bg: #f4f4f2;
-  --gz-canvas: #fcfcfb;
-  --gz-panel: #ffffff;
-  --gz-elevated: #ffffff;
-  --gz-border: #e3e3df;
-  --gz-border-strong: #cfcfc9;
-  --gz-text: #17171a;
-  --gz-muted: #6c6c74;
-  --gz-faint: #9a9aa2;
-  --gz-accent: #4f46e5;
-  --gz-accent-contrast: #ffffff;
-  --gz-accent-soft: #eceafe;
-  --gz-success: #0f7a58;
-  --gz-warning: #a55a06;
-  --gz-danger: #be123c;
-  --gz-shadow: 0 1px 2px rgb(17 17 26 / 0.04), 0 8px 24px rgb(17 17 26 / 0.06);
+  --gz-paper: #f3ead3;
+  --gz-paper-deep: #ebdfc1;
+  --gz-paper-light: #f8f2e1;
+  --gz-ink: #1d1a14;
+  --gz-red: #c9381d;
+  --gz-red-text: #b3311a;
+  --gz-blue: #24519f;
+  --gz-blue-text: #24519f;
+  --gz-yellow: #e6a915;
+  --gz-yellow-line: #9c7205;
+  --gz-on-red: #f8f1de;
+  --gz-hair: color-mix(in oklab, var(--gz-ink) 22%, transparent);
+  --gz-serif: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --gz-grain:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .12 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  --gz-bg: var(--gz-paper);
+  --gz-canvas: var(--gz-paper-light);
+  --gz-panel: var(--gz-paper);
+  --gz-elevated: var(--gz-paper-light);
+  --gz-border: var(--gz-hair);
+  --gz-border-strong: color-mix(in oklab, var(--gz-ink) 55%, transparent);
+  --gz-text: var(--gz-ink);
+  --gz-muted: #51483a;
+  --gz-faint: #6f6453;
+  --gz-accent: var(--gz-blue);
+  --gz-accent-contrast: var(--gz-paper);
+  --gz-accent-soft: color-mix(in oklab, var(--gz-blue) 12%, var(--gz-paper));
+  --gz-primary: var(--gz-red);
+  --gz-primary-contrast: var(--gz-on-red);
+  --gz-success: var(--gz-blue-text);
+  --gz-warning: var(--gz-red-text);
+  --gz-danger: var(--gz-red-text);
+  --gz-shadow: 0 0 0 1px var(--gz-ink);
   color-scheme: light;
 }
 
 .dark {
-  --gz-bg: #0b0b0e;
-  --gz-canvas: #101014;
-  --gz-panel: #141419;
-  --gz-elevated: #1b1b22;
-  --gz-border: #26262e;
-  --gz-border-strong: #383843;
-  --gz-text: #eceaf2;
-  --gz-muted: #9d9dab;
-  --gz-faint: #6e6e7c;
-  --gz-accent: #8d88ff;
-  --gz-accent-contrast: #12121a;
-  --gz-accent-soft: #211f42;
-  --gz-success: #34d399;
-  --gz-warning: #fbbf24;
-  --gz-danger: #fb7185;
-  --gz-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.35);
+  --gz-paper: #1a1d3d;
+  --gz-paper-deep: #242853;
+  --gz-paper-light: #1f2347;
+  --gz-ink: #ece2c6;
+  --gz-red: #f2694a;
+  --gz-red-text: #f2694a;
+  --gz-blue: #4f7fee;
+  --gz-blue-text: #6f9af0;
+  --gz-yellow: #f3be33;
+  --gz-yellow-line: #f3be33;
+  --gz-on-red: #1a1d3d;
+  --gz-hair: color-mix(in oklab, var(--gz-ink) 26%, transparent);
+  --gz-grain:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .89 0 0 0 0 .78 0 0 0 .2 -.045'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  --gz-elevated: var(--gz-paper-deep);
+  --gz-muted: #c2b9a0;
+  --gz-faint: #959ab8;
+  --gz-accent: var(--gz-blue-text);
+  --gz-accent-contrast: var(--gz-paper);
+  --gz-accent-soft: color-mix(in oklab, var(--gz-blue) 18%, var(--gz-paper));
   color-scheme: dark;
 }
 
@@ -59,7 +90,7 @@
   --color-warn: var(--gz-warning);
   --color-bad: var(--gz-danger);
 
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', monospace;
 }
 
@@ -84,20 +115,33 @@
     min-height: 100%;
   }
 
+  /* The app is printed on the grained paper, in Garamond with its own
+     kerning and ligatures and lining figures for the numbers a workbench
+     is full of. (The home page sets old-style figures on its own root.) */
   body {
-    background: var(--gz-bg);
+    background-color: var(--gz-bg);
+    background-image: var(--gz-grain);
     color: var(--gz-text);
     font-family: var(--font-sans);
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+    font-feature-settings: normal;
+    font-kerning: normal;
+    font-variant-ligatures: common-ligatures;
+    font-variant-numeric: lining-nums;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     overscroll-behavior: none;
   }
 
+  /* Square focus rings in cobalt, to match the square controls. */
   :focus-visible {
     outline: 2px solid var(--gz-accent);
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: 0;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--gz-blue) 24%, var(--gz-paper));
+    color: var(--gz-text);
   }
 
   ::-webkit-scrollbar {
@@ -117,37 +161,104 @@
     background: var(--gz-border-strong);
     background-clip: padding-box;
   }
+
+  /* In the workbench the scrollbars are thin square ink rules in a
+     hairline-ruled gutter. (The home page keeps the scrollbar it has.) */
+  html:not([data-route='home']) ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  html:not([data-route='home']) ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  html:not([data-route='home']) ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--gz-text) 34%, transparent);
+    border: 3px solid transparent;
+    border-radius: 0;
+    background-clip: padding-box;
+  }
+  html:not([data-route='home']) ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--gz-text) 60%, transparent);
+    background-clip: padding-box;
+  }
+  html:not([data-route='home']) ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    html:not([data-route='home']) * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--gz-text) 34%, transparent) transparent;
+    }
+  }
 }
 
+/*
+ * The shared pieces, set like the home page's plates. Everything is square,
+ * ruled in 1px hairlines and set in EB Garamond; labels are letter-spaced
+ * small caps. Colour carries meaning: cobalt is selection and focus,
+ * vermilion the primary action and warnings, chrome yellow a highlight.
+ *
+ * The home page draws a few of these (the account menu's sign-in button and
+ * the saved-graph dialogs) and styles them itself in home.css; the rules that
+ * would visibly change them are fenced off with :where(:not(.gz-home *)),
+ * which adds no specificity, so a Tailwind utility still wins as before.
+ */
 @layer components {
   .gz-panel {
     background: var(--gz-panel);
     border-color: var(--gz-border);
   }
 
+  /* Numbers in the text face, with lining, even-width figures so columns of
+     counts and degrees line up. */
   .gz-num {
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: 0;
+  }
+
+  /* Only what people type or copy as code keeps a monospace. */
+  .gz-code {
     font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
     font-size: 0.8125rem;
-    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
   }
 
+  /* A field label: letter-spaced small caps in muted ink. */
   .gz-label {
-    font-size: 0.6875rem;
-    font-weight: 550;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--gz-faint);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.14em;
+    line-height: 1.3;
+    color: var(--gz-muted);
   }
 
+  /* A section marker, like the home page's "Prop. I." and "Properties":
+     the same small caps in the red. */
+  .gz-marker {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.14em;
+    line-height: 1.3;
+    color: var(--gz-red-text);
+  }
+
+  /* Plain button: Garamond text on the paper; hover lays the deeper paper
+     under it. Square, so it sits flush with the rules around it. */
   .gz-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border-radius: 0.4rem;
+    border-radius: 0;
     padding: 0.3125rem 0.625rem;
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
     font-weight: 500;
+    line-height: 1.25;
     color: var(--gz-text);
     transition:
       background-color 120ms ease,
@@ -155,8 +266,8 @@
       border-color 120ms ease;
   }
 
-  .gz-btn:hover:not(:disabled) {
-    background: color-mix(in oklab, var(--gz-border) 55%, transparent);
+  .gz-btn:where(:not(.gz-home *)):hover:not(:disabled) {
+    background: var(--gz-paper-deep);
   }
 
   .gz-btn:disabled {
@@ -164,42 +275,200 @@
     cursor: default;
   }
 
+  /* The primary action, like "Start drawing": a flat block of vermilion
+     with small caps in the paper; hover turns it to ink. */
   .gz-btn-primary {
-    background: var(--gz-accent);
-    color: var(--gz-accent-contrast);
+    background: var(--gz-primary);
+    color: var(--gz-primary-contrast);
+  }
+
+  .gz-btn-primary:where(:not(.gz-home *)) {
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.1em;
   }
 
   .gz-btn-primary:hover:not(:disabled) {
-    background: color-mix(in oklab, var(--gz-accent) 88%, black);
+    background: var(--gz-text);
+    color: var(--gz-bg);
   }
 
+  /* The outlined button, like "Open the workbench": a 1px ink rule round
+     letter-spaced small caps; hover fills it with ink. */
+  .gz-btn-outline {
+    border: 1px solid var(--gz-text);
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.1em;
+  }
+
+  .gz-btn-outline:where(:not(.gz-home *)):hover:not(:disabled) {
+    background: var(--gz-text);
+    color: var(--gz-bg);
+  }
+
+  /* A tag or toggle: square, hairline-ruled small caps. "On" is printed in
+     ink (or cobalt, with .gz-chip-blue). */
   .gz-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    border-radius: 999px;
-    border: 1px solid var(--gz-border);
-    padding: 0.0625rem 0.5rem;
-    font-size: 0.6875rem;
+    gap: 0.3125rem;
+    border-radius: 0;
+    border: 1px solid var(--gz-border-strong);
+    padding: 0 0.4375rem 0.0625rem;
+    font-size: 0.9rem;
     font-weight: 500;
+    font-variant-caps: all-small-caps;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: 0.08em;
+    line-height: 1.35;
     color: var(--gz-muted);
     white-space: nowrap;
   }
 
+  .gz-chip-on,
+  .gz-chip[aria-pressed='true'],
+  .gz-chip[data-on='true'] {
+    border-color: var(--gz-text);
+    background: var(--gz-text);
+    color: var(--gz-bg);
+  }
+
+  .gz-chip-blue.gz-chip-on,
+  .gz-chip-blue[aria-pressed='true'],
+  .gz-chip-blue[data-on='true'] {
+    border-color: var(--gz-blue);
+    background: var(--gz-blue);
+    color: var(--gz-paper-light);
+  }
+
+  /* Text fields: a lighter sheet laid on the paper, square, with a firm
+     enough edge to find (3:1); focus is the page's square cobalt ring. */
   .gz-input {
-    background: var(--gz-bg);
-    border: 1px solid var(--gz-border);
-    border-radius: 0.4rem;
+    background: var(--gz-paper-light);
+    border: 1px solid var(--gz-border-strong);
+    border-radius: 0;
     padding: 0.3125rem 0.5rem;
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
+    font-variant-numeric: lining-nums tabular-nums;
+    line-height: 1.3;
     color: var(--gz-text);
     width: 100%;
   }
 
-  .gz-input:focus {
-    outline: none;
-    border-color: var(--gz-accent);
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--gz-accent) 22%, transparent);
+  .gz-input::placeholder {
+    color: var(--gz-faint);
+    font-style: italic;
+    opacity: 1;
+  }
+
+  .gz-input:focus,
+  .gz-input:focus-visible {
+    outline: 2px solid var(--gz-accent);
+    outline-offset: 2px;
+    border-color: var(--gz-text);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .gz-input:disabled {
+    opacity: 0.55;
+  }
+
+  /* Byrne's double rule round a plate: the box's own 1px ink border and an
+     outline 3px outside it. The outer rule lies outside the box, so leave
+     it 4px of room (margin or padding on the parent). */
+  .gz-frame-double {
+    border: 1px solid var(--gz-text);
+    outline: 1px solid var(--gz-text);
+    outline-offset: 3px;
+  }
+
+  .gz-frame-double:focus-visible {
+    outline: 2px solid var(--gz-accent);
+    outline-offset: 3px;
+  }
+
+  /* The same double rule as a horizontal division between sections. */
+  .gz-rule-double {
+    border-bottom: 4px double var(--gz-text);
+  }
+
+  .gz-rule-double-top {
+    border-top: 4px double var(--gz-text);
+  }
+
+  /* Byrne's glyphs, his symbols for words: a triangle, a bar and a disc in
+     the three inks. data-ink picks the ink (red, blue or yellow; ink by
+     default). Yellow and every disc are ringed in ink, as on the home page. */
+  .gz-glyph-tri,
+  .gz-glyph-bar,
+  .gz-glyph-disc {
+    --gz-glyph: var(--gz-text);
+    display: inline-block;
+    flex-shrink: 0;
+    width: 0.8rem;
+    height: 0.8rem;
+    vertical-align: -0.05em;
+    background: var(--gz-glyph);
+    forced-color-adjust: none;
+  }
+
+  .gz-glyph-tri {
+    clip-path: polygon(50% 2%, 100% 96%, 0 96%);
+  }
+
+  .gz-glyph-bar {
+    width: 0.9rem;
+    height: 0.3rem;
+    vertical-align: 0.2em;
+  }
+
+  .gz-glyph-disc {
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1.25px var(--gz-text);
+  }
+
+  .gz-glyph-bar[data-ink='yellow'] {
+    box-shadow: inset 0 0 0 1px var(--gz-text);
+  }
+
+  /* A yellow triangle cannot take a ring through clip-path, so it is drawn
+     as an ink triangle with the yellow one inset inside it. */
+  .gz-glyph-tri[data-ink='yellow'] {
+    background: var(--gz-text);
+    position: relative;
+  }
+
+  .gz-glyph-tri[data-ink='yellow']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gz-yellow);
+    clip-path: polygon(50% 17%, 89% 90%, 11% 90%);
+  }
+
+  [data-ink='red'].gz-glyph-tri,
+  [data-ink='red'].gz-glyph-bar,
+  [data-ink='red'].gz-glyph-disc {
+    --gz-glyph: var(--gz-red);
+  }
+
+  [data-ink='blue'].gz-glyph-tri,
+  [data-ink='blue'].gz-glyph-bar,
+  [data-ink='blue'].gz-glyph-disc {
+    --gz-glyph: var(--gz-blue);
+  }
+
+  [data-ink='yellow'].gz-glyph-bar,
+  [data-ink='yellow'].gz-glyph-disc {
+    --gz-glyph: var(--gz-yellow);
+  }
+
+  /* The paper's grain, for the app background and the canvas plate. */
+  .gz-paper {
+    background-color: var(--gz-bg);
+    background-image: var(--gz-grain);
   }
 
   .gz-scroll {

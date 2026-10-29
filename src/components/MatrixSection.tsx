@@ -40,11 +40,11 @@ export const MatrixSection = () => {
   const active = matrices.find((m) => m.kind === activeKind) ?? matrices[0]
 
   if (!graph.order) {
-    return <p className="px-2.5 py-2 text-[0.8125rem] text-[var(--gz-muted)]">No vertices yet.</p>
+    return <p className="gz-wb-note">No vertices yet.</p>
   }
   if (!active) {
     return (
-      <p className="px-2.5 py-2 text-[0.8125rem] text-[var(--gz-muted)]">
+      <p className="gz-wb-note">
         Matrices are not built above 400 vertices.
       </p>
     )
@@ -64,46 +64,40 @@ export const MatrixSection = () => {
   }
 
   return (
-    <div className="px-2 pb-2">
-      <div className="mb-2 flex flex-wrap gap-1">
+    <div className="gz-wb-matrices">
+      <div className="gz-wb-tabs">
         {matrices.map((m) => (
           <button
             key={m.kind}
             type="button"
             onClick={() => setActiveKind(m.kind)}
-            className={`rounded-md px-2 py-[3px] text-[0.75rem] transition-colors ${
-              m.kind === active.kind
-                ? 'bg-[var(--gz-accent-soft)] text-[var(--gz-accent)]'
-                : 'text-[var(--gz-muted)] hover:bg-[color-mix(in_oklab,var(--gz-border)_50%,transparent)]'
-            }`}
+            aria-pressed={m.kind === active.kind}
+            className="gz-wb-tab"
           >
             {TAB_LABELS[m.kind]}
           </button>
         ))}
       </div>
 
-      <p className="mb-1 px-0.5 text-[0.8125rem] font-medium">{active.title}</p>
-      <p className="mb-2 px-0.5 text-[0.7188rem] leading-relaxed text-[var(--gz-muted)]">
-        {active.convention}
-      </p>
+      <p className="gz-wb-matrix-title">{active.title}</p>
+      <p className="gz-wb-matrix-convention">{active.convention}</p>
 
       {tooBig ? (
-        <p className="px-0.5 text-[0.8125rem] text-[var(--gz-muted)]">
-          {active.values.length} x {active.values.length} is too large to display here. Copy it
+        <p className="gz-wb-note">
+          <span className="gz-wb-num">
+            {active.values.length} × {active.values.length}
+          </span>{' '}
+          is too large to display here. Copy it
           instead.
         </p>
       ) : (
-        <div className="gz-scroll max-h-72 overflow-x-auto rounded-md border">
-          <table className="gz-num border-collapse">
+        <div className="gz-scroll gz-wb-matrix-scroll">
+          <table className="gz-wb-matrix">
             <thead>
               <tr>
-                <th className="sticky left-0 top-0 z-20 bg-[var(--gz-panel)] px-1.5 py-1" />
+                <th />
                 {active.colLabels.map((label, i) => (
-                  <th
-                    key={`${label}-${i}`}
-                    scope="col"
-                    className="sticky top-0 z-10 bg-[var(--gz-panel)] px-1.5 py-1 text-[0.6875rem] font-semibold text-[var(--gz-muted)]"
-                  >
+                  <th key={`${label}-${i}`} scope="col">
                     {label}
                   </th>
                 ))}
@@ -111,10 +105,9 @@ export const MatrixSection = () => {
             </thead>
             <tbody>
               {active.values.map((rowValues, r) => (
-                <tr key={active.rowLabels[r] ?? r} className="hover:bg-[var(--gz-accent-soft)]">
+                <tr key={active.rowLabels[r] ?? r}>
                   <th
                     scope="row"
-                    className="sticky left-0 z-10 cursor-pointer bg-[var(--gz-panel)] px-1.5 py-0.5 text-[0.6875rem] font-semibold text-[var(--gz-muted)]"
                     onClick={() => {
                       const id = graph.vertexIds[r]
                       if (id) select([id], [])
@@ -124,12 +117,7 @@ export const MatrixSection = () => {
                     {active.rowLabels[r]}
                   </th>
                   {rowValues.map((value, c) => (
-                    <td
-                      key={c}
-                      className={`px-1.5 py-0.5 text-center text-[0.75rem] ${
-                        value === 0 ? 'text-[var(--gz-faint)]' : 'text-[var(--gz-text)]'
-                      }`}
-                    >
+                    <td key={c} data-zero={value === 0 || undefined}>
                       {formatCell(value)}
                     </td>
                   ))}
@@ -140,15 +128,16 @@ export const MatrixSection = () => {
         </div>
       )}
 
-      <div className="mt-2 flex gap-1">
+      <div className="gz-wb-copy">
+        <span className="gz-wb-copy-label">Copy as</span>
         {(['text', 'csv', 'latex'] as const).map((kind) => (
           <button
             key={kind}
             type="button"
             onClick={() => void copy(kind)}
-            className="gz-btn border px-2 py-1 text-[0.75rem]"
+            className="gz-wb-btn"
           >
-            <CopyIcon width={13} height={13} />
+            <CopyIcon width={12} height={12} aria-hidden="true" />
             {kind === 'latex' ? 'LaTeX' : kind.toUpperCase()}
           </button>
         ))}

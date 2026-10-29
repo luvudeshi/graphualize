@@ -85,12 +85,12 @@ export const ConfirmReplace = () => {
       width="max-w-md"
       footer={
         <>
-          <button type="button" className="gz-btn border px-3" onClick={close} disabled={saving}>
+          <button type="button" className="gz-btn" onClick={close} disabled={saving}>
             Cancel
           </button>
           <button
             type="button"
-            className="gz-btn border border-[var(--gz-danger)] px-3 text-[var(--gz-danger)] hover:bg-[color-mix(in_oklab,var(--gz-danger)_12%,transparent)]"
+            className="gz-btn gz-wb-dlg-btn-danger"
             onClick={discard}
             disabled={saving}
           >
@@ -98,7 +98,7 @@ export const ConfirmReplace = () => {
           </button>
           <button
             type="button"
-            className="gz-btn gz-btn-primary px-3"
+            className="gz-btn gz-btn-primary"
             onClick={() => void saveThenContinue()}
             disabled={saving}
           >
@@ -108,13 +108,13 @@ export const ConfirmReplace = () => {
       }
     >
       {problem ? (
-        <p role="alert" className="text-[0.8125rem] leading-relaxed text-[var(--gz-danger)]">
+        <p role="alert" className="gz-wb-dlg-notice" data-tone="danger">
           {problem === 'changed'
             ? 'The graph changed while it was saving, so nothing was replaced. Your graph is still here.'
             : 'That save did not go through, so nothing was replaced. Your graph is still here.'}
         </p>
       ) : (
-        <p className="text-[0.8125rem] leading-relaxed text-[var(--gz-muted)]">
+        <p className="gz-wb-dlg-caption">
           Your saved graphs are not affected either way.
         </p>
       )}
