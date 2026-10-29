@@ -77,10 +77,10 @@ const buildTriangle = (): GraphDocument => {
 const buildSquare = (): GraphDocument => {
   const b = new GraphBuilder()
   at(b, [
-    ['A', -150, -120],
-    ['B', 150, -120],
-    ['C', 150, 120],
-    ['D', -150, 120],
+    ['A', -130, -130],
+    ['B', 130, -130],
+    ['C', 130, 130],
+    ['D', -130, 130],
   ])
   connect(b, ['A-B', 'B-C', 'C-D', 'D-A'])
   return b.build()

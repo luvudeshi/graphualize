@@ -1,292 +1,219 @@
 import type { ReactNode } from 'react'
-import { GraphMarkIcon, PlayIcon, StepBackIcon, StepForwardIcon } from '../components/Icons'
+import { EDGE_INKS, edgeInks } from './byrne'
 
 /**
- * What the workbench does beyond the demo above it, as a grid of tiles: a
- * small picture each and a line of text at most. The pictures are inline SVG
- * and HTML coloured from the --gz-* tokens, so they follow the theme and cost
- * no request. They are illustrations in the product's own visual language,
- * not screenshots, and they are hidden from assistive technology — the tile's
- * heading and line carry the meaning.
+ * What the workbench does beyond the demo above it, set as a short list of
+ * numbered definitions, each with a small figure in the page's four inks.
+ * The figures are inline SVG coloured from the --gz-home-* properties, so they
+ * follow the theme and cost no request, and they are hidden from assistive
+ * technology: the heading and line beside each carry the meaning.
  */
 
-const ALGORITHMS = [
-  'BFS',
-  'DFS',
-  'Dijkstra',
-  'Bellman–Ford',
-  'Prim',
-  'Kruskal',
-  'Topological sort',
-  'Colouring',
-]
+/* A word joiner after the en dash keeps 'Bellman–Ford' from breaking at it. */
+const ALGORITHMS = 'BFS, DFS, Dijkstra, Bellman–⁠Ford, Prim, Kruskal, topological sort, colouring.'
 
-const Tile = ({
-  title,
-  line,
-  visual,
-  className = '',
-  children,
-}: {
-  title: string
-  line?: string
-  visual: ReactNode
-  className?: string
-  children?: ReactNode
-}) => (
-  <article className={`gz-home-tile ${className}`}>
-    <div className="gz-home-tile-visual" aria-hidden="true">
-      {visual}
-    </div>
-    <div className="px-5 pb-5 pt-1">
-      <h3 className="text-[0.9375rem] font-semibold tracking-[-0.015em]">{title}</h3>
-      {line && <p className="mt-1 text-[0.8125rem] leading-relaxed text-[var(--gz-muted)]">{line}</p>}
-      {children}
-    </div>
-  </article>
+const Figure = ({ children, name }: { children: ReactNode; name?: string }) => (
+  <svg viewBox="0 0 120 80" className="gz-home-def-svg" data-fig={name} aria-hidden="true" focusable="false">
+    {children}
+  </svg>
 )
 
-/* Breadth-first search, frozen part-way: `c` is being expanded, `d`, `e` and
-   `f` wait in the queue, and the tree edges found so far are drawn solid. */
-const BFS_NODES = [
-  { id: 'a', x: 26, y: 80, state: 'visited' },
-  { id: 'b', x: 92, y: 40, state: 'visited' },
-  { id: 'c', x: 92, y: 120, state: 'current' },
-  { id: 'd', x: 160, y: 22, state: 'frontier' },
-  { id: 'e', x: 160, y: 80, state: 'frontier' },
-  { id: 'f', x: 160, y: 138, state: 'frontier' },
-  { id: 'g', x: 226, y: 52, state: 'idle' },
-] as const
-
-const BFS_EDGES = [
-  ['a', 'b', 'tree'],
-  ['a', 'c', 'tree'],
-  ['b', 'c', 'idle'],
-  ['b', 'd', 'tree'],
-  ['b', 'e', 'tree'],
-  ['c', 'e', 'idle'],
-  ['c', 'f', 'active'],
-  ['d', 'g', 'idle'],
-  ['e', 'g', 'idle'],
-] as const
-
-const BfsPicture = () => {
-  const at = new Map(BFS_NODES.map((node) => [node.id, node]))
-  return (
-    <svg viewBox="0 0 252 160" className="h-full max-h-[9.5rem] w-auto shrink-0">
-      {BFS_EDGES.map(([a, b, state]) => {
-        const p = at.get(a)!
-        const q = at.get(b)!
-        return (
-          <line
-            key={`${a}${b}`}
-            x1={p.x}
-            y1={p.y}
-            x2={q.x}
-            y2={q.y}
-            className="gz-algo-edge"
-            data-state={state}
-          />
-        )
-      })}
-      {BFS_NODES.map((node) => (
-        <g key={node.id} className="gz-algo-node" data-state={node.state}>
-          <circle cx={node.x} cy={node.y} r={11} />
-          <text x={node.x} y={node.y} dy="0.35em" textAnchor="middle">
-            {node.id}
-          </text>
-        </g>
-      ))}
-    </svg>
-  )
+/* Breadth-first search, frozen part-way: the tree found so far in blue, the
+   edge being followed in red, the queue in yellow. */
+const BFS_AT: Record<string, [number, number]> = {
+  a: [12, 40],
+  b: [44, 16],
+  c: [44, 64],
+  d: [80, 8],
+  e: [80, 40],
+  f: [80, 72],
+  g: [110, 24],
 }
 
-const Player = () => (
-  <div className="gz-home-mini hidden w-[13.5rem] shrink-0 p-3 sm:block">
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-[0.75rem] font-medium">Breadth-first search</span>
-      <span className="gz-num text-[0.6875rem] text-[var(--gz-faint)]">6/14</span>
-    </div>
-    <div className="mt-2.5 flex items-center gap-1.5">
-      <span className="mr-0.5 text-[0.6875rem] text-[var(--gz-faint)]">Queue</span>
-      {['d', 'e', 'f'].map((id) => (
-        <span key={id} className="gz-algo-queued">
-          {id}
-        </span>
-      ))}
-    </div>
-    <div className="gz-algo-track mt-3">
-      <span style={{ width: '43%' }} />
-    </div>
-    <div className="mt-2.5 flex items-center justify-center gap-3 text-[var(--gz-muted)]">
-      <StepBackIcon width={13} height={13} />
-      <span className="gz-algo-play">
-        <PlayIcon width={12} height={12} />
-      </span>
-      <StepForwardIcon width={13} height={13} />
-    </div>
-  </div>
-)
-
-const BoundsPicture = () => (
-  <div className="gz-home-mini w-[15.5rem] px-3.5 py-3">
-    <div className="flex items-center gap-2">
-      <span className="flex-1 text-[0.75rem] text-[var(--gz-muted)]">Chromatic number</span>
-      <span className="gz-chip">bounded</span>
-      <span className="gz-num font-medium">3–5</span>
-    </div>
-    <div className="gz-range mt-3.5">
-      <span className="gz-range-band" />
-      {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-        <span key={n} className="gz-num" data-in={n >= 3 && n <= 5}>
-          {n}
-        </span>
-      ))}
-    </div>
-  </div>
-)
-
-/* The 5-cycle and its adjacency matrix, side by side. */
-const C5_MATRIX = [
-  [0, 1, 0, 0, 1],
-  [1, 0, 1, 0, 0],
-  [0, 1, 0, 1, 0],
-  [0, 0, 1, 0, 1],
-  [1, 0, 0, 1, 0],
+const BFS_EDGES: [string, string, 'tree' | 'active' | 'idle'][] = [
+  ['b', 'c', 'idle'],
+  ['c', 'e', 'idle'],
+  ['d', 'g', 'idle'],
+  ['e', 'g', 'idle'],
+  ['a', 'b', 'tree'],
+  ['a', 'c', 'tree'],
+  ['b', 'd', 'tree'],
+  ['b', 'e', 'tree'],
+  ['c', 'f', 'active'],
 ]
 
-const C5_POINTS = Array.from({ length: 5 }, (_, i) => {
-  const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5
-  return { x: 40 + 30 * Math.cos(angle), y: 40 + 30 * Math.sin(angle) }
-})
+const BfsFigure = () => (
+  <Figure>
+    {BFS_EDGES.map(([p, q, state]) => {
+      const [x1, y1] = BFS_AT[p]!
+      const [x2, y2] = BFS_AT[q]!
+      return (
+        <line key={p + q} x1={x1} y1={y1} x2={x2} y2={y2} className="gz-algo-edge" data-state={state} />
+      )
+    })}
+    {Object.entries(BFS_AT).map(([id, [x, y]]) => {
+      const state = id === 'c' ? 'current' : 'def'.includes(id) ? 'frontier' : id === 'g' ? 'idle' : 'visited'
+      const r = state === 'current' ? 6.5 : state === 'frontier' ? 5.5 : 4
+      return <circle key={id} cx={x} cy={y} r={r} className="gz-algo-node" data-state={state} />
+    })}
+  </Figure>
+)
 
-const MatrixPicture = () => (
-  <div className="flex items-center gap-4">
-    <svg viewBox="0 0 80 80" className="h-[4.5rem] w-[4.5rem] shrink-0">
-      {C5_POINTS.map((p, i) => {
-        const q = C5_POINTS[(i + 1) % 5]!
-        return <line key={i} x1={p.x} y1={p.y} x2={q.x} y2={q.y} className="gz-thumb-edge" />
-      })}
-      {C5_POINTS.map((p, i) => (
-        <g key={i} className="gz-algo-node" data-state="plain">
-          <circle cx={p.x} cy={p.y} r={8} />
-          <text x={p.x} y={p.y} dy="0.35em" textAnchor="middle">
-            {i + 1}
+/* A chromatic number pinned between bounds rather than guessed. */
+const BoundsFigure = () => (
+  <Figure>
+    <line x1="4" y1="44" x2="116" y2="44" className="gz-home-ink-line" />
+    {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+      const x = 10 + (n - 1) * 16.6
+      return (
+        <g key={n}>
+          <line x1={x} y1="39" x2={x} y2="49" className="gz-home-ink-line" />
+          <text x={x} y="66" textAnchor="middle" className="gz-home-def-text">
+            {n}
           </text>
         </g>
-      ))}
-    </svg>
-    <div className="gz-matrix">
-      {C5_MATRIX.flat().map((value, i) => (
-        <span key={i} className="gz-num" data-on={value === 1}>
-          {value}
-        </span>
-      ))}
-    </div>
-  </div>
+      )
+    })}
+    <rect x={10 + 2 * 16.6} y="39.5" width={2 * 16.6} height="9" className="gz-home-fill" data-ink="red" />
+    <text x={10 + 3 * 16.6} y="28" textAnchor="middle" className="gz-home-def-text" data-italic>
+      χ
+    </text>
+  </Figure>
 )
 
-/* A drawing selected as an object, the way a vector editor shows it. */
-const STAR = Array.from({ length: 5 }, (_, i) => {
+/* The 5-cycle and its adjacency matrix, each entry in the colour of its edge.
+   The edges are coloured by the same proper edge colouring as the plate of
+   figures, so an odd cycle takes three inks, as it must. */
+const C5 = Array.from({ length: 5 }, (_, i) => {
   const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5
-  return { x: 60 + 34 * Math.cos(angle), y: 52 + 34 * Math.sin(angle) }
+  return { x: 24 + 19 * Math.cos(angle), y: 41 + 19 * Math.sin(angle) }
+})
+const C5_EDGES = C5.map((_, i) => ({ id: String(i), source: String(i), target: String((i + 1) % 5) }))
+const C5_INKS = edgeInks({ edges: C5_EDGES })
+const C5_INK = C5_EDGES.map((edge) => EDGE_INKS[C5_INKS.get(edge.id) ?? 0])
+const c5Ink = (i: number, j: number): string | null => {
+  if ((i + 1) % 5 === j) return C5_INK[i]!
+  if ((j + 1) % 5 === i) return C5_INK[j]!
+  return null
+}
+
+const MatrixFigure = () => (
+  <Figure name="matrix">
+    {C5.map((p, i) => {
+      const q = C5[(i + 1) % 5]!
+      return (
+        <line key={i} x1={p.x} y1={p.y} x2={q.x} y2={q.y} className="gz-home-stroke" data-ink={C5_INK[i]} />
+      )
+    })}
+    {C5.map((p, i) => (
+      <circle key={i} cx={p.x} cy={p.y} r="2.6" className="gz-home-fill" data-ink="ink" />
+    ))}
+    <path d="M58 13h-3v56h3M114 13h3v56h-3" className="gz-home-ink-line" fill="none" />
+    {C5.map((_, i) =>
+      C5.map((__, j) => {
+        const ink = c5Ink(i, j)
+        return ink ? (
+          <rect key={`${i}${j}`} x={59 + j * 11} y={15 + i * 11} width="9" height="9" className="gz-home-fill" data-ink={ink} />
+        ) : (
+          <rect key={`${i}${j}`} x={61.5 + j * 11} y={17.5 + i * 11} width="4" height="4" className="gz-home-fill" data-ink="faint" />
+        )
+      }),
+    )}
+  </Figure>
+)
+
+/* K5 with crop marks round it: ready to print, at any size. */
+const K5 = Array.from({ length: 5 }, (_, i) => {
+  const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5
+  return { x: 60 + 27 * Math.cos(angle), y: 43 + 27 * Math.sin(angle) }
 })
 
-const ExportPicture = () => (
-  <div className="flex items-center gap-4">
-    <svg viewBox="0 0 120 104" className="h-[6.5rem] w-auto shrink-0">
-      {STAR.flatMap((p, i) =>
-        STAR.slice(i + 1).map((q, j) => (
-          <line key={`${i}-${j}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} className="gz-thumb-edge" />
-        )),
-      )}
-      {STAR.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={5.5} className="gz-thumb-vertex" />
-      ))}
-      <rect x="18" y="10" width="84" height="80" className="gz-select-box" />
-      {[
-        [18, 10],
-        [102, 10],
-        [18, 90],
-        [102, 90],
-      ].map(([x, y]) => (
-        <rect key={`${x}${y}`} x={x! - 3} y={y! - 3} width="6" height="6" className="gz-select-handle" />
-      ))}
-    </svg>
-    <div className="flex flex-col gap-1.5">
-      {['SVG', 'PNG', 'DOT'].map((format, i) => (
-        <span key={format} className="gz-file" data-primary={i === 0}>
-          {format}
-        </span>
-      ))}
-    </div>
-  </div>
+const ExportFigure = () => (
+  <Figure>
+    <polygon points={K5.map((p) => `${p.x},${p.y}`).join(' ')} className="gz-home-fill" data-ink="yellow" />
+    {K5.flatMap((p, i) =>
+      K5.slice(i + 1).map((q, j) => (
+        <line key={`${i}-${j}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} className="gz-home-ink-line" />
+      )),
+    )}
+    {K5.map((p, i) => (
+      <circle key={i} cx={p.x} cy={p.y} r="3" className="gz-home-fill" data-ink="ink" />
+    ))}
+    <path
+      d="M22 4v10M12 14h10M98 4v10M98 14h10M22 76v-10M12 66h10M98 76v-10M98 66h10"
+      className="gz-home-ink-line"
+      data-thin
+    />
+  </Figure>
 )
 
-const LocalPicture = () => (
-  <div className="gz-home-mini w-[13rem] overflow-hidden">
-    <div className="flex items-center gap-1.5 border-b px-2.5 py-2">
-      <span className="gz-window-dot" />
-      <span className="gz-window-dot" />
-      <span className="gz-window-dot" />
-      <span className="ml-1.5 flex h-4 flex-1 items-center gap-1 rounded-full bg-[color-mix(in_oklab,var(--gz-border)_50%,transparent)] px-2">
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-[var(--gz-faint)]">
-          <rect x="5" y="11" width="14" height="10" rx="2" />
-          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-        </svg>
-      </span>
-    </div>
-    <div className="flex items-center justify-center gap-2.5 py-5">
-      <span className="gz-local-badge">
-        <GraphMarkIcon width={18} height={18} />
-      </span>
-      <span className="text-left">
-        <span className="block text-[0.75rem] font-medium">Computed locally</span>
-        <span className="block text-[0.6875rem] text-[var(--gz-faint)]">in this tab</span>
-      </span>
-    </div>
-  </div>
+/* A page in a browser window, with a figure drawn inside it. */
+const LocalFigure = () => (
+  <Figure>
+    <rect x="20" y="6" width="80" height="68" className="gz-home-ink-line" fill="none" />
+    <line x1="20" y1="18" x2="100" y2="18" className="gz-home-ink-line" />
+    <circle cx="27" cy="12" r="2" className="gz-home-fill" data-ink="red" />
+    <circle cx="34" cy="12" r="2" className="gz-home-fill" data-ink="yellow" />
+    <circle cx="41" cy="12" r="2" className="gz-home-fill" data-ink="blue" />
+    <polygon points="60,28 80,62 40,62" className="gz-home-fill" data-ink="red" />
+    <line x1="40" y1="62" x2="80" y2="62" className="gz-home-stroke" data-ink="blue" />
+    <circle cx="60" cy="28" r="3" className="gz-home-fill" data-ink="ink" />
+    <circle cx="80" cy="62" r="3" className="gz-home-fill" data-ink="ink" />
+    <circle cx="40" cy="62" r="3" className="gz-home-fill" data-ink="ink" />
+  </Figure>
 )
+
+/* EB Garamond italic has no a–T kerning pair, so the word reads 'La TeX'
+   unless the T is pulled in by hand. */
+const LATEX = (
+  <span className="gz-latex">
+    La<span className="gz-latex-t">T</span>eX
+  </span>
+)
+
+const DEFINITIONS: { numeral: string; title: string; line: ReactNode; figure: ReactNode }[] = [
+  { numeral: 'I', title: 'Step through algorithms', line: ALGORITHMS, figure: <BfsFigure /> },
+  {
+    numeral: 'II',
+    title: 'Honest about hard problems',
+    line: 'Exact within stated limits. Bounds, never guesses.',
+    figure: <BoundsFigure />,
+  },
+  {
+    numeral: 'III',
+    title: 'Matrices and spectra',
+    line: <>Adjacency to Laplacian, copied as {LATEX}.</>,
+    figure: <MatrixFigure />,
+  },
+  {
+    numeral: 'IV',
+    title: 'Export that stays sharp',
+    line: 'SVG, PNG, DOT, GraphML, CSV and JSON.',
+    figure: <ExportFigure />,
+  },
+  {
+    numeral: 'V',
+    title: 'Runs in your browser',
+    line: 'Nothing to install. No account needed.',
+    figure: <LocalFigure />,
+  },
+]
 
 export const FeatureGrid = () => (
-  <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-3">
-    <Tile
-      className="sm:col-span-2"
-      title="Step through algorithms"
-      visual={
-        <>
-          <BfsPicture />
-          <Player />
-        </>
-      }
-    >
-      <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Algorithms">
-        {ALGORITHMS.map((name) => (
-          <li key={name} className="gz-home-tag">
-            {name}
-          </li>
-        ))}
-      </ul>
-    </Tile>
-    <Tile
-      title="Honest about hard problems"
-      line="Exact within stated limits. Bounds, never guesses."
-      visual={<BoundsPicture />}
-    />
-    <Tile
-      title="Matrices and spectra"
-      line="Adjacency to Laplacian, copied as LaTeX."
-      visual={<MatrixPicture />}
-    />
-    <Tile
-      title="Export that stays sharp"
-      line="SVG, PNG, DOT, GraphML, CSV and JSON."
-      visual={<ExportPicture />}
-    />
-    <Tile
-      title="Runs in your browser"
-      line="Nothing to install. No account needed."
-      visual={<LocalPicture />}
-    />
-  </div>
+  <ol className="gz-home-defs">
+    {DEFINITIONS.map(({ numeral, title, line, figure }) => (
+      <li key={numeral} className="gz-home-def">
+        <span className="gz-home-def-fig">{figure}</span>
+        <div className="gz-home-def-body">
+          <h3 className="gz-home-def-title">
+            <span className="gz-home-def-no" aria-hidden="true">
+              {numeral}.
+            </span>
+            {title}
+          </h3>
+          <p className="gz-home-def-line">{line}</p>
+        </div>
+      </li>
+    ))}
+  </ol>
 )

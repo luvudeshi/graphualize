@@ -13,10 +13,15 @@ interface FakeElement {
   removeData: (key: string) => void
   toggleClass: (name: string, on: boolean) => void
   position: (to?: { x: number; y: number }) => { x: number; y: number } | undefined
+  renderedPosition: () => { x: number; y: number } | undefined
+  renderedOuterWidth: () => number
+  renderedBoundingBox: () => { x1: number; y1: number; x2: number; y2: number; w: number; h: number }
   label: string
 }
 
 const { stage, mounted, fakeElement } = vi.hoisted(() => {
+  /** What the fake reports as the size of the drawing area. */
+  const stage = { width: 706, height: 364 }
   const fake = (data: Record<string, unknown>, at?: { x: number; y: number }): FakeElement => {
     const values: Record<string, unknown> = { ...data }
     let position = at ? { ...at } : undefined
@@ -35,12 +40,21 @@ const { stage, mounted, fakeElement } = vi.hoisted(() => {
         if (to) position = { ...to }
         return position
       },
+      // The fake viewport is unzoomed, with the origin in the middle of the stage.
+      renderedPosition: () =>
+        position && { x: position.x + stage.width / 2, y: position.y + stage.height / 2 },
+      renderedOuterWidth: () => (values.hlColor ? 26 : 15),
+      // A letter about the size the page sets them, above and to the right.
+      renderedBoundingBox: () => {
+        const x = (position?.x ?? 0) + stage.width / 2
+        const y = (position?.y ?? 0) + stage.height / 2
+        return { x1: x + 8, y1: y - 30, x2: x + 22, y2: y - 8, w: 14, h: 22 }
+      },
       label: String(data.label ?? ''),
     }
   }
   return {
-    /** What the fake reports as the size of the drawing area. */
-    stage: { width: 706, height: 364 },
+    stage,
     mounted: [] as { nodes: FakeElement[]; edges: FakeElement[] }[],
     fakeElement: fake,
   }
@@ -70,6 +84,7 @@ vi.mock('cytoscape', () => ({
       center: () => {},
       width: () => stage.width,
       height: () => stage.height,
+      on: () => {},
       destroy: () => {},
     }
   },
@@ -239,6 +254,29 @@ describe('the live demo', () => {
     expect(screen.queryByRole('button', { name: 'Pause the tour' })).not.toBeInTheDocument()
     act(() => void vi.advanceTimersByTime(10_000))
     expect(pressed()).toHaveTextContent(/^Bipartite/)
+  })
+
+  it('writes notes on the plate for the property on show, out of reach of assistive technology', () => {
+    // A stage with the room the page gives the drawing on a desktop.
+    stage.width = 900
+    stage.height = 400
+    const { container } = render(<HeroDemo />)
+    // The drawing is measured on the next frame.
+    act(() => void vi.advanceTimersByTime(50))
+    const notes = () => container.querySelector('svg.gz-demo-notes')!
+    expect(notes()).toHaveAttribute('aria-hidden', 'true')
+    expect(notes()).toHaveTextContent('the triangle ABC, of odd length')
+
+    fireEvent.click(within(list()).getByRole('button', { name: /Bridges/ }))
+    act(() => void vi.advanceTimersByTime(50))
+    const lettering = [...notes().querySelectorAll('text')].map((text) => text.textContent)
+    expect(lettering).toEqual(['a bridge', 'a bridge', 'a bridge'])
+    // In the property's own ink, so the list keys the plate.
+    expect(notes()).toHaveAttribute('data-ink', 'blue')
+
+    fireEvent.click(within(list()).getByRole('button', { name: /Diameter/ }))
+    act(() => void vi.advanceTimersByTime(50))
+    expect(notes()).toHaveTextContent('diameter 5')
   })
 
   it('keeps the wide drawing on a wide stage', () => {

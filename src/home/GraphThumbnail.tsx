@@ -1,11 +1,14 @@
 import { useId, useMemo } from 'react'
 import type { GraphDocument } from '../graph/model/types'
 import { thumbnailGeometry, type ThumbnailOptions } from './thumbnail'
+import { EDGE_INKS, edgeInks } from './byrne'
 
 /**
  * A small, static drawing of a document, styled entirely from CSS (see
  * `.gz-thumb-*` in home.css) so it follows the theme without knowing about it.
- * Decorative: the card around it carries the name.
+ * Each edge carries one of the page's edge inks (`data-ink`), handed out as a
+ * proper edge colouring: no two edges meeting at a vertex share one, as in
+ * Byrne's plates. Decorative: the card around it carries the name.
  */
 export const GraphThumbnail = ({
   doc,
@@ -23,6 +26,7 @@ export const GraphThumbnail = ({
     () => thumbnailGeometry(doc, { width, height, padding, radius }),
     [doc, width, height, padding, radius],
   )
+  const inks = useMemo(() => edgeInks(doc), [doc])
 
   return (
     <svg
@@ -33,28 +37,36 @@ export const GraphThumbnail = ({
     >
       {doc.directed && (
         <defs>
-          <marker
-            id={marker}
-            viewBox="0 0 10 10"
-            refX="8.5"
-            refY="5"
-            markerWidth="5"
-            markerHeight="5"
-            orient="auto-start-reverse"
-          >
-            <path d="M0 0L10 5L0 10z" className="gz-thumb-arrow" />
-          </marker>
+          {/* One arrowhead per ink, so each matches the edge it ends. */}
+          {EDGE_INKS.map((ink, k) => (
+            <marker
+              key={ink}
+              id={`${marker}-${k}`}
+              viewBox="0 0 10 10"
+              refX="7"
+              refY="5"
+              markerWidth="3.2"
+              markerHeight="3.2"
+              orient="auto-start-reverse"
+            >
+              <path d="M0 0L10 5L0 10z" className="gz-thumb-arrow" data-ink={k} />
+            </marker>
+          ))}
         </defs>
       )}
       <g>
-        {geometry.edges.map((edge) => (
-          <path
-            key={edge.id}
-            d={edge.d}
-            className="gz-thumb-edge"
-            markerEnd={doc.directed ? `url(#${marker})` : undefined}
-          />
-        ))}
+        {geometry.edges.map((edge) => {
+          const ink = inks.get(edge.id) ?? 0
+          return (
+            <path
+              key={edge.id}
+              d={edge.d}
+              className="gz-thumb-edge"
+              data-ink={ink}
+              markerEnd={doc.directed ? `url(#${marker}-${ink})` : undefined}
+            />
+          )
+        })}
       </g>
       <g>
         {geometry.vertices.map((vertex) => (
