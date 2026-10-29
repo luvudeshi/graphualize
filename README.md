@@ -7,7 +7,12 @@ update as you type, and clicking any property draws the mathematical reason on
 the graph itself: the odd cycle that stops it being bipartite, the two vertices
 that realise the diameter, the bridge whose removal disconnects it.
 
-It runs entirely in the browser. No account, no server, no upload.
+It runs entirely in the browser. No account, no server, no upload, unless you
+choose to sign in, and then only the graphs you save go to your account.
+
+It is set like Oliver Byrne's 1847 colour-plate edition of Euclid: cream paper,
+black ink and three flat colours, in EB Garamond, with a night edition on deep
+indigo for dark mode.
 
 ```
 Create  →  Inspect  →  Understand  →  Manipulate
@@ -15,24 +20,25 @@ Create  →  Inspect  →  Understand  →  Manipulate
 
 ## Screenshots
 
-The home page — the live demo at the top is the real analysis library running on
-a real graph, not a picture of one:
+The home page. Plate I is the real analysis library running on a real graph,
+not a picture of one, with a note on the drawing naming what each property
+found:
 
-![The Graphualize home page](docs/screenshot-home.png)
+![The Graphualize home page](docs/screenshot-home.jpg)
 
 The workbench, with the Petersen graph and the live inspector:
 
-![The editor with the Petersen graph and the live inspector](docs/screenshot-editor.png)
+![The editor with the Petersen graph and the live inspector](docs/screenshot-editor.jpg)
 
-Clicking **Bipartite: No** highlights the odd cycle that proves it, and dims
-everything else:
+Clicking **Bipartite: No** draws the odd cycle that proves it and dims
+everything else, here in the night edition:
 
-![An odd cycle highlighted on a wheel graph in dark mode](docs/screenshot-witness.png)
+![An odd cycle highlighted on a wheel graph in dark mode](docs/screenshot-witness.jpg)
 
-Dijkstra mid-run, with tentative distances on the vertices and the algorithm's
-own priority queue below:
+Dijkstra mid-run, with tentative distances beside the vertices and the
+algorithm's own priority queue and finalised set below:
 
-![Dijkstra part-way through a weighted graph](docs/screenshot-dijkstra.png)
+![Dijkstra part-way through a weighted graph](docs/screenshot-dijkstra.jpg)
 
 ## Quick start
 
@@ -40,9 +46,10 @@ Two ways in.
 
 **No install.** Build (or download) `Graphualize.html` and double-click it —
 one file with the script, the stylesheet and the icon inlined, running straight
-from `file://` with no server and no Node. The only thing it fetches is the web
-font, which is a progressive enhancement: offline it falls back to your system
-font and everything else works exactly the same.
+from `file://` with no server and no Node. The only things it fetches are the
+web fonts (EB Garamond and JetBrains Mono), which are a progressive
+enhancement: offline it falls back to a system serif and everything else works
+exactly the same.
 
 ```bash
 npm install && npm run build:single   # produces Graphualize.html
@@ -65,7 +72,8 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-Requires Node 20 or newer.
+Requires Node 22.22 or newer (24.15 or newer on Node 24). The dev server and
+build alone run on Node 20.19, but the unit tests' jsdom does not.
 
 ## Commands
 
@@ -75,9 +83,9 @@ Requires Node 20 or newer.
 | `npm run build` | Type-check the project and build to `dist/` |
 | `npm run preview` | Serve the production build locally |
 | `npm run build:single` | Build `Graphualize.html`, one self-contained file that runs from `file://` |
-| `npm test` | Vitest unit and component tests (696 tests) |
+| `npm test` | Vitest unit and component tests (1,208 tests) |
 | `npm run test:watch` | Vitest in watch mode |
-| `npm run test:e2e` | Playwright end-to-end tests against a production build (24 tests) |
+| `npm run test:e2e` | Playwright end-to-end tests against a production build (34 tests) |
 | `npm run typecheck` | `tsc` over the app, the tests and the e2e suite |
 | `npm run lint` | oxlint |
 | `npm run verify` | lint, build, unit tests and the auth config check in one go |
@@ -99,8 +107,8 @@ Bipartite                          No
   and no odd cycle fits in two parts.
 
 Eulerian circuit                   No
-  4 vertices have odd degree. An Eulerian circuit
-  needs every vertex to have even degree.
+  4 vertices have odd degree. An Eulerian trail
+  allows at most two.
 
 Diameter                            5
   The furthest pair is A and H. Distances count edges.
@@ -112,21 +120,28 @@ odd-degree vertices, or a realising shortest path on the canvas.
 ## The home page
 
 `/` is a real front door rather than a splash screen: it explains what the tool
-does, then demonstrates it. The graph in the hero is live — it runs the same
-analysis library as the workbench, cycles through five properties and draws the
-witness for each one, and you can drag its vertices around to watch the
-mathematics stay put. The tour holds still while you point at it and has a pause
-button of its own, and on a phone the demo switches to a compact drawing of the
-same graph. A unit test asserts that the demo graph genuinely has the
-properties the surrounding copy claims (three bridges, four articulation
-vertices, diameter 5, an odd cycle of length 3), so the marketing cannot drift
-away from the mathematics.
+does, then demonstrates it, set as a page from Byrne's Euclid. Plate I, in the
+first screen, is live: it runs the same analysis library as the workbench,
+cycles through five properties and draws the witness for each one, with an
+italic note on the drawing naming it ("the triangle ABC, of odd length", "a
+bridge", "cut vertex", a bracket for the diameter). Drag a vertex and the notes
+follow it while the mathematics stays put. The tour holds still while you point
+at it and has a pause button of its own, and on a phone the demo switches to a
+compact drawing of the same graph. A unit test asserts that the demo graph
+genuinely has the properties the surrounding copy claims (three bridges, four
+articulation vertices, diameter 5, an odd cycle of length 3), so the marketing
+cannot drift away from the mathematics.
 
-Every route into the product is one click: **Start drawing**, or a chip that
+Plate II shows the worked examples as numbered figures, each drawn with a proper
+edge colouring found by an exact search: four inks, and Byrne's dotted black
+line as a fifth where four cannot do (K5, the bridges of Königsberg). Tests
+check every colouring.
+
+Every route into the product is one click: **Start drawing**, a quick-start that
 opens the workbench with `K5`, `C8`, the Petersen graph, `K3,3`, `Q4` or
-`G(20,0.2)` already drawn, or any of the worked examples. If you have a graph in
+`G(20,0.2)` already drawn, or any of the figures. If you have a graph in
 progress the primary button changes to **Continue "…"** instead of throwing it
-away. There is nothing to sign up for, so nothing asks you to.
+away. Signing in is optional, and nothing needs it.
 
 ## Getting around
 
@@ -135,6 +150,8 @@ away. There is nothing to sign up for, so nothing asks you to.
 | `V` / `N` / `E` / `X` | Select, vertex, edge, erase tools |
 | `A` | Place a vertex at the centre of the view |
 | `Ctrl/Cmd + K` | Command palette (also accepts `K5`, `C8`, `G(20,0.2)`) |
+| `Ctrl/Cmd + S` / `Ctrl/Cmd + Shift + S` | Save / save as |
+| `Ctrl/Cmd + O` / `Ctrl/Cmd + N` | Open a saved graph / new graph (most browsers keep `Ctrl/Cmd + N` for a new window; use **File → New graph** there) |
 | `Ctrl/Cmd + Z` / `Ctrl/Cmd + Shift + Z` | Undo / redo |
 | `F` | Fit the graph to the screen |
 | `Delete` | Delete the selection |
@@ -222,7 +239,8 @@ During playback the canvas distinguishes the current vertex, visited vertices,
 the frontier, the active edge, accepted tree edges and rejected edges, and the
 panel below shows the algorithm's own state: the BFS queue, the DFS recursion
 path, Dijkstra's priority queue and tentative distances, Kruskal's sorted edge
-list, Prim's candidate edges, the current indegrees for a topological sort.
+list, Prim's candidate edges, the ready vertices and the output so far for a
+topological sort (its remaining indegrees are written on the vertices).
 
 Beside the algorithm's name the player holds the run's own choices: **From**
 for the algorithms that start somewhere, **To** for Dijkstra, which then ends on
@@ -265,7 +283,7 @@ accepts Graphualize JSON, DOT, adjacency lists, adjacency matrices and CSV edge
 lists. Invalid input produces a sentence explaining the problem, never a stack
 trace.
 
-![The export dialog showing a live SVG preview of the Petersen graph with its odd cycle highlighted](docs/screenshot-export.png)
+![The export dialog showing a live SVG preview of the Petersen graph with its odd cycle highlighted](docs/screenshot-export.jpg)
 
 **Drawing.** Export the picture as SVG or PNG. The SVG is written from the
 document rather than screen-scraped from the canvas, so it is real circles,
@@ -273,8 +291,9 @@ lines and text — sharp at any size and editable in Illustrator, Inkscape or
 LaTeX. Whatever witness or algorithm step is on screen can travel with it, so
 the odd cycle you highlighted is still highlighted in the file you paste into
 your write-up. PNG is captured from the canvas at 2× and matches the screen
-exactly. Both offer a light or dark drawing and an optional transparent
-background.
+exactly. The SVG comes as a day or night drawing, in the same inks and Garamond as
+the canvas; the PNG keeps the inks on screen and takes only the day or night
+paper. Both offer an optional transparent background.
 
 **TikZ.** For write-ups in LaTeX, the same drawing comes out as TikZ source:
 one named node per vertex, edges drawn between names (bent apart when they run
@@ -291,14 +310,29 @@ whoever opens the link gets the graph straight out of the URL, as a new graph
 they can undo. Links carry up to 2,000 vertices and 10,000 edges; a graph past
 that, or one whose link would be longer than 100,000 characters, is reported
 rather than turned into a link that cannot open. Where the clipboard is
-unavailable the link is shown, selected, to copy by hand.
+unavailable the link is shown, selected, to copy by hand. The single-file build
+makes no links: a `file://` address leads nowhere for anyone else, so it says
+to export a file instead.
 
-File → Save keeps a graph in the browser's local storage when you are signed
-out, and in your Google account when you are signed in. Nothing is autosaved:
-the working document is not restored on reload, and the browser warns before
-leaving with unsaved changes. Generating, importing or opening an example puts a
-*new* graph on screen rather than editing the saved one, so it takes that name
-(unless you chose one) and Save cannot write it over the graph it replaced.
+## Saving
+
+File → Save (`Ctrl/Cmd + S`, or the **Save** button in the header) keeps a
+graph in the browser's local storage when you are signed out, and in your Google
+account when you are signed in. The first save of a graph asks for its name and
+says where it will go; after that, Save writes straight away and a note in the
+corner says what happened: saved, kept in this browser because the account could
+not be reached, or saved as a copy because another tab or device changed it.
+A failed save offers **Try again** and **Export instead**. The header button
+shows whether there are unsaved changes, and **Save as…** (`Ctrl/Cmd + Shift +
+S`) saves under a new name and carries on with the copy.
+
+Nothing is autosaved: the working document is not restored on reload, and the
+browser warns before leaving with unsaved changes. **New** and **Open** ask
+before they would throw away unsaved work, offering to save it first. Deleting a
+saved graph asks for a second click, and can be undone while the Open dialog is
+still up. Generating, importing or opening an example puts a *new* graph on
+screen rather than editing the saved one, so it takes that name (unless you
+chose one) and Save cannot write it over the graph it replaced.
 
 ## Signing in (optional)
 
@@ -314,7 +348,7 @@ and saving simply uses this browser.
 
 **If sign-in stops working.** Supabase pauses free-tier projects after a week
 without activity. A paused project's hostname stops resolving, so sign-in and
-account saves fail while local saving keeps working; the sign-in button says the
+account saves fail while local saving keeps working; pressing sign-in says the
 service is unavailable instead of redirecting into an error page. Resume the
 project from its Supabase dashboard (data is kept) and everything comes back
 without a redeploy. `npm run verify:auth` reports a paused project first.
@@ -326,7 +360,7 @@ deployments only, and the run log is under the project's Settings → Cron Jobs.
 The endpoint reads nothing private, but setting a `CRON_SECRET` environment
 variable in Vercel restricts it to Vercel Cron.
 
-**Setting it up.** One command does everything that can be scripted:
+**Setting it up.** One command does nearly everything that can be scripted:
 
 ```bash
 SUPABASE_ACCESS_TOKEN=sbp_... npm run setup:auth
@@ -349,6 +383,11 @@ npm run setup:auth
 When you have a production domain, add it with `SITE_URL=https://your-domain`
 on the same command.
 
+The script does not create the `graphs` table that account saves go to. Run
+`supabase/migrations/0001_graphs.sql` once, in the project's SQL editor or with
+`supabase db push`, or signed-in saves fail; `npm run verify:auth` with an
+access token checks the table and its row-level security.
+
 **Checking it.** `npm run verify:auth` reports what is actually configured —
 whether the Google provider is enabled, what `SITE_URL` is, which redirect URLs
 are allow-listed, and whether localhost and production are among them. With
@@ -358,8 +397,9 @@ are allow-listed, and whether localhost and production are among them. With
 `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The Google client secret goes
 straight from your shell to Supabase and never touches disk; the service-role
 key is never referenced by this codebase at all. `.env*` is gitignored apart
-from `.env.example`, and `verify:auth` fails the build if a client secret,
-access token or service-role key ever appears in a file git would commit —
+from `.env.example`, and `verify:auth` (and with it `npm run verify`)
+fails if a client secret, access token or service-role key ever appears in a
+source, config or Markdown file git would commit —
 including untracked ones, since that is when a leak is most likely.
 
 ## Honesty about what is computed
@@ -370,28 +410,29 @@ label saying so, and an explanation of why.
 
 | Computation | Exact up to | Above that |
 |---|---|---|
-| Chromatic number | 24 vertices | An interval, e.g. `3–5`, with the bounds explained |
+| Chromatic number | 24 vertices | An interval, e.g. `3-5`, with the bounds explained |
 | Chromatic polynomial | 12 vertices | Not computed |
 | Maximum clique / independent set | 46 vertices | A lower bound with a real witness |
-| Hamiltonian cycle | 20 vertices | `Not computed` — never `No` |
+| Hamiltonian cycle | 20 vertices | `Not computed` — never `No` without a proof |
 | Maximum matching | 400 vertices | A greedy matching, labelled as a floor |
 | Vertex connectivity | 60 vertices | Not computed |
 | Edge connectivity | 120 vertices | Not computed |
 | Planarity | 150 vertices | Not computed |
 | Eigenvalues | 150 vertices | Not computed |
-| Spanning tree count | 400 vertices | Not computed |
+| Spanning tree count | 400 vertices, and about 1 s of estimated work | Not computed |
 | All-pairs distances | 400 vertices | Not computed |
 
 Two more points of care:
 
 - **Eigenvalues are floating point.** They are labelled `heuristic`, and
   multiplicities are inferred by grouping values within 1e-7. An eigenvalue that
-  looks like −2 is never described as exactly −2. The one number in that section
-  labelled `exact` is the spanning tree count, which really is exact: it comes
-  from fraction-free Bareiss elimination over `bigint`.
-- **"Not computed" is not "no".** Hamiltonicity above the limit reports
-  `Not computed`, and says in as many words that this is different from a
-  negative answer.
+  looks like −2 is never described as exactly −2. The spanning tree count, in its
+  own section beside the spectrum, really is exact: it comes from
+  fraction-free Bareiss elimination over `bigint`.
+- **"Not computed" is not "no".** Above the limit, Hamiltonicity
+  reports `No` only when a cheap certificate proves it — a disconnected graph,
+  or a vertex with too few neighbours — and otherwise reports `Not computed`,
+  saying in as many words that this is different from a negative answer.
 
 ## Architecture in one paragraph
 
@@ -426,8 +467,10 @@ nothing. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full picture.
   clean vector version of it.
 - **TikZ export is checked, not compiled.** The tests assert on its structure —
   escaped labels, balanced braces, paired environments — but the suite runs no
-  LaTeX. Labels outside Latin script need an engine and font that can typeset
-  them (LuaLaTeX or XeLaTeX rather than pdfLaTeX).
+  LaTeX. Greek letters and primes are written as math, so they compile under
+  pdfLaTeX; other labels outside Latin script need LuaLaTeX or XeLaTeX and a
+  font that has them, and the export says so in a comment (plus a
+  `% !TEX program = lualatex` line in a standalone document).
 - **Keyboard editing on the canvas** covers nudging, deleting, placing a vertex
   at the centre of the view (`A`) and every command in the palette, but a vertex
   cannot yet be placed at an arbitrary point without the mouse. Colour is backed
