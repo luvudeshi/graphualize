@@ -1,0 +1,450 @@
+/*
+ * The algorithm player, set as a plate's caption in the same book as the
+ * home page: a double rule above it, Garamond throughout, a red small-caps
+ * marker before the algorithm's name, square controls with Play as the
+ * vermilion block, and Byrne's glyphs in the legend. Every colour is a
+ * --gz-* token, so the night edition follows without rules of its own.
+ *
+ * These rules are unlayered on purpose: they sit over the shared .gz-btn /
+ * .gz-input / .gz-label / .gz-num classes the player also carries, and over
+ * Tailwind's utilities, without !important.
+ */
+
+.gz-wb-algo {
+  position: relative;
+  flex-shrink: 0;
+  border-top: 1px solid var(--gz-ink);
+  background-color: var(--gz-panel);
+  background-image: var(--gz-grain);
+  color: var(--gz-text);
+  font-family: var(--gz-serif);
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+/* Byrne's double rule: the border, and a second line 3px under it. */
+.gz-wb-algo::before {
+  content: '';
+  position: absolute;
+  inset: 3px 0 auto;
+  border-top: 1px solid var(--gz-ink);
+  pointer-events: none;
+}
+
+.gz-wb-algo :focus-visible {
+  border-radius: 0;
+  outline: 2px solid var(--gz-accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* The bar: transport, title line and scrubber, speed, close          */
+/* ------------------------------------------------------------------ */
+
+.gz-wb-algo-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.875rem;
+  padding: 0.75rem 0.75rem 0.5rem 1rem;
+}
+
+.gz-wb-algo-transport {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid var(--gz-ink);
+  background: var(--gz-paper-light);
+}
+
+.gz-wb-algo .gz-wb-algo-key {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--gz-text);
+  box-shadow: none;
+  font: inherit;
+}
+
+.gz-wb-algo .gz-wb-algo-key + .gz-wb-algo-key {
+  border-left: 1px solid var(--gz-border);
+}
+
+.gz-wb-algo .gz-wb-algo-key:hover:not(:disabled) {
+  background: var(--gz-paper-deep);
+}
+
+.gz-wb-algo .gz-wb-algo-key:disabled {
+  opacity: 1;
+  color: var(--gz-border-strong);
+  cursor: default;
+}
+
+.gz-wb-algo .gz-wb-algo-key:focus-visible {
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Play is the page's one primary action: the flat vermilion block, as
+   "Start drawing" is on the home page, with its word in small caps. */
+.gz-wb-algo .gz-wb-algo-play {
+  width: auto;
+  min-width: 5.5rem;
+  padding: 0 0.875rem 0 0.75rem;
+  border-left-color: var(--gz-ink);
+  background: var(--gz-primary);
+  color: var(--gz-primary-contrast);
+}
+
+.gz-wb-algo .gz-wb-algo-play + .gz-wb-algo-key {
+  border-left-color: var(--gz-ink);
+}
+
+.gz-wb-algo .gz-wb-algo-play:hover:not(:disabled) {
+  background: var(--gz-text);
+  color: var(--gz-bg);
+}
+
+.gz-wb-algo .gz-wb-algo-play:focus-visible {
+  outline-color: var(--gz-ink);
+}
+
+.gz-wb-algo-play-word {
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+
+.gz-wb-algo-main {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.gz-wb-algo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.gz-wb-algo-marker {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.16em;
+}
+
+/* The short rule after the marker, as after "Prop. I." on the home page. */
+.gz-wb-algo-marker::after {
+  content: '';
+  width: 1.25rem;
+  border-top: 1px solid currentColor;
+}
+
+.gz-wb-algo-name {
+  flex-shrink: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+}
+
+.gz-wb-algo-option {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  gap: 0.375rem;
+}
+
+.gz-wb-algo-speed {
+  display: inline-flex;
+}
+
+/* A square select on the lighter paper, with a small ink triangle for its
+   arrow (two hard-edged halves, so it takes the current ink in both
+   editions). */
+.gz-wb-algo .gz-wb-algo-select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: auto;
+  max-width: 9rem;
+  min-height: 1.75rem;
+  padding: 0.0625rem 1.5rem 0.0625rem 0.5rem;
+  border: 1px solid var(--gz-border-strong);
+  border-radius: 0;
+  background-color: var(--gz-paper-light);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 0.8125rem) 55%,
+    calc(100% - 0.5625rem) 55%;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+  box-shadow: none;
+  color: var(--gz-text);
+  font-family: var(--gz-serif);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  font-variant-caps: normal;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0;
+  line-height: 1.3;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.gz-wb-algo .gz-wb-algo-select:hover {
+  border-color: var(--gz-ink);
+}
+
+.gz-wb-algo .gz-wb-algo-select:focus {
+  box-shadow: none;
+}
+
+.gz-wb-algo .gz-wb-algo-select:focus-visible {
+  outline: 2px solid var(--gz-accent);
+  outline-offset: 2px;
+}
+
+.gz-wb-algo-count {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  gap: 0.375rem;
+  color: var(--gz-muted);
+}
+
+.gz-wb-algo .gz-wb-algo-count-figs {
+  font-family: var(--gz-serif);
+  font-size: 0.9375rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0;
+  color: var(--gz-text);
+}
+
+.gz-wb-algo-count-of {
+  margin: 0 0.125em;
+  color: var(--gz-faint);
+}
+
+.gz-wb-algo-desc {
+  min-width: 0;
+  flex: 1 1 10rem;
+  overflow: hidden;
+  font-size: 1rem;
+  font-style: italic;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The scrubber: a hairline for the run, a heavier ink line for the part
+   already shown, and a square ink thumb. */
+.gz-wb-algo-scrub {
+  --gz-wb-thumb: 0.6875rem;
+  display: block;
+  width: 100%;
+  height: 1.125rem;
+  margin: 0.375rem 0 0;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.gz-wb-algo-scrub::-webkit-slider-runnable-track {
+  height: var(--gz-wb-thumb);
+  border: 0;
+  background:
+    linear-gradient(var(--gz-ink), var(--gz-ink)) 0 50% /
+      calc(var(--gz-wb-progress, 0) * (100% - var(--gz-wb-thumb)) + var(--gz-wb-thumb) / 2) 2px
+      no-repeat,
+    linear-gradient(var(--gz-border-strong), var(--gz-border-strong)) 0 50% / 100% 1px no-repeat;
+}
+
+.gz-wb-algo-scrub::-moz-range-track {
+  height: var(--gz-wb-thumb);
+  border: 0;
+  background:
+    linear-gradient(var(--gz-ink), var(--gz-ink)) 0 50% /
+      calc(var(--gz-wb-progress, 0) * (100% - var(--gz-wb-thumb)) + var(--gz-wb-thumb) / 2) 2px
+      no-repeat,
+    linear-gradient(var(--gz-border-strong), var(--gz-border-strong)) 0 50% / 100% 1px no-repeat;
+}
+
+.gz-wb-algo-scrub::-webkit-slider-thumb {
+  width: var(--gz-wb-thumb);
+  height: var(--gz-wb-thumb);
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--gz-ink);
+}
+
+.gz-wb-algo-scrub::-moz-range-thumb {
+  width: var(--gz-wb-thumb);
+  height: var(--gz-wb-thumb);
+  border: 0;
+  border-radius: 0;
+  background: var(--gz-ink);
+}
+
+.gz-wb-algo-scrub:hover::-webkit-slider-thumb {
+  background: var(--gz-accent);
+}
+
+.gz-wb-algo-scrub:hover::-moz-range-thumb {
+  background: var(--gz-accent);
+}
+
+.gz-wb-algo-tail {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.gz-wb-algo .gz-wb-algo-close {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--gz-text);
+}
+
+.gz-wb-algo .gz-wb-algo-close:hover {
+  border-color: var(--gz-ink);
+  background: var(--gz-paper-deep);
+}
+
+/* ------------------------------------------------------------------ */
+/* The body: the step's working, the legend and the live state         */
+/* ------------------------------------------------------------------ */
+
+.gz-wb-algo-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem 1.75rem;
+  margin: 0 0.75rem 0 1rem;
+  padding: 0.5rem 0 0.625rem;
+  border-top: 1px solid var(--gz-border);
+}
+
+.gz-wb-algo-detail {
+  width: 100%;
+  color: var(--gz-muted);
+  font-size: 0.9375rem;
+  font-style: italic;
+  font-variant-numeric: lining-nums;
+}
+
+.gz-wb-algo-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gz-wb-algo-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  color: var(--gz-muted);
+  font-size: 0.9375rem;
+  font-style: italic;
+}
+
+/* The legend's glyphs are the shared Byrne glyphs (.gz-glyph-disc and
+   .gz-glyph-bar with data-ink); only the rejected edge, a dotted ink line
+   like the canvas draws it, is the player's own. */
+.gz-wb-glyph-rejected {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1rem;
+  border-top: 2px dotted var(--gz-text);
+}
+
+.gz-wb-algo-field {
+  min-width: 0;
+}
+
+.gz-wb-algo-field-label {
+  display: block;
+}
+
+.gz-wb-algo .gz-wb-algo-field-value {
+  overflow: hidden;
+  font-family: var(--gz-serif);
+  font-size: 1rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gz-wb-algo .gz-wb-algo-result .gz-wb-algo-field-value {
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* Narrow screens                                                      */
+/* ------------------------------------------------------------------ */
+
+@media (width < 40rem) {
+  .gz-wb-algo-bar {
+    padding: 0.625rem 0.5rem 0.375rem 0.75rem;
+    gap: 0.375rem 0.625rem;
+  }
+
+  .gz-wb-algo-body {
+    margin: 0 0.5rem 0 0.75rem;
+    gap: 0.375rem 1.25rem;
+  }
+
+  .gz-wb-algo-marker,
+  .gz-wb-algo-count-label {
+    display: none;
+  }
+
+  .gz-wb-algo .gz-wb-algo-play {
+    min-width: 0;
+    width: 2.5rem;
+    padding: 0;
+  }
+
+  .gz-wb-algo-play-word {
+    display: none;
+  }
+
+  .gz-wb-algo-main {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .gz-wb-algo-tail {
+    margin-left: auto;
+  }
+}

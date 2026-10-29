@@ -1,7 +1,7 @@
 import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
 import { Menu, type MenuItem } from './Menu'
-import { CheckIcon, GraphMarkIcon, MoonIcon, SaveIcon, SearchIcon, SunIcon } from './Icons'
+import { CheckIcon, SaveIcon, SearchIcon } from './Icons'
 import { applyTransformById, runGraphCommand } from '../state/actions'
 import { LAYOUT_LABELS, type LayoutName } from '../graph/layout'
 import { TRANSFORMS } from '../graph/transformations'
@@ -13,6 +13,47 @@ import { useTheme } from '../hooks/useTheme'
 import { replaceWorkingGraph } from '../state/replace'
 import { copyShareLink } from '../state/share'
 import { requestSave, requestSaveAs } from '../state/save'
+import '../styles/header.css'
+
+/** The app's mark in the Byrne inks, as on the home page: three points, three primaries. */
+const BrandMark = ({ size = 24 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 26 26" className="gz-wb-brandmark" aria-hidden="true">
+    <path d="M5 6.5L21 9.5L11.5 21Z" className="gz-wb-brandmark-edges" />
+    <circle cx="5" cy="6.5" r="3.6" data-ink="red" />
+    <circle cx="21" cy="9.5" r="3.6" data-ink="blue" />
+    <circle cx="11.5" cy="21" r="3.6" data-ink="yellow" />
+  </svg>
+)
+
+/* The theme toggle's two states as flat shapes, the home page's own: an ink
+   crescent for the night edition, a yellow sun for the day. */
+const MoonGlyph = () => (
+  <svg width={19} height={19} viewBox="0 0 20 20" aria-hidden="true">
+    <path d="M8.82 3.09A7.5 7.5 0 1 0 17.41 11.68A6.2 6.2 0 0 1 8.82 3.09Z" fill="currentColor" />
+  </svg>
+)
+
+const SunGlyph = () => (
+  <svg width={19} height={19} viewBox="0 0 20 20" aria-hidden="true" className="gz-wb-sun">
+    <circle cx="10" cy="10" r="4.2" />
+    <path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.6 3.6l2.1 2.1M14.3 14.3l2.1 2.1M3.6 16.4l2.1-2.1M14.3 5.7l2.1-2.1" />
+  </svg>
+)
+
+/**
+ * A family's name with its symbol set as maths, as in the Generate dialog and
+ * on the home page: an italic letter and a subscript. Its text still reads
+ * "Complete K5", so the item's accessible name is unchanged.
+ */
+const FamilyName = ({ name, letter, size }: { name: string; letter: string; size: string }) => (
+  <>
+    {name}{' '}
+    <span className="gz-wb-item-math">
+      <i>{letter}</i>
+      <sub>{size}</sub>
+    </span>
+  </>
+)
 
 /**
  * Save, where it can be seen. Its label is the graph's save state — Save with
@@ -41,18 +82,12 @@ const SaveButton = () => {
         syncing ? 'Saving' : saved ? 'Saved — no unsaved changes' : unsaved ? 'Save (unsaved changes)' : 'Save'
       }
       title={`Save (${formatShortcut('mod+S')})`}
-      className={`gz-btn relative gap-1.5 px-2 ${
-        saved ? 'text-[var(--gz-muted)]' : 'border border-[var(--gz-accent)] text-[var(--gz-accent)]'
-      }`}
+      data-state={syncing ? 'saving' : saved ? 'saved' : 'unsaved'}
+      className="gz-wb-save"
     >
-      {saved ? <CheckIcon width={14} height={14} /> : <SaveIcon width={14} height={14} />}
-      <span className="hidden text-[0.75rem] font-medium lg:inline">{label}</span>
-      {unsaved && !syncing && (
-        <span
-          aria-hidden
-          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--gz-accent)] ring-2 ring-[var(--gz-panel)]"
-        />
-      )}
+      {saved ? <CheckIcon width={15} height={15} /> : <SaveIcon width={15} height={15} />}
+      <span className="hidden lg:inline">{label}</span>
+      {unsaved && !syncing && <span aria-hidden className="gz-wb-save-dot" />}
     </button>
   )
 }
@@ -151,6 +186,7 @@ export const MenuBar = () => {
       label: 'Directed graph',
       checked: directed,
       separatorBefore: true,
+      section: 'The graph',
       onSelect: act((s) => s.setDirected(!s.doc.directed)),
     },
     {
@@ -168,13 +204,20 @@ export const MenuBar = () => {
     },
   ]
 
+  const family = (id: string, name: string, letter: string, size: string): MenuItem => ({
+    id,
+    label: `${name} ${letter}${size}`,
+    labelNode: <FamilyName name={name} letter={letter} size={size} />,
+    onSelect: () => runGraphCommand(`${letter}${size}`),
+  })
+
   const generateItems: MenuItem[] = [
-    { id: 'k5', label: 'Complete K5', onSelect: () => runGraphCommand('K5') },
-    { id: 'c6', label: 'Cycle C6', onSelect: () => runGraphCommand('C6') },
-    { id: 'p6', label: 'Path P6', onSelect: () => runGraphCommand('P6') },
-    { id: 'k33', label: 'Complete bipartite K3,3', onSelect: () => runGraphCommand('K3,3') },
-    { id: 'w6', label: 'Wheel W6', onSelect: () => runGraphCommand('W6') },
-    { id: 'q3', label: 'Hypercube Q3', onSelect: () => runGraphCommand('Q3') },
+    { ...family('k5', 'Complete', 'K', '5'), section: 'Families' },
+    family('c6', 'Cycle', 'C', '6'),
+    family('p6', 'Path', 'P', '6'),
+    family('k33', 'Complete bipartite', 'K', '3,3'),
+    family('w6', 'Wheel', 'W', '6'),
+    family('q3', 'Hypercube', 'Q', '3'),
     { id: 'petersen', label: 'Petersen graph', onSelect: () => runGraphCommand('Petersen') },
     {
       id: 'more',
@@ -218,6 +261,7 @@ export const MenuBar = () => {
       label: 'Inspector panel',
       checked: inspectorOpen,
       separatorBefore: true,
+      section: 'Panels',
       onSelect: act((s) => s.setInspectorOpen(!s.inspectorOpen)),
     },
     {
@@ -225,6 +269,7 @@ export const MenuBar = () => {
       label: 'Light theme',
       checked: theme === 'light',
       separatorBefore: true,
+      section: 'Theme',
       onSelect: act((s) => s.setTheme('light')),
     },
     {
@@ -245,6 +290,7 @@ export const MenuBar = () => {
         id: `layout-${name}`,
         label: `Layout: ${LAYOUT_LABELS[name]}`,
         separatorBefore: index === 0,
+        section: index === 0 ? 'Layout' : undefined,
         onSelect: act((s) => s.runLayout(name)),
       })),
   ]
@@ -263,16 +309,16 @@ export const MenuBar = () => {
     // Wraps rather than clipping: where the menus and the right-hand controls
     // do not fit on one line (narrow windows, phones), the controls drop to a
     // second row instead of being pushed off-screen out of reach.
-    <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-0.5 border-b bg-[var(--gz-panel)] px-2 py-1">
+    <header className="gz-wb-masthead">
       <button
         type="button"
         onClick={() => navigate('/')}
         // The visible word is part of the label, so speech control still works.
         aria-label="Graphualize — back to the home page"
-        className="gz-btn mr-2 gap-1.5 px-1.5"
+        className="gz-wb-brand"
       >
-        <GraphMarkIcon className="text-[var(--gz-accent)]" />
-        <span className="text-[0.875rem] font-semibold tracking-[-0.015em]">Graphualize</span>
+        <BrandMark />
+        <span className="gz-wb-brand-word">Graphualize</span>
       </button>
 
       <Menu label="File" items={fileItems} />
@@ -283,26 +329,24 @@ export const MenuBar = () => {
       <Menu label="View" items={viewItems} />
       <Menu label="Help" items={helpItems} />
 
-      <div className="ml-auto flex shrink-0 items-center gap-1">
+      <div className="gz-wb-tools">
         <SaveButton />
         <button
           type="button"
-          className="gz-btn border px-2 text-[var(--gz-muted)]"
+          className="gz-wb-find-btn"
           onClick={act((s) => s.setCommandPaletteOpen(true))}
           aria-label="Open command palette"
         >
-          <SearchIcon width={13} height={13} />
-          <span className="gz-num hidden text-[0.6875rem] sm:inline">
-            {formatShortcut('mod+K')}
-          </span>
+          <SearchIcon width={14} height={14} />
+          <kbd className="hidden sm:inline">{formatShortcut('mod+K')}</kbd>
         </button>
         <button
           type="button"
-          className="gz-btn px-1.5"
+          className="gz-wb-icon-btn"
           onClick={act((s) => s.setTheme(dark ? 'light' : 'dark'))}
           aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
         >
-          {dark ? <SunIcon /> : <MoonIcon />}
+          {dark ? <SunGlyph /> : <MoonGlyph />}
         </button>
         <AccountMenu compact />
       </div>

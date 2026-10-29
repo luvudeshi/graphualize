@@ -31,23 +31,23 @@ const PICTURE_LABELS: Record<PictureFormat, string> = {
   tikz: 'TikZ',
 }
 
+/** A view (`tab`) or one of a set of choices (`toggle`), pressed when chosen. */
 const TabButton = ({
   active,
   onClick,
   children,
+  look = 'toggle',
 }: {
   active: boolean
   onClick: () => void
   children: React.ReactNode
+  look?: 'tab' | 'toggle'
 }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`rounded-md px-2.5 py-1 text-[0.8125rem] transition-colors ${
-      active
-        ? 'bg-[var(--gz-accent-soft)] text-[var(--gz-accent)]'
-        : 'text-[var(--gz-muted)] hover:bg-[color-mix(in_oklab,var(--gz-border)_50%,transparent)]'
-    }`}
+    aria-pressed={active}
+    className={look === 'tab' ? 'gz-wb-dlg-tab' : 'gz-wb-dlg-toggle'}
   >
     {children}
   </button>
@@ -62,12 +62,11 @@ const Toggle = ({
   onChange: (next: boolean) => void
   children: React.ReactNode
 }) => (
-  <label className="flex items-center gap-2 text-[0.8125rem] text-[var(--gz-muted)]">
+  <label className="gz-wb-dlg-check">
     <input
       type="checkbox"
       checked={checked}
       onChange={(event) => onChange(event.target.checked)}
-      className="accent-[var(--gz-accent)]"
     />
     {children}
   </label>
@@ -132,17 +131,17 @@ const ExportBody = () => {
       width="max-w-2xl"
       footer={
         <>
-          <button type="button" className="gz-btn border px-3" onClick={() => void copyCurrent()}>
+          <button type="button" className="gz-btn gz-btn-outline" onClick={() => void copyCurrent()}>
             Copy
           </button>
           {tab === 'drawing' && picture === 'svg' && (
-            <button type="button" className="gz-btn border px-3" onClick={downloadPng}>
+            <button type="button" className="gz-btn gz-btn-outline" onClick={downloadPng}>
               Download {slug}.png
             </button>
           )}
           <button
             type="button"
-            className="gz-btn gz-btn-primary px-3"
+            className="gz-btn gz-btn-primary"
             onClick={() => downloadText(output.filename, output.text)}
           >
             Download {output.filename}
@@ -150,38 +149,38 @@ const ExportBody = () => {
         </>
       }
     >
-      <div className="mb-3 flex items-center gap-1 border-b pb-3">
-        <TabButton active={tab === 'data'} onClick={() => setTab('data')}>
+      <div className="gz-wb-dlg-tabs">
+        <TabButton look="tab" active={tab === 'data'} onClick={() => setTab('data')}>
           Data
         </TabButton>
-        <TabButton active={tab === 'drawing'} onClick={() => setTab('drawing')}>
+        <TabButton look="tab" active={tab === 'drawing'} onClick={() => setTab('drawing')}>
           Drawing
         </TabButton>
       </div>
 
       {tab === 'data' ? (
         <>
-          <div className="mb-3 flex flex-wrap gap-1">
+          <div className="gz-wb-dlg-toggles gz-wb-dlg-toggles-grid">
             {DATA_FORMATS.map((id) => (
               <TabButton key={id} active={id === format} onClick={() => setFormat(id)}>
                 {EXPORT_LABELS[id]}
               </TabButton>
             ))}
           </div>
-          <pre className="gz-scroll gz-num max-h-80 whitespace-pre rounded-lg border bg-[var(--gz-bg)] p-3 text-[0.75rem] leading-relaxed">
+          <pre className="gz-scroll gz-wb-dlg-code max-h-80 whitespace-pre">
             {dataText || '(empty graph)'}
           </pre>
         </>
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap gap-1">
+          <div className="gz-wb-dlg-toggles">
             {(Object.keys(PICTURE_LABELS) as PictureFormat[]).map((id) => (
               <TabButton key={id} active={id === picture} onClick={() => setPicture(id)}>
                 {PICTURE_LABELS[id]}
               </TabButton>
             ))}
           </div>
-          <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2">
             {picture === 'svg' ? (
               <>
                 <Toggle
@@ -211,7 +210,7 @@ const ExportBody = () => {
               Keep the highlight
             </Toggle>
           </div>
-          <p className="mb-3 text-[0.75rem] leading-relaxed text-[var(--gz-faint)]">
+          <p className="gz-wb-dlg-caption mb-3">
             {picture === 'svg' ? (
               <>
                 SVG is drawn from the document — real circles, lines and text, so it stays sharp
@@ -229,10 +228,7 @@ const ExportBody = () => {
               : ''}
           </p>
           {unicode && unicode.characters.length > 0 && (
-            <p
-              role="note"
-              className="mb-3 rounded-md border px-2.5 py-1.5 text-[0.75rem] leading-relaxed text-[var(--gz-warning)]"
-            >
+            <p role="note" className="gz-wb-dlg-notice mb-3" data-tone="warning">
               Some labels use characters pdfLaTeX, Overleaf's default, may not typeset (
               {unicode.characters.slice(0, 5).join(' ')}
               {unicode.characters.length > 5 ? ' …' : ''}): compile with LuaLaTeX or XeLaTeX
@@ -243,12 +239,12 @@ const ExportBody = () => {
             /* The preview is the exact string that will be downloaded; the
                child selectors only scale it down to fit the dialog. */
             <div
-              className="flex max-h-80 items-center justify-center overflow-hidden rounded-lg border p-3 [&>svg]:h-auto [&>svg]:max-h-72 [&>svg]:w-auto [&>svg]:max-w-full"
-              style={{ background: drawing.transparent ? undefined : 'var(--gz-bg)' }}
+              className="gz-wb-dlg-preview"
+              style={{ background: drawing.transparent ? undefined : 'var(--gz-paper-light)' }}
               dangerouslySetInnerHTML={{ __html: svg }}
             />
           ) : (
-            <pre className="gz-scroll gz-num max-h-80 whitespace-pre rounded-lg border bg-[var(--gz-bg)] p-3 text-[0.75rem] leading-relaxed">
+            <pre className="gz-scroll gz-wb-dlg-code max-h-80 whitespace-pre">
               {tikz}
             </pre>
           )}
@@ -289,7 +285,7 @@ const ImportBody = () => {
       width="max-w-2xl"
       footer={
         <>
-          <label className="gz-btn mr-auto cursor-pointer border px-3">
+          <label className="gz-btn gz-btn-outline mr-auto cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--gz-accent)]">
             Choose file
             <input
               type="file"
@@ -303,10 +299,10 @@ const ImportBody = () => {
               }}
             />
           </label>
-          <button type="button" className="gz-btn border px-3" onClick={close}>
+          <button type="button" className="gz-btn gz-btn-outline" onClick={close}>
             Cancel
           </button>
-          <button type="button" className="gz-btn gz-btn-primary px-3" onClick={submit}>
+          <button type="button" className="gz-btn gz-btn-primary" onClick={submit}>
             Import
           </button>
         </>
@@ -321,16 +317,16 @@ const ImportBody = () => {
         rows={14}
         spellCheck={false}
         aria-label="Graph data to import"
-        className="gz-input gz-num min-h-56 resize-y leading-relaxed"
+        className="gz-wb-dlg-code block min-h-56 resize-y"
         placeholder={'A: B, C\nB: C\nC:'}
       />
       {error && (
-        <p className="mt-2 rounded-md border border-[var(--gz-danger)] bg-[color-mix(in_oklab,var(--gz-danger)_10%,transparent)] px-2.5 py-1.5 text-[0.8125rem] text-[var(--gz-danger)]">
+        <p className="gz-wb-dlg-notice mt-3" data-tone="danger">
           {error}
         </p>
       )}
       {warnings.length > 0 && (
-        <ul className="mt-2 space-y-1 rounded-md border px-2.5 py-1.5 text-[0.8125rem] text-[var(--gz-warning)]">
+        <ul className="gz-wb-dlg-notice mt-3 space-y-1" data-tone="warning">
           {warnings.map((warning) => (
             <li key={warning}>{warning}</li>
           ))}

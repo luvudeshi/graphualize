@@ -12,6 +12,8 @@ export interface CanvasTheme {
   edgeLabel: string
   edgeLabelBg: string
   dim: string
+  /** Letters of what a witness leaves out: still 4.5:1 on the paper. */
+  dimText: string
   witness: string
   witnessFill: string
   path: string
@@ -31,94 +33,145 @@ export interface CanvasTheme {
   paletteInk: string[]
 }
 
-const LIGHT_PALETTE = [
-  '#3b6ef5',
-  '#e8663c',
-  '#12916b',
-  '#b455d6',
-  '#d0a000',
-  '#0c8fb5',
-  '#d1417a',
-  '#6b7280',
-  '#7c8b1f',
-  '#8b5e34',
+/*
+ * The canvas is a plate from Byrne's 1847 Euclid, like the home page's: warm
+ * paper, black ink and three flat primaries. These are the same inks as the
+ * --gz-paper / --gz-ink / --gz-red / --gz-blue / --gz-yellow tokens in
+ * index.css (Cytoscape needs values, not custom properties). Keep them in
+ * step.
+ */
+const DAY = {
+  paper: '#f8f2e1',
+  paperDeep: '#ebdfc1',
+  ink: '#1d1a14',
+  red: '#c9381d',
+  blue: '#24519f',
+  yellow: '#e6a915',
+  /** Letters on vermilion, cobalt and dark ink: 4.5:1 or better on each. */
+  onDark: '#f8f1de',
+}
+
+/* The night edition: cream ink and the primaries lifted for the indigo board. */
+const NIGHT = {
+  paper: '#1f2347',
+  paperDeep: '#2a2f5c',
+  ink: '#ece2c6',
+  red: '#f2694a',
+  blue: '#4f7fee',
+  blueLine: '#6f9af0',
+  yellow: '#f3be33',
+  /** Letters on every fill of the night palette, 4.5:1 or better. */
+  onLight: '#0f1129',
+}
+
+/*
+ * Colourings use Byrne's inks first (vermilion, cobalt, chrome yellow, black)
+ * and then printed pigments that sit with them: verdigris, rose madder, burnt
+ * umber, slate, ochre and violet-grey. Each comes with a letter colour that
+ * reads on it at 4.5:1 or better.
+ */
+const DAY_PALETTE: { fill: string; ink: string }[] = [
+  { fill: DAY.red, ink: DAY.onDark },
+  { fill: DAY.blue, ink: DAY.onDark },
+  { fill: DAY.yellow, ink: DAY.ink },
+  { fill: DAY.ink, ink: DAY.onDark },
+  { fill: '#276b5d', ink: DAY.onDark }, // verdigris
+  { fill: '#d27a8a', ink: DAY.ink }, // rose madder
+  { fill: '#7a5230', ink: DAY.onDark }, // umber
+  { fill: '#5d6b78', ink: DAY.onDark }, // slate
+  { fill: '#c29a55', ink: DAY.ink }, // ochre
+  { fill: '#6a5f85', ink: DAY.onDark }, // violet-grey
 ]
 
-const DARK_PALETTE = [
-  '#6f9bff',
-  '#ff8f63',
-  '#2fc79a',
-  '#cf87ee',
-  '#e8c34a',
-  '#4fbede',
-  '#ff77a8',
-  '#a3adbe',
-  '#b6c847',
-  '#c48a5c',
+const NIGHT_PALETTE: { fill: string; ink: string }[] = [
+  { fill: NIGHT.red, ink: NIGHT.onLight },
+  { fill: NIGHT.blue, ink: NIGHT.onLight },
+  { fill: NIGHT.yellow, ink: NIGHT.onLight },
+  { fill: NIGHT.ink, ink: NIGHT.onLight },
+  { fill: '#4fae96', ink: NIGHT.onLight }, // verdigris
+  { fill: '#e48a9a', ink: NIGHT.onLight }, // rose madder
+  { fill: '#b98552', ink: NIGHT.onLight }, // umber
+  { fill: '#93a3b3', ink: NIGHT.onLight }, // slate
+  { fill: '#d9b56e', ink: NIGHT.onLight }, // ochre
+  { fill: '#a597c4', ink: NIGHT.onLight }, // violet-grey
 ]
 
 export const canvasTheme = (dark: boolean): CanvasTheme =>
   dark
     ? {
         dark,
-        background: '#101014',
-        grid: '#1a1a21',
-        vertexFill: '#1e1e26',
-        vertexBorder: '#7a7a8c',
-        vertexText: '#eceaf2',
-        vertexHover: '#2a2a35',
-        selected: '#8d88ff',
-        selectedFill: '#2a2555',
-        edge: '#4d4d5c',
-        edgeLabel: '#c8c8d4',
-        edgeLabelBg: '#101014',
-        dim: '#2a2a33',
-        witness: '#fbbf24',
-        witnessFill: '#3a2c07',
-        path: '#38bdf8',
-        cycle: '#fb7185',
-        matching: '#a78bfa',
-        tree: '#34d399',
-        partitionA: '#4fbede',
-        partitionB: '#ff8f63',
-        current: '#8d88ff',
-        visited: '#34d399',
-        frontier: '#fbbf24',
-        accepted: '#34d399',
-        rejected: '#6b6b7a',
-        palette: DARK_PALETTE,
-        paletteInk: DARK_PALETTE.map(() => '#0b0b0e'),
+        background: NIGHT.paper,
+        grid: '#262a52',
+        vertexFill: NIGHT.paper,
+        vertexBorder: NIGHT.ink,
+        vertexText: NIGHT.ink,
+        vertexHover: NIGHT.paperDeep,
+        selected: NIGHT.blueLine,
+        selectedFill: '#27306a',
+        edge: NIGHT.ink,
+        edgeLabel: NIGHT.ink,
+        edgeLabelBg: NIGHT.paper,
+        dim: '#7b82a4',
+        dimText: '#a3a9c6',
+        witness: NIGHT.red,
+        witnessFill: NIGHT.red,
+        path: NIGHT.red,
+        cycle: NIGHT.red,
+        matching: NIGHT.red,
+        tree: NIGHT.blue,
+        partitionA: NIGHT.blue,
+        partitionB: NIGHT.red,
+        current: NIGHT.red,
+        visited: NIGHT.blue,
+        frontier: NIGHT.yellow,
+        accepted: NIGHT.blueLine,
+        rejected: NIGHT.ink,
+        palette: NIGHT_PALETTE.map((p) => p.fill),
+        paletteInk: NIGHT_PALETTE.map((p) => p.ink),
       }
     : {
         dark,
-        background: '#fcfcfb',
-        grid: '#eeeeea',
-        vertexFill: '#ffffff',
-        vertexBorder: '#3f3f46',
-        vertexText: '#17171a',
-        vertexHover: '#f2f2ef',
-        selected: '#4f46e5',
-        selectedFill: '#e6e3fd',
-        edge: '#9a9aa2',
-        edgeLabel: '#4b4b53',
-        edgeLabelBg: '#fcfcfb',
-        dim: '#dedeD8',
-        witness: '#b45309',
-        witnessFill: '#fdf0d5',
-        path: '#0284c7',
-        cycle: '#be123c',
-        matching: '#7c3aed',
-        tree: '#0f7a58',
-        partitionA: '#0c8fb5',
-        partitionB: '#e8663c',
-        current: '#4f46e5',
-        visited: '#0f7a58',
-        frontier: '#b45309',
-        accepted: '#0f7a58',
-        rejected: '#a1a1aa',
-        palette: LIGHT_PALETTE,
-        paletteInk: LIGHT_PALETTE.map(() => '#ffffff'),
+        background: DAY.paper,
+        grid: '#efe6cf',
+        vertexFill: DAY.paper,
+        vertexBorder: DAY.ink,
+        vertexText: DAY.ink,
+        vertexHover: DAY.paperDeep,
+        selected: DAY.blue,
+        // A pale cobalt that still reads blue on the cream paper (a token mix
+        // of cobalt into warm paper cancels to grey and looks disabled).
+        selectedFill: '#dbe3f3',
+        edge: DAY.ink,
+        edgeLabel: DAY.ink,
+        edgeLabelBg: DAY.paper,
+        dim: '#857b6a',
+        dimText: '#5f5544',
+        witness: DAY.red,
+        witnessFill: DAY.red,
+        path: DAY.red,
+        cycle: DAY.red,
+        matching: DAY.red,
+        tree: DAY.blue,
+        partitionA: DAY.blue,
+        partitionB: DAY.red,
+        current: DAY.red,
+        visited: DAY.blue,
+        frontier: DAY.yellow,
+        accepted: DAY.blue,
+        rejected: DAY.ink,
+        palette: DAY_PALETTE.map((p) => p.fill),
+        paletteInk: DAY_PALETTE.map((p) => p.ink),
       }
+
+/**
+ * The letter colour for a vertex filled with a highlight colour: paper on
+ * vermilion, cobalt and black, ink on chrome yellow.
+ */
+export const highlightInk = (theme: CanvasTheme, fill: string): string => {
+  const at = theme.palette.indexOf(fill)
+  if (at >= 0) return theme.paletteInk[at]!
+  return theme.dark ? NIGHT.onLight : fill === DAY.yellow ? DAY.ink : DAY.onDark
+}
 
 export const modeColor = (theme: CanvasTheme, mode: string): string => {
   switch (mode) {

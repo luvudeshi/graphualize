@@ -1,0 +1,851 @@
+/*
+ * The inspector, set as a page of the same Byrne Euclid as the home page:
+ * the graph's name as a heading, red small-capital section markers with a
+ * hairline, and the property list of Plate I (name, dot leaders, the value
+ * at the right in lining figures). Square everything; rules, not shadows.
+ */
+
+.gz-wb-inspector {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  border-left: 1px solid var(--gz-border);
+  background-color: var(--gz-panel);
+  background-image: var(--gz-grain);
+  color: var(--gz-text);
+  font-family: var(--gz-serif);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.gz-wb-inspector :focus-visible {
+  border-radius: 0;
+  outline: 2px solid var(--gz-accent);
+  outline-offset: 2px;
+}
+
+/* Numbers in the text face, lining and tabular, so columns line up. */
+.gz-wb-inspector .gz-wb-num {
+  font-family: var(--gz-serif);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Head: the graph's name, its two modes and the quick command       */
+/* ---------------------------------------------------------------- */
+
+/* Byrne's double rule closes the head, as it frames the home plates.
+   The head keeps the same scrollbar gutter as the body below it, so the
+   command box and the column of values share one right edge. */
+.gz-wb-inspector .gz-wb-head {
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 0.875rem 0.875rem 0.875rem;
+  border-bottom: 4px double var(--gz-text);
+  scrollbar-gutter: stable;
+}
+
+.gz-wb-inspector .gz-wb-name {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gz-text);
+  font-family: var(--gz-serif);
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+}
+
+.gz-wb-inspector .gz-wb-name::placeholder {
+  color: var(--gz-faint);
+  font-style: italic;
+}
+
+.gz-wb-inspector .gz-wb-modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+}
+
+/* The order and size, in italic under the name, as a plate's caption. */
+.gz-wb-inspector .gz-wb-count {
+  display: block;
+  margin-top: 0.1875rem;
+  color: var(--gz-muted);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+/* Square small-capital switches: inked when on, as the home's controls. */
+.gz-wb-inspector .gz-wb-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.625rem;
+  padding: 0.125rem 0.625rem 0.125rem 0.5rem;
+  border: 1px solid var(--gz-border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--gz-muted);
+  font-family: var(--gz-serif);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+/* A small square box that fills when the switch is on. */
+.gz-wb-inspector .gz-wb-toggle::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 1px solid currentColor;
+}
+
+.gz-wb-inspector .gz-wb-toggle:hover {
+  background: var(--gz-paper-deep);
+  color: var(--gz-text);
+}
+
+.gz-wb-inspector .gz-wb-toggle[aria-checked='true'] {
+  border-color: var(--gz-text);
+  background: var(--gz-text);
+  color: var(--gz-paper);
+}
+
+.gz-wb-inspector .gz-wb-toggle[aria-checked='true']::before {
+  background: currentColor;
+}
+
+/* The command is typed as code, so it is set in the monospace; what to
+   type is suggested in the book's italic. */
+.gz-wb-inspector .gz-wb-command-form {
+  margin-top: 0.75rem;
+}
+
+.gz-wb-inspector .gz-wb-command {
+  display: block;
+  width: 100%;
+  height: 2.125rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--gz-border-strong);
+  border-radius: 0;
+  background: var(--gz-paper-light);
+  color: var(--gz-text);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: -0.01em;
+}
+
+.gz-wb-inspector .gz-wb-command::placeholder {
+  color: var(--gz-faint);
+  font-family: var(--gz-serif);
+  font-size: 0.9375rem;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.gz-wb-inspector .gz-wb-command:focus {
+  border-color: var(--gz-text);
+}
+
+.gz-wb-inspector .gz-wb-command:focus-visible {
+  outline: 2px solid var(--gz-accent);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Sections                                                          */
+/* ---------------------------------------------------------------- */
+
+.gz-wb-inspector .gz-wb-body {
+  min-height: 0;
+  flex: 1;
+  padding-bottom: 1.25rem;
+}
+
+.gz-wb-inspector .gz-wb-section-head {
+  margin: 0;
+}
+
+/* "OVERVIEW ———": a red small-capital marker and its hairline, as the
+   home's PROP. I. and PROPERTIES. */
+.gz-wb-inspector .gz-wb-section-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0.875rem 0.375rem;
+  border: 0;
+  background: transparent;
+  color: var(--gz-red-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.gz-wb-inspector .gz-wb-chevron {
+  flex-shrink: 0;
+  margin-left: -0.125rem;
+  color: var(--gz-faint);
+  transition: transform 140ms ease;
+}
+
+.gz-wb-inspector .gz-wb-section-btn[aria-expanded='true'] .gz-wb-chevron {
+  transform: rotate(90deg);
+}
+
+.gz-wb-inspector .gz-wb-marker {
+  flex-shrink: 0;
+  color: var(--gz-red-text);
+  font-family: var(--gz-serif);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.gz-wb-inspector .gz-wb-section-btn:hover .gz-wb-marker {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.gz-wb-inspector .gz-wb-section-btn:hover .gz-wb-chevron {
+  color: var(--gz-text);
+}
+
+.gz-wb-inspector .gz-wb-rule {
+  height: 1px;
+  min-width: 1rem;
+  flex: 1;
+  background: var(--gz-border);
+}
+
+.gz-wb-inspector .gz-wb-section-count {
+  flex-shrink: 0;
+  color: var(--gz-muted);
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1;
+}
+
+.gz-wb-inspector .gz-wb-section-content {
+  padding: 0 0.875rem 0.25rem;
+}
+
+.gz-wb-inspector .gz-wb-note {
+  margin: 0.125rem 0 0.25rem;
+  color: var(--gz-muted);
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+/* ---------------------------------------------------------------- */
+/* Property rows: Plate I's list                                     */
+/* ---------------------------------------------------------------- */
+
+.gz-wb-inspector .gz-wb-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.gz-wb-inspector .gz-wb-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0.3125rem 0 0.375rem;
+  border: 0;
+  border-bottom: 1px solid var(--gz-border);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.gz-wb-inspector .gz-wb-row:last-child {
+  border-bottom: 0;
+}
+
+.gz-wb-inspector button.gz-wb-row {
+  cursor: pointer;
+}
+
+.gz-wb-inspector .gz-wb-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.gz-wb-inspector .gz-wb-line[data-stacked] {
+  flex-wrap: wrap;
+  row-gap: 0.0625rem;
+}
+
+/* The witness's mark: a Byrne triangle, quiet until the row is shown on
+   the figure, then in vermilion like the home's chosen row. */
+.gz-wb-inspector .gz-wb-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.625rem;
+  height: 0.625rem;
+  align-self: center;
+}
+
+.gz-wb-inspector .gz-wb-mark[data-witness] {
+  background: var(--gz-border-strong);
+  clip-path: polygon(50% 8%, 96% 92%, 4% 92%);
+  transform: scale(0.72);
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease;
+}
+
+.gz-wb-inspector button.gz-wb-row:hover .gz-wb-mark[data-witness] {
+  background: var(--gz-red);
+}
+
+.gz-wb-inspector button.gz-wb-row[aria-pressed='true'] .gz-wb-mark[data-witness] {
+  background: var(--gz-red);
+  transform: scale(1.12);
+}
+
+@media (forced-colors: active) {
+  .gz-wb-inspector .gz-wb-mark {
+    forced-color-adjust: none;
+  }
+}
+
+.gz-wb-inspector .gz-wb-row-name {
+  color: var(--gz-muted);
+  font-size: 0.90625rem;
+  line-height: 1.35;
+}
+
+.gz-wb-inspector button.gz-wb-row:hover .gz-wb-row-name {
+  color: var(--gz-text);
+  text-decoration: underline;
+  text-decoration-color: var(--gz-red);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+
+.gz-wb-inspector button.gz-wb-row[aria-pressed='true'] .gz-wb-row-name {
+  color: var(--gz-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Dot leaders, as in a table of contents, anchored at the value end so
+   the dots stand in true columns down the list. */
+.gz-wb-inspector .gz-wb-leader {
+  height: 0.25rem;
+  min-width: 0.75rem;
+  flex: 1;
+  background-image: radial-gradient(circle, var(--gz-muted) 0.8px, transparent 1.2px);
+  background-position: right center;
+  background-repeat: repeat-x;
+  background-size: 0.4375rem 0.25rem;
+  opacity: 0.7;
+}
+
+.gz-wb-inspector .gz-wb-value-wrap {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  gap: 0.375rem;
+}
+
+.gz-wb-inspector .gz-wb-line[data-stacked] .gz-wb-value-wrap {
+  flex-basis: 100%;
+  flex-shrink: 1;
+  padding-left: 1.125rem;
+}
+
+.gz-wb-inspector .gz-wb-value {
+  color: var(--gz-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.gz-wb-inspector .gz-wb-line[data-stacked] .gz-wb-value {
+  text-align: left;
+}
+
+.gz-wb-inspector .gz-wb-value[data-status='success'] {
+  color: var(--gz-success);
+}
+
+.gz-wb-inspector .gz-wb-value[data-status='warning'],
+.gz-wb-inspector .gz-wb-value[data-status='danger'] {
+  color: var(--gz-danger);
+}
+
+/* Heuristic, upper bound...: the caveat in the margin's italic. */
+.gz-wb-inspector .gz-wb-caveat {
+  color: var(--gz-faint);
+  font-size: 0.8125rem;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+/* The chosen row, as on the home plate: its name in ink, the reason in
+   italic beneath it, and a vermilion rule under it all. */
+.gz-wb-inspector button.gz-wb-row[aria-pressed='true'] {
+  box-shadow: inset 0 -2px 0 var(--gz-red);
+}
+
+.gz-wb-inspector .gz-wb-why {
+  margin-top: 0.1875rem;
+  padding: 0 0 0.25rem 1.125rem;
+}
+
+.gz-wb-inspector .gz-wb-why-text {
+  margin: 0;
+  color: var(--gz-text);
+  font-size: 0.9375rem;
+  font-style: italic;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+/* The arrows of a cycle, upright and light, evenly spaced in the italic. */
+.gz-wb-inspector .gz-wb-why-arrow {
+  display: inline-block;
+  margin: 0 0.04em 0 0.02em;
+  color: var(--gz-muted);
+  font-size: 0.82em;
+  font-style: normal;
+  font-weight: 400;
+  vertical-align: 0.06em;
+}
+
+.gz-wb-inspector .gz-wb-why-detail {
+  margin: 0.25rem 0 0;
+  color: var(--gz-muted);
+  font-size: 0.84375rem;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+/* ---------------------------------------------------------------- */
+/* Buttons, chips and fields shared by the selection and matrices    */
+/* ---------------------------------------------------------------- */
+
+.gz-wb-inspector .gz-wb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.75rem;
+  padding: 0.1875rem 0.625rem;
+  border: 1px solid var(--gz-text);
+  border-radius: 0;
+  background: transparent;
+  color: var(--gz-text);
+  font-family: var(--gz-serif);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.gz-wb-inspector .gz-wb-btn:hover {
+  background: var(--gz-text);
+  color: var(--gz-paper);
+}
+
+.gz-wb-inspector .gz-wb-btn[data-danger] {
+  border-color: var(--gz-danger);
+  color: var(--gz-danger);
+}
+
+.gz-wb-inspector .gz-wb-btn[data-danger]:hover {
+  background: var(--gz-primary);
+  border-color: var(--gz-primary);
+  color: var(--gz-primary-contrast);
+}
+
+.gz-wb-inspector .gz-wb-btn svg {
+  flex-shrink: 0;
+}
+
+.gz-wb-inspector .gz-wb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding-top: 0.25rem;
+}
+
+.gz-wb-inspector .gz-wb-field {
+  display: block;
+}
+
+.gz-wb-inspector .gz-wb-field-label {
+  display: block;
+  color: var(--gz-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.gz-wb-inspector .gz-wb-input {
+  display: block;
+  width: 100%;
+  margin-top: 0.3125rem;
+  padding: 0.3125rem 0.5rem;
+  border: 1px solid var(--gz-border-strong);
+  border-radius: 0;
+  background: var(--gz-paper-light);
+  color: var(--gz-text);
+  font-family: var(--gz-serif);
+  font-size: 0.9375rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.gz-wb-inspector .gz-wb-input:focus {
+  border-color: var(--gz-text);
+}
+
+.gz-wb-inspector .gz-wb-input:focus-visible {
+  outline: 2px solid var(--gz-accent);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Selection                                                         */
+/* ---------------------------------------------------------------- */
+
+.gz-wb-inspector .gz-wb-sel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.375rem 0 0.5rem;
+}
+
+.gz-wb-inspector .gz-wb-stats {
+  margin: 0;
+}
+
+.gz-wb-inspector .gz-wb-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  /* Names on the property list's left edge, past its glyph column. */
+  padding: 0.25rem 0 0.3125rem 1.125rem;
+  border-bottom: 1px solid var(--gz-border);
+}
+
+.gz-wb-inspector .gz-wb-stat:first-child {
+  border-top: 1px solid var(--gz-border);
+}
+
+.gz-wb-inspector .gz-wb-stat dt {
+  color: var(--gz-muted);
+  font-size: 0.90625rem;
+}
+
+.gz-wb-inspector .gz-wb-stat dd {
+  margin: 0;
+  color: var(--gz-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.gz-wb-inspector .gz-wb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3125rem;
+  margin-top: 0.375rem;
+}
+
+/* Vertex names as on the figure: italic letters. */
+.gz-wb-inspector .gz-wb-chip {
+  display: inline-flex;
+  min-width: 1.875rem;
+  min-height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.5rem;
+  border: 1px solid var(--gz-border-strong);
+  border-radius: 0;
+  background: var(--gz-paper-light);
+  color: var(--gz-text);
+  font-family: var(--gz-serif);
+  font-size: 0.9375rem;
+  font-style: italic;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.gz-wb-inspector .gz-wb-chip:hover {
+  border-color: var(--gz-accent);
+  background: var(--gz-accent-soft);
+  color: var(--gz-accent);
+}
+
+.gz-wb-inspector .gz-wb-none {
+  color: var(--gz-faint);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.gz-wb-inspector .gz-wb-edge-title {
+  margin: 0;
+  color: var(--gz-text);
+  font-size: 1.1875rem;
+  font-style: italic;
+  line-height: 1.2;
+}
+
+.gz-wb-inspector .gz-wb-edge-arrow {
+  margin-inline: 0.25rem;
+  font-style: normal;
+  color: var(--gz-muted);
+}
+
+.gz-wb-inspector .gz-wb-lede {
+  margin: 0;
+  color: var(--gz-muted);
+  font-size: 0.9375rem;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------- */
+/* Matrices                                                          */
+/* ---------------------------------------------------------------- */
+
+.gz-wb-inspector .gz-wb-matrices {
+  padding: 0.375rem 0 0.5rem;
+}
+
+.gz-wb-inspector .gz-wb-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.gz-wb-inspector .gz-wb-tab {
+  min-height: 1.625rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--gz-border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--gz-muted);
+  font-family: var(--gz-serif);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.gz-wb-inspector .gz-wb-tab:hover {
+  background: var(--gz-paper-deep);
+  color: var(--gz-text);
+}
+
+.gz-wb-inspector .gz-wb-tab[aria-pressed='true'] {
+  border-color: var(--gz-text);
+  background: var(--gz-text);
+  color: var(--gz-paper);
+}
+
+.gz-wb-inspector .gz-wb-matrix-title {
+  margin: 0;
+  color: var(--gz-text);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.gz-wb-inspector .gz-wb-matrix-convention {
+  margin: 0.125rem 0 0.625rem;
+  color: var(--gz-muted);
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.gz-wb-inspector .gz-wb-matrix-scroll {
+  max-height: 18rem;
+  overflow: auto;
+}
+
+.gz-wb-inspector .gz-wb-matrix {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--gz-serif);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.gz-wb-inspector .gz-wb-matrix th {
+  background-color: var(--gz-panel);
+  background-image: var(--gz-grain);
+  color: var(--gz-muted);
+  font-size: 0.8125rem;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.gz-wb-inspector .gz-wb-matrix thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.125rem 0.375rem 0.25rem;
+  text-align: center;
+}
+
+.gz-wb-inspector .gz-wb-matrix thead th:first-child {
+  left: 0;
+  z-index: 2;
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding: 0.0625rem 0.5rem 0.0625rem 0.25rem;
+  text-align: right;
+  cursor: pointer;
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody th:hover {
+  color: var(--gz-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.gz-wb-inspector .gz-wb-matrix td {
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.375rem;
+  color: var(--gz-text);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.gz-wb-inspector .gz-wb-matrix td[data-zero] {
+  color: var(--gz-faint);
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody tr:hover td,
+.gz-wb-inspector .gz-wb-matrix tbody tr:hover th {
+  background-color: var(--gz-accent-soft);
+}
+
+/* The matrix between brackets: a rule down each side of the body and a
+   tick in at each corner. */
+.gz-wb-inspector .gz-wb-matrix tbody td:first-of-type {
+  padding-left: 0.5rem;
+  box-shadow: inset 1.5px 0 0 var(--gz-text);
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody td:last-child {
+  padding-right: 0.5rem;
+  box-shadow: inset -1.5px 0 0 var(--gz-text);
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody td:first-of-type:last-child {
+  box-shadow:
+    inset 1.5px 0 0 var(--gz-text),
+    inset -1.5px 0 0 var(--gz-text);
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody tr:first-child td:first-of-type {
+  background-image: linear-gradient(var(--gz-text), var(--gz-text));
+  background-position: left top;
+  background-repeat: no-repeat;
+  background-size: 0.375rem 1.5px;
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody tr:first-child td:last-child {
+  background-image: linear-gradient(var(--gz-text), var(--gz-text));
+  background-position: right top;
+  background-repeat: no-repeat;
+  background-size: 0.375rem 1.5px;
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody tr:last-child td:first-of-type {
+  background-image: linear-gradient(var(--gz-text), var(--gz-text));
+  background-position: left bottom;
+  background-repeat: no-repeat;
+  background-size: 0.375rem 1.5px;
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody tr:last-child td:last-child {
+  background-image: linear-gradient(var(--gz-text), var(--gz-text));
+  background-position: right bottom;
+  background-repeat: no-repeat;
+  background-size: 0.375rem 1.5px;
+}
+
+/* A one-row matrix needs all four ticks on its single row. */
+.gz-wb-inspector .gz-wb-matrix tbody tr:first-child:last-child td:first-of-type {
+  background-image:
+    linear-gradient(var(--gz-text), var(--gz-text)),
+    linear-gradient(var(--gz-text), var(--gz-text));
+  background-position:
+    left top,
+    left bottom;
+  background-size: 0.375rem 1.5px;
+}
+
+.gz-wb-inspector .gz-wb-matrix tbody tr:first-child:last-child td:last-child {
+  background-image:
+    linear-gradient(var(--gz-text), var(--gz-text)),
+    linear-gradient(var(--gz-text), var(--gz-text));
+  background-position:
+    right top,
+    right bottom;
+  background-size: 0.375rem 1.5px;
+}
+
+.gz-wb-inspector .gz-wb-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
+
+.gz-wb-inspector .gz-wb-copy-label {
+  margin-right: 0.125rem;
+  color: var(--gz-muted);
+  font-size: 0.875rem;
+  font-style: italic;
+}

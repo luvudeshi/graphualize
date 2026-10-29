@@ -1,0 +1,598 @@
+/*
+ * The workbench's dialogs, set as slips of the same paper as the home page's
+ * plates: a square sheet of the lighter paper with Byrne's double rule round
+ * it, a Garamond title under an optional red small-caps marker, an italic
+ * description, and a footer of letter-spaced small caps with the one primary
+ * action as a flat vermilion block.
+ *
+ * The home page draws the same Dialog for its delete confirmation and styles
+ * it itself (home.css, `.gz-home [role='dialog']`). So that it looks exactly
+ * as it did, every shell rule here is scoped with `:not(.gz-home *)` and
+ * cannot reach it.
+ *
+ * Shell rules are unlayered so they win over the shell's own utilities (the
+ * home page still relies on those). Rules for things inside the body sit in
+ * the components layer, so a utility on the element still wins.
+ */
+
+/* ── The wash behind the sheet: flat, no blur ───────────────────────────── */
+
+.gz-wb-backdrop:not(.gz-home *) {
+  background: color-mix(in oklab, var(--gz-ink) 34%, transparent);
+  backdrop-filter: none;
+}
+
+.dark .gz-wb-backdrop:not(.gz-home *) {
+  /* On the night edition the wash is the board itself, deepened. */
+  background: color-mix(in oklab, var(--gz-paper) 80%, transparent);
+}
+
+/* ── The sheet ──────────────────────────────────────────────────────────── */
+
+.gz-wb-dialog:not(.gz-home *) {
+  border: 1px solid var(--gz-ink);
+  border-radius: 0;
+  background-color: var(--gz-paper-light);
+  background-image: var(--gz-grain);
+  color: var(--gz-text);
+  font-family: var(--gz-serif);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  /* Byrne's double rule: a second hairline 3px out, with paper between. */
+  box-shadow:
+    0 0 0 3px var(--gz-paper-light),
+    0 0 0 4px var(--gz-ink);
+}
+
+.gz-wb-dialog:not(.gz-home *) > header {
+  padding: 1.125rem 1.5rem 0.9375rem;
+  border-bottom: 1px solid var(--gz-border);
+}
+
+.gz-wb-dialog:not(.gz-home *) > footer {
+  padding: 0.875rem 1.5rem;
+  border-top: 1px solid var(--gz-border);
+  gap: 0.625rem;
+}
+
+/* The sheet is the only box with a height limit: it never grows past the
+   window (less the wrapper's padding and the 4px outer rule), so the title,
+   the close button and the footer stay on screen and only the body scrolls. */
+.gz-wb-dialog:not(.gz-home *) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 2rem - 8px);
+}
+
+@media (min-width: 40rem) {
+  .gz-wb-dialog:not(.gz-home *) {
+    max-height: calc(100dvh - 4rem - 8px);
+  }
+}
+
+.gz-wb-dialog:not(.gz-home *) > header,
+.gz-wb-dialog:not(.gz-home *) > footer {
+  flex-shrink: 0;
+}
+
+/* Positioned, so the screen-reader copies (sr-only, absolute) inside a
+   scrolled body are clipped by it and cannot make the window scroll. */
+.gz-wb-dialog:not(.gz-home *) > .gz-wb-dialog-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1.125rem 1.5rem 1.25rem;
+}
+
+@media (max-width: 39.99rem) {
+  .gz-wb-dialog:not(.gz-home *) > .gz-wb-dialog-body {
+    max-height: none;
+  }
+}
+
+/* With no footer, a scrolled body would run straight into the frame and cut
+   type in half on it. It stops instead on a hairline a margin inside the
+   double rule, the way type on the plates always stops short of a rule. */
+.gz-wb-dialog:not(.gz-home *) > .gz-wb-dialog-body:last-child {
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--gz-border);
+}
+
+.gz-wb-dialog-marker {
+  display: block;
+  margin-bottom: 0.125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  color: var(--gz-red-text);
+}
+
+.gz-wb-dialog:not(.gz-home *) .gz-wb-dialog-title {
+  font-family: var(--gz-serif);
+  font-size: 1.4375rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.2;
+  color: var(--gz-text);
+}
+
+.gz-wb-dialog:not(.gz-home *) .gz-wb-dialog-desc {
+  margin-top: 0.3rem;
+  font-size: 1rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--gz-muted);
+}
+
+.gz-wb-dialog:not(.gz-home *) .gz-wb-dialog-close {
+  width: 2rem;
+  height: 2rem;
+  margin: -0.25rem -0.5rem 0 0;
+  padding: 0;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 0;
+}
+
+.gz-wb-dialog:not(.gz-home *) .gz-wb-dialog-close:hover {
+  border-color: var(--gz-ink);
+  background: var(--gz-paper-deep);
+}
+
+@layer components {
+  /* Footer buttons: letter-spaced small caps; outlined ones in ink, the
+     primary as the flat vermilion block of the home page's START DRAWING. */
+  .gz-wb-dialog:not(.gz-home *) > footer .gz-btn {
+    min-height: 2.25rem;
+    justify-content: center;
+    border-radius: 0;
+    padding-inline: 1rem;
+    font-family: var(--gz-serif);
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.14em;
+    text-transform: none;
+    color: var(--gz-text);
+  }
+
+  .gz-wb-dialog:not(.gz-home *) > footer .gz-btn.border {
+    border-color: var(--gz-ink);
+  }
+
+  .gz-wb-dialog:not(.gz-home *) > footer .gz-btn:hover:not(:disabled) {
+    background: var(--gz-paper-deep);
+  }
+
+  .gz-wb-dialog:not(.gz-home *) > footer .gz-btn-primary {
+    border: 1px solid var(--gz-primary);
+    background: var(--gz-primary);
+    color: var(--gz-primary-contrast);
+  }
+
+  .gz-wb-dialog:not(.gz-home *) > footer .gz-btn-primary:hover:not(:disabled) {
+    border-color: var(--gz-ink);
+    background: var(--gz-ink);
+    color: var(--gz-paper);
+  }
+
+  /* Maths inside a small-caps button keeps its own case and italic. */
+  .gz-wb-math {
+    font-family: var(--gz-serif);
+    font-style: normal;
+    letter-spacing: 0;
+    text-transform: none;
+    font-variant-caps: normal;
+    font-variant-numeric: lining-nums;
+    white-space: nowrap;
+  }
+
+  .gz-wb-math i {
+    font-style: italic;
+  }
+
+  /* Preflight already drops a subscript 0.25em (position: relative); a
+     vertical-align on top of that would drop it twice. */
+  .gz-wb-math sub {
+    font-size: max(0.75em, 11.5px);
+    line-height: 0;
+    vertical-align: baseline;
+    margin-left: 0.04em;
+  }
+
+  .gz-wb-dialog .gz-btn .gz-wb-math {
+    font-size: 1.15em;
+    font-weight: 500;
+    margin-left: 0.15em;
+  }
+}
+
+/* ── Generate: a ruled index on the left, the chosen family on the right ─── */
+
+@layer components {
+  /* Stacked on a phone, the index ends on a rule above the detail; beside
+     it, a vertical rule divides the two columns. */
+  .gz-wb-gen .gz-wb-gen-index {
+    scrollbar-gutter: auto;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--gz-border);
+  }
+
+  @media (min-width: 40rem) {
+    .gz-wb-gen .gz-wb-gen-index {
+      scrollbar-gutter: stable;
+      padding-bottom: 0;
+      border-bottom: 0;
+      border-right: 1px solid var(--gz-border);
+    }
+  }
+
+  .gz-wb-gen-group + .gz-wb-gen-group {
+    margin-top: 1.125rem;
+  }
+
+  .gz-wb-gen-cat {
+    display: block;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--gz-ink);
+  }
+
+  /* One ruled line per family: the name set left, its notation hung right
+     like a page number in a table of contents. */
+  .gz-wb-gen-row {
+    position: relative;
+    display: flex;
+    width: 100%;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+    border-bottom: 1px solid var(--gz-border);
+    text-align: left;
+    font-size: 0.90625rem;
+    line-height: 1.35;
+    color: var(--gz-text);
+    transition: background-color 120ms ease;
+  }
+
+  .gz-wb-gen-row:hover {
+    background: color-mix(in oklab, var(--gz-paper-deep) 60%, transparent);
+  }
+
+  .gz-wb-gen-row[aria-current='true'] {
+    background: var(--gz-paper-deep);
+  }
+
+  /* The cobalt bar that marks the chosen line. */
+  .gz-wb-gen-row[aria-current='true']::before {
+    content: '';
+    position: absolute;
+    inset: -1px auto -1px 0;
+    width: 3px;
+    background: var(--gz-blue);
+  }
+
+  .gz-wb-gen-row:focus-visible {
+    outline: 2px solid var(--gz-accent);
+    outline-offset: -2px;
+  }
+
+  /* Type is never cut short: a long name wraps under itself. */
+  .gz-wb-gen-name {
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .gz-wb-gen-math {
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: var(--gz-muted);
+  }
+
+  .gz-wb-gen-row[aria-current='true'] .gz-wb-gen-math {
+    color: var(--gz-blue-text);
+  }
+
+  .gz-wb-gen-title {
+    margin-top: 0.125rem;
+    font-size: 1.3125rem;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .gz-wb-gen-title .gz-wb-math {
+    font-size: 1.1em;
+  }
+
+  .gz-wb-gen-desc {
+    margin-top: 0.375rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--gz-muted);
+  }
+
+  .gz-wb-gen-params {
+    margin-top: 1.125rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gz-border);
+    display: grid;
+    gap: 1rem;
+  }
+
+  .gz-wb-gen-value {
+    font-size: 1rem;
+  }
+
+  .gz-wb-gen-estimate {
+    margin-top: 1.25rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--gz-border);
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--gz-muted);
+  }
+
+  .gz-wb-gen-range {
+    font-size: 0.9375rem;
+    font-style: italic;
+    color: var(--gz-muted);
+  }
+
+  .gz-wb-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.84375rem;
+    font-style: italic;
+    line-height: 1.4;
+    color: var(--gz-muted);
+  }
+
+  .gz-wb-hint-error {
+    font-style: normal;
+    color: var(--gz-danger);
+  }
+
+  /* ── Sliders: a hairline track and a square ink thumb ───────────────── */
+
+  .gz-wb-range {
+    display: block;
+    width: 100%;
+    height: 1.25rem;
+    margin-top: 0.125rem;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .gz-wb-range::-webkit-slider-runnable-track {
+    height: 1px;
+    background: var(--gz-border-strong);
+  }
+
+  .gz-wb-range::-moz-range-track {
+    height: 1px;
+    background: var(--gz-border-strong);
+  }
+
+  .gz-wb-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-top: calc(-0.375rem + 0.5px);
+    border: 0;
+    border-radius: 0;
+    background: var(--gz-ink);
+  }
+
+  .gz-wb-range::-moz-range-thumb {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--gz-ink);
+  }
+
+  .gz-wb-range:hover::-webkit-slider-thumb,
+  .gz-wb-range:active::-webkit-slider-thumb {
+    background: var(--gz-blue);
+  }
+
+  .gz-wb-range:hover::-moz-range-thumb,
+  .gz-wb-range:active::-moz-range-thumb {
+    background: var(--gz-blue);
+  }
+
+  .gz-wb-range:focus-visible {
+    outline: 2px solid var(--gz-accent);
+    outline-offset: 2px;
+  }
+
+  /* ── Square small-caps toggles in one hairline frame ────────────────── */
+
+  .gz-wb-seg {
+    display: inline-flex;
+    border: 1px solid var(--gz-ink);
+  }
+
+  .gz-wb-seg > label + label {
+    border-left: 1px solid var(--gz-border);
+  }
+
+  .gz-wb-seg-option {
+    display: block;
+    padding: 0.3rem 0.8rem 0.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.14em;
+    line-height: 1.3;
+    color: var(--gz-muted);
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+
+  .gz-wb-seg-option:hover {
+    background: var(--gz-paper-deep);
+    color: var(--gz-text);
+  }
+
+  .gz-wb-seg input:checked + .gz-wb-seg-option {
+    background: var(--gz-ink);
+    color: var(--gz-paper);
+  }
+
+  .gz-wb-seg input:focus-visible + .gz-wb-seg-option {
+    outline: 2px solid var(--gz-accent);
+    outline-offset: 2px;
+    position: relative;
+    z-index: 1;
+  }
+}
+
+/* ── Save: one name field and a ruled note of where it goes ─────────────── */
+
+@layer components {
+  .gz-wb-save-name {
+    padding: 0.5rem 0.625rem;
+    font-size: 1.0625rem;
+  }
+
+  /* A cobalt bar down the margin, the plates' way of pointing at something. */
+  .gz-wb-save-dest {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding: 0.5rem 0 0.5rem 0.75rem;
+    border-left: 3px solid var(--gz-blue);
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+
+  .gz-wb-save-place {
+    font-weight: 500;
+  }
+
+  .gz-wb-save-error {
+    margin-top: 0.875rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--gz-border);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--gz-danger);
+  }
+}
+
+/* ── Command palette: a slip of paper with an index of commands ────────── */
+
+@layer components {
+  .gz-wb-palette-input {
+    display: block;
+    width: 100%;
+    padding: 0.9375rem 1.375rem 0.875rem;
+    border-bottom: 1px solid var(--gz-ink);
+    background: transparent;
+    font-family: var(--gz-serif);
+    font-size: 1.1875rem;
+    color: var(--gz-text);
+    outline: none;
+  }
+
+  .gz-wb-palette-input::placeholder {
+    font-style: italic;
+    color: var(--gz-faint);
+  }
+
+  /* The only control here, so its focus is a cobalt rule under it. */
+  .gz-wb-palette-input:focus-visible {
+    border-bottom-color: var(--gz-blue);
+    box-shadow: inset 0 -1px 0 var(--gz-blue);
+  }
+
+  /* No reserved scrollbar gutter (the shared scroller keeps one), so the
+     chosen row's fill reaches both inner rules alike. The list stops on a
+     hairline a margin inside the frame, so a row cut by the scroll is cut
+     on that rule and not on the frame. */
+  .gz-wb-palette .gz-wb-palette-list {
+    scrollbar-gutter: auto;
+    min-height: 0;
+    padding: 0.375rem 0 0.5rem;
+    margin-bottom: 0.625rem;
+    border-bottom: 1px solid var(--gz-border);
+  }
+
+  .gz-wb-palette-row {
+    position: relative;
+    display: flex;
+    width: 100%;
+    cursor: pointer;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.375rem 1.375rem;
+    text-align: left;
+    font-size: 0.96875rem;
+    line-height: 1.35;
+    color: var(--gz-text);
+  }
+
+  .gz-wb-palette-lead {
+    align-items: center;
+    padding-block: 0.625rem;
+    border-bottom: 1px solid var(--gz-border);
+    margin-bottom: 0.25rem;
+  }
+
+  .gz-wb-palette-row[data-active='true'] {
+    background: var(--gz-paper-deep);
+  }
+
+  .gz-wb-palette-row[data-active='true']::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--gz-blue);
+  }
+
+  .gz-wb-palette-hit {
+    color: var(--gz-blue-text);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
+  .gz-wb-palette-notation {
+    font-size: 1.0625rem;
+  }
+
+  .gz-wb-palette-maths {
+    font-size: 1.0625rem;
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  .gz-wb-palette-group {
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.14em;
+    color: var(--gz-muted);
+  }
+
+  .gz-wb-palette-hint {
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--gz-muted);
+  }
+
+  .gz-wb-palette-empty {
+    padding: 1.5rem 1.375rem;
+    text-align: center;
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--gz-muted);
+  }
+}

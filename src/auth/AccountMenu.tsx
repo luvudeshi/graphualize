@@ -52,7 +52,7 @@ const Avatar = ({ profile, size = 24 }: { profile: AuthProfile; size?: number })
   return (
     <span
       aria-hidden="true"
-      className="flex shrink-0 items-center justify-center rounded-full bg-[var(--gz-accent-soft)] font-semibold text-[var(--gz-accent)]"
+      className="gz-wb-avatar-initials flex shrink-0 items-center justify-center rounded-full bg-[var(--gz-accent-soft)] font-semibold text-[var(--gz-accent)]"
       style={{ width: size, height: size, fontSize: size * 0.42 }}
     >
       {initials}
@@ -60,6 +60,12 @@ const Avatar = ({ profile, size = 24 }: { profile: AuthProfile; size?: number })
   )
 }
 
+/*
+ * `gz-wb-account-sheet`, `gz-wb-account-name` and `gz-wb-avatar-initials`
+ * carry no style of their own: the workbench's header
+ * (styles/header.css) restyles the sheet only inside `.gz-wb-masthead`, so the
+ * home page's account menu is untouched by it.
+ */
 const SignedInMenu = ({ profile }: { profile: AuthProfile }) => {
   const signOut = useAuth((s) => s.signOut)
   const [open, setOpen] = useState(false)
@@ -94,14 +100,14 @@ const SignedInMenu = ({ profile }: { profile: AuthProfile }) => {
         className="gz-btn gap-2 px-1.5"
       >
         <Avatar profile={profile} />
-        <span className="hidden max-w-32 truncate text-[0.8125rem] sm:inline">{label}</span>
+        <span className="gz-wb-account-name hidden max-w-32 truncate text-[0.8125rem] sm:inline">{label}</span>
       </button>
 
       {open && (
         <div
           role="menu"
           aria-label="Account"
-          className="gz-anim-pop absolute right-0 top-[calc(100%+6px)] z-40 w-64 rounded-lg border bg-[var(--gz-elevated)] p-1 shadow-[var(--gz-shadow)]"
+          className="gz-wb-account-sheet gz-anim-pop absolute right-0 top-[calc(100%+6px)] z-40 w-64 rounded-lg border bg-[var(--gz-elevated)] p-1 shadow-[var(--gz-shadow)]"
         >
           <div className="flex items-center gap-2.5 px-2.5 py-2">
             <Avatar profile={profile} size={32} />

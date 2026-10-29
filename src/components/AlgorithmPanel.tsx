@@ -1,8 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, type CSSProperties } from 'react'
 import { useEditor } from '../state/store'
 import { useInterval } from '../hooks/useDeferred'
-import { useTheme } from '../hooks/useTheme'
-import { canvasTheme } from '../canvas/theme'
 import { algorithmById } from '../graph/algorithms'
 import type { AlgorithmOptions, AlgorithmStep, VertexOrdering } from '../graph/algorithms/types'
 import {
@@ -13,45 +11,40 @@ import {
   StepBackIcon,
   StepForwardIcon,
 } from './Icons'
+import '../styles/algorithm.css'
 
 const SPEEDS = [0.6, 1.2, 2.4, 5]
 
 /**
  * A legend, because the states on the canvas are otherwise told apart by
  * colour alone. Only the states present in the current frame are listed, so it
- * stays short and matches what is actually on screen.
+ * stays short and matches what is actually on screen. Each state is one of
+ * Byrne's glyphs in his inks: a vermilion disc for the current vertex, cobalt
+ * for visited, chrome yellow ringed in ink for the frontier, a vermilion bar
+ * for the edge being examined, a cobalt bar for an accepted edge and a dotted
+ * ink line for a rejected one. An edge the step is examining is drawn as the
+ * current edge even when it is also accepted or rejected, so those two are
+ * listed only when some edge actually shows them.
  */
-const Legend = ({ dark, step }: { dark: boolean; step?: AlgorithmStep }) => {
-  const theme = canvasTheme(dark)
-  const entries: { label: string; color: string; edge?: boolean; dashed?: boolean }[] = []
-  if (step?.activeVertices?.length) entries.push({ label: 'current', color: theme.current })
-  if (step?.visitedVertices?.length) entries.push({ label: 'visited', color: theme.visited })
-  if (step?.frontierVertices?.length) entries.push({ label: 'frontier', color: theme.frontier })
-  if (step?.treeEdges?.length) entries.push({ label: 'accepted edge', color: theme.accepted, edge: true })
-  if (step?.rejectedEdges?.length) {
-    entries.push({ label: 'rejected edge', color: theme.rejected, edge: true, dashed: true })
+const Legend = ({ step }: { step?: AlgorithmStep }) => {
+  const entries: { label: string; glyph: string; ink?: 'red' | 'blue' | 'yellow' }[] = []
+  if (step?.activeVertices?.length) entries.push({ label: 'current', glyph: 'gz-glyph-disc', ink: 'red' })
+  if (step?.visitedVertices?.length) entries.push({ label: 'visited', glyph: 'gz-glyph-disc', ink: 'blue' })
+  if (step?.frontierVertices?.length) {
+    entries.push({ label: 'frontier', glyph: 'gz-glyph-disc', ink: 'yellow' })
   }
+  const active = new Set(step?.activeEdges ?? [])
+  const shown = (ids?: readonly string[]) => Boolean(ids?.some((id) => !active.has(id)))
+  if (active.size) entries.push({ label: 'current edge', glyph: 'gz-glyph-bar', ink: 'red' })
+  if (shown(step?.treeEdges)) entries.push({ label: 'accepted edge', glyph: 'gz-glyph-bar', ink: 'blue' })
+  if (shown(step?.rejectedEdges)) entries.push({ label: 'rejected edge', glyph: 'gz-wb-glyph-rejected' })
   if (!entries.length) return null
 
   return (
-    <ul className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <ul className="gz-wb-algo-legend">
       {entries.map((entry) => (
-        <li key={entry.label} className="flex items-center gap-1.5 text-[0.6875rem] text-[var(--gz-muted)]">
-          {entry.edge ? (
-            <span
-              aria-hidden
-              className="h-0 w-4"
-              style={{
-                borderTop: `2px ${entry.dashed ? 'dashed' : 'solid'} ${entry.color}`,
-              }}
-            />
-          ) : (
-            <span
-              aria-hidden
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ border: `2px solid ${entry.color}` }}
-            />
-          )}
+        <li key={entry.label}>
+          <span aria-hidden className={entry.glyph} data-ink={entry.ink} />
           {entry.label}
         </li>
       ))}
@@ -59,8 +52,8 @@ const Legend = ({ dark, step }: { dark: boolean; step?: AlgorithmStep }) => {
   )
 }
 
-const OPTION_LABEL = 'flex shrink-0 items-center gap-1 text-[0.75rem] text-[var(--gz-muted)]'
-const OPTION_SELECT = 'gz-input w-auto max-w-[8rem] py-0.5 text-[0.75rem]'
+const OPTION_LABEL = 'gz-label gz-wb-algo-option'
+const OPTION_SELECT = 'gz-input gz-wb-algo-select'
 
 /**
  * The run's own choices, beside its title: where it starts, where it is
@@ -151,7 +144,6 @@ export const AlgorithmPanel = () => {
   const setPlaying = useEditor((s) => s.setPlaying)
   const speed = useEditor((s) => s.playbackSpeed)
   const setSpeed = useEditor((s) => s.setPlaybackSpeed)
-  const { dark } = useTheme()
 
   const playing = session?.playing ?? false
   useInterval(
@@ -174,17 +166,20 @@ export const AlgorithmPanel = () => {
   const step = session.steps[session.index]
   const atEnd = session.index >= session.steps.length - 1
   const stateEntries = Object.entries(step?.state ?? {})
+  // On the last step the result says the same things in red, so the running
+  // state would only repeat it (ORDER twice, COLOURS beside COLOURS USED).
+  const shownState = atEnd && session.result?.length ? [] : stateEntries
+  const last = Math.max(0, session.steps.length - 1)
+  // How far along the run is, 0 to 1, for the inked part of the scrubber.
+  const progress = { '--gz-wb-progress': last ? session.index / last : 0 } as CSSProperties
 
   return (
-    <section
-      aria-label="Algorithm playback"
-      className="gz-anim-in shrink-0 border-t bg-[var(--gz-panel)]"
-    >
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-        <div className="flex items-center gap-0.5">
+    <section aria-label="Algorithm playback" className="gz-anim-in gz-wb-algo">
+      <div className="gz-wb-algo-bar">
+        <div className="gz-wb-algo-transport">
           <button
             type="button"
-            className="gz-btn px-1.5"
+            className="gz-btn gz-wb-algo-key"
             onClick={() => goToStep(0)}
             aria-label="Restart"
             title="Restart"
@@ -193,7 +188,7 @@ export const AlgorithmPanel = () => {
           </button>
           <button
             type="button"
-            className="gz-btn px-1.5"
+            className="gz-btn gz-wb-algo-key"
             onClick={stepBackward}
             disabled={session.index === 0}
             aria-label="Step backward"
@@ -203,16 +198,19 @@ export const AlgorithmPanel = () => {
           </button>
           <button
             type="button"
-            className="gz-btn gz-btn-primary px-2"
+            className="gz-btn gz-btn-primary gz-wb-algo-key gz-wb-algo-play"
             onClick={() => setPlaying(!playing)}
             aria-label={playing ? 'Pause' : 'Play'}
             title={playing ? 'Pause' : 'Play'}
           >
             {playing ? <PauseIcon /> : <PlayIcon />}
+            <span aria-hidden className="gz-wb-algo-play-word">
+              {playing ? 'Pause' : 'Play'}
+            </span>
           </button>
           <button
             type="button"
-            className="gz-btn px-1.5"
+            className="gz-btn gz-wb-algo-key"
             onClick={stepForward}
             disabled={atEnd}
             aria-label="Step forward"
@@ -222,73 +220,82 @@ export const AlgorithmPanel = () => {
           </button>
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="gz-wb-algo-main">
           {/* Wraps on a narrow screen, so the description drops to its own line
               instead of truncating to nothing beside the choices. */}
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="shrink-0 text-[0.8125rem] font-semibold">{session.title}</span>
+          <div className="gz-wb-algo-head">
+            <span aria-hidden className="gz-marker gz-wb-algo-marker">
+              Algorithm
+            </span>
+            <span className="gz-wb-algo-name">{session.title}</span>
             <RunOptions algorithmId={session.algorithmId} options={session.options} />
-            <span className="gz-num shrink-0 text-[0.6875rem] text-[var(--gz-faint)]">
-              {session.index + 1}/{session.steps.length}
+            <span className="gz-wb-algo-count">
+              <span aria-hidden className="gz-label gz-wb-algo-count-label">
+                Step
+              </span>
+              <span className="gz-num gz-wb-algo-count-figs">
+                {session.index + 1}
+                <span className="gz-wb-algo-count-of">/</span>
+                {session.steps.length}
+              </span>
             </span>
-            <span className="min-w-0 flex-[1_1_8rem] truncate text-[0.8125rem] text-[var(--gz-text)]">
-              {step?.description}
-            </span>
+            <span className="gz-wb-algo-desc">{step?.description}</span>
           </div>
           <input
             type="range"
             min={0}
-            max={Math.max(0, session.steps.length - 1)}
+            max={last}
             value={session.index}
             onChange={(event) => goToStep(Number(event.target.value))}
             aria-label="Algorithm step"
-            className="mt-1 h-1 w-full cursor-pointer appearance-none rounded-full bg-[var(--gz-border)] accent-[var(--gz-accent)]"
+            className="gz-wb-algo-scrub"
+            style={progress}
           />
         </div>
 
-        <label className="flex shrink-0 items-center gap-1 text-[0.75rem] text-[var(--gz-muted)]">
-          <span className="sr-only">Playback speed</span>
-          <select
-            value={speed}
-            onChange={(event) => setSpeed(Number(event.target.value))}
-            className="gz-input w-auto py-1 text-[0.75rem]"
-          >
-            {SPEEDS.map((value) => (
-              <option key={value} value={value}>
-                {value}x
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="gz-wb-algo-tail">
+          <label className="gz-wb-algo-speed">
+            <span className="sr-only">Playback speed</span>
+            <select
+              value={speed}
+              onChange={(event) => setSpeed(Number(event.target.value))}
+              className="gz-input gz-wb-algo-select"
+            >
+              {SPEEDS.map((value) => (
+                <option key={value} value={value}>
+                  {value}×
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <button
-          type="button"
-          className="gz-btn shrink-0 px-1.5"
-          onClick={stop}
-          aria-label="Exit visualisation"
-          title="Exit visualisation"
-        >
-          <CloseIcon />
-        </button>
+          <button
+            type="button"
+            className="gz-btn gz-wb-algo-close"
+            onClick={stop}
+            aria-label="Exit visualisation"
+            title="Exit visualisation"
+          >
+            <CloseIcon />
+          </button>
+        </div>
       </div>
 
       {step && (
-        <div className="flex flex-wrap items-start gap-x-5 gap-y-1.5 border-t px-3 py-2">
-          {step?.detail && (
-            <p className="gz-num w-full text-[0.75rem] text-[var(--gz-muted)]">{step.detail}</p>
-          )}
-          <Legend dark={dark} step={step} />
-          {stateEntries.map(([label, value]) => (
-            <div key={label} className="min-w-0">
-              <span className="gz-label">{label}</span>
-              <p className="gz-num truncate text-[0.8125rem]">{value}</p>
+        <div className="gz-wb-algo-body">
+          {step?.detail && <p className="gz-wb-algo-detail">{step.detail}</p>}
+          <Legend step={step} />
+          {shownState.map(([label, value]) => (
+            <div key={label} className="gz-wb-algo-field">
+              <span className="gz-label gz-wb-algo-field-label">{label}</span>
+              <p className="gz-num gz-wb-algo-field-value">{value}</p>
             </div>
           ))}
           {atEnd &&
             session.result?.map((entry) => (
-              <div key={entry.label} className="min-w-0">
-                <span className="gz-label text-[var(--gz-accent)]">{entry.label}</span>
-                <p className="gz-num truncate text-[0.8125rem]">{entry.value}</p>
+              <div key={entry.label} className="gz-wb-algo-field gz-wb-algo-result">
+                <span className="gz-marker gz-wb-algo-field-label">{entry.label}</span>
+                <p className="gz-num gz-wb-algo-field-value">{entry.value}</p>
               </div>
             ))}
         </div>

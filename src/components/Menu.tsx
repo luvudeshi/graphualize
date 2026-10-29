@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -10,11 +11,18 @@ import {
 export interface MenuItem {
   id: string
   label: string
+  /**
+   * What is drawn in place of `label`, such as a family's name set as maths.
+   * Its text must read the same as `label`, which stays the accessible name.
+   */
+  labelNode?: ReactNode
   shortcut?: string
   disabled?: boolean
   danger?: boolean
   /** Renders a divider above this item. */
   separatorBefore?: boolean
+  /** Names the group this item opens, as a small-caps rule above it. */
+  section?: string
   checked?: boolean
   onSelect: () => void
 }
@@ -27,6 +35,37 @@ export interface MenuProps {
   align?: 'left' | 'right'
 }
 
+/**
+ * What goes above an item: a hairline, or a section's name in small capitals
+ * ruled off to the right. A separator, so it is never a stop for the arrows.
+ */
+export const MenuRule = ({ item }: { item: MenuItem }) => {
+  if (item.section) {
+    return (
+      <div role="separator" aria-label={item.section} className="gz-wb-sheet-section">
+        {item.section}
+      </div>
+    )
+  }
+  return item.separatorBefore ? <div role="separator" className="gz-wb-sheet-rule" /> : null
+}
+
+/** A tick in cobalt for an option that is on: a ruled mark, not a glyph. */
+const Tick = () => (
+  <svg width={12} height={12} viewBox="0 0 12 12" aria-hidden="true">
+    <path d="M1.5 6.5L4.6 9.5L10.5 2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+  </svg>
+)
+
+/** An item's tick column, label and right-aligned italic shortcut. */
+export const MenuItemBody = ({ item, tickColumn = true }: { item: MenuItem; tickColumn?: boolean }) => (
+  <>
+    {tickColumn && <span className="gz-wb-item-check">{item.checked ? <Tick /> : null}</span>}
+    <span className="gz-wb-item-label">{item.labelNode ?? item.label}</span>
+    {item.shortcut && <span className="gz-wb-item-key">{item.shortcut}</span>}
+  </>
+)
+
 /** A small keyboard-navigable dropdown used by the menu bar. */
 export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
   const [open, setOpen] = useState(false)
@@ -35,6 +74,23 @@ export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
   const listRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuId = useId()
+  // Where the sheet hangs, from the top of its trigger's box: on the running
+  // head's ink rule, whichever row of a wrapped head the trigger sits on.
+  const [sheetTop, setSheetTop] = useState<number | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const place = () => {
+      const root = rootRef.current
+      const head = root?.closest('.gz-wb-masthead')
+      setSheetTop(
+        root && head ? head.getBoundingClientRect().bottom - 1 - root.getBoundingClientRect().top : null,
+      )
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [open])
 
   const close = useCallback((restoreFocus = true) => {
     setOpen(false)
@@ -83,7 +139,7 @@ export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        className={`gz-btn px-2 py-1 ${open ? 'bg-[color-mix(in_oklab,var(--gz-border)_60%,transparent)]' : ''}`}
+        className="gz-wb-menu-trigger"
         onClick={() => (open ? close(false) : setOpen(true))}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
@@ -101,9 +157,10 @@ export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
           ref={listRef}
           role="menu"
           aria-label={label}
-          className={`gz-anim-in absolute top-full z-40 mt-1 min-w-56 rounded-lg border bg-[var(--gz-elevated)] p-1 shadow-[var(--gz-shadow)] ${
+          className={`gz-wb-sheet gz-anim-in absolute top-full z-40 mt-[5px] min-w-60 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
+          style={sheetTop === null ? undefined : { top: sheetTop, marginTop: 0 }}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.stopPropagation()
@@ -119,7 +176,7 @@ export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
         >
           {items.map((item, index) => (
             <div key={item.id}>
-              {item.separatorBefore && <div className="my-1 h-px bg-[var(--gz-border)]" />}
+              <MenuRule item={item} />
               <button
                 type="button"
                 role="menuitem"
@@ -129,21 +186,10 @@ export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
                   close()
                   item.onSelect()
                 }}
-                className={`flex w-full items-center gap-3 rounded-md px-2.5 py-[5px] text-left text-[0.8125rem] transition-colors ${
-                  item.disabled
-                    ? 'cursor-default opacity-40'
-                    : 'hover:bg-[color-mix(in_oklab,var(--gz-border)_55%,transparent)] focus:bg-[color-mix(in_oklab,var(--gz-border)_55%,transparent)] focus:outline-none'
-                } ${item.danger ? 'text-[var(--gz-danger)]' : ''}`}
+                data-danger={item.danger || undefined}
+                className="gz-wb-item"
               >
-                <span className="w-3 shrink-0 text-[var(--gz-accent)]">
-                  {item.checked ? '✓' : ''}
-                </span>
-                <span className="flex-1 truncate">{item.label}</span>
-                {item.shortcut && (
-                  <span className="gz-num shrink-0 text-[0.6875rem] text-[var(--gz-faint)]">
-                    {item.shortcut}
-                  </span>
-                )}
+                <MenuItemBody item={item} />
               </button>
             </div>
           ))}

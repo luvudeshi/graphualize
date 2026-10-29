@@ -107,6 +107,7 @@ const SaveDialogBody = ({ asCopy, initialName }: { asCopy: boolean; initialName:
         if (!saving) close()
       }}
       title={asCopy ? 'Save as' : 'Save graph'}
+      marker={asCopy ? 'A copy' : 'Save'}
       width="max-w-md"
       initialFocus={inputRef}
       footer={
@@ -133,7 +134,7 @@ const SaveDialogBody = ({ asCopy, initialName }: { asCopy: boolean; initialName:
       }
     >
       <form id="gz-save-form" onSubmit={(event) => void submit(event)}>
-        <label className="block text-[0.75rem] font-medium text-[var(--gz-muted)]" htmlFor="gz-save-name">
+        <label className="gz-label block" htmlFor="gz-save-name">
           Name
         </label>
         <input
@@ -147,22 +148,17 @@ const SaveDialogBody = ({ asCopy, initialName }: { asCopy: boolean; initialName:
           aria-describedby={error ? `${errorId} ${hintId}` : hintId}
           aria-invalid={error ? true : undefined}
           readOnly={saving}
-          className="mt-1 w-full rounded-md border bg-[var(--gz-bg)] px-2.5 py-2 text-[0.875rem] outline-none focus-visible:border-[var(--gz-accent)] focus-visible:ring-2 focus-visible:ring-[var(--gz-accent-soft)]"
+          className="gz-input gz-wb-save-name mt-1.5"
           placeholder="Untitled graph"
           autoComplete="off"
           spellCheck={false}
         />
 
-        <div
-          id={hintId}
-          className="mt-3 flex items-start gap-2 rounded-md bg-[var(--gz-accent-soft)] px-2.5 py-2 text-[0.75rem] leading-relaxed"
-        >
-          <span className="shrink-0 whitespace-nowrap font-medium text-[var(--gz-accent)]">Saves to</span>
+        <div id={hintId} className="gz-wb-save-dest">
+          <span className="gz-label shrink-0 whitespace-nowrap">Saves to</span>
           <span className="min-w-0">
-            <span className="font-medium">{destination.place}</span>
-            {destination.note && (
-              <span className="block break-words text-[var(--gz-muted)]">{destination.note}</span>
-            )}
+            <span className="gz-wb-save-place">{destination.place}</span>
+            {destination.note && <span className="gz-wb-hint break-words">{destination.note}</span>}
           </span>
         </div>
 
@@ -170,7 +166,7 @@ const SaveDialogBody = ({ asCopy, initialName }: { asCopy: boolean; initialName:
             and focus returns to the name, which this describes — so it is
             heard once, where the user is. */}
         {error && (
-          <p id={errorId} className="mt-3 text-[0.8125rem] leading-relaxed text-[var(--gz-danger)]">
+          <p id={errorId} className="gz-wb-save-error">
             {error}
           </p>
         )}

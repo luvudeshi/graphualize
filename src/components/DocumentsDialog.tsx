@@ -4,6 +4,7 @@ import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
 import { useAuth } from '../auth/store'
 import { replaceWorkingGraph } from '../state/replace'
+import '../styles/dialogs2.css'
 
 const formatDate = (ms: number) =>
   new Date(ms).toLocaleString(undefined, {
@@ -105,15 +106,12 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
       width="max-w-xl"
     >
       {lastDeleted && (
-        <div
-          role="status"
-          className="mb-2 flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-[0.8125rem]"
-        >
-          <span className="min-w-0 truncate">Deleted “{lastDeleted.name}”.</span>
+        <div role="status" className="gz-wb-dlg-notice gz-wb-dlg-undo">
+          <span className="min-w-0 truncate italic">Deleted “{lastDeleted.name}”.</span>
           <button
             ref={undoRef}
             type="button"
-            className="gz-btn border px-2"
+            className="gz-wb-dlg-red-link"
             onClick={() => void undo()}
             disabled={busy}
           >
@@ -123,24 +121,24 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
       )}
 
       {documents.length === 0 ? (
-        <p className="py-6 text-center text-[0.8125rem] text-[var(--gz-muted)]">
+        <p className="gz-wb-dlg-caption gz-wb-dlg-ledger-empty">
           Nothing saved {source === 'cloud' ? 'to your account' : 'in this browser'} yet. Use File
           → Save to keep the graph you are working on.
         </p>
       ) : (
-        <ul ref={listRef} className="divide-y">
+        <ul ref={listRef} className="gz-wb-dlg-ledger">
           {documents.map((entry) =>
             confirming === entry.id ? (
               // Asking in place keeps the list in view, so it is plain which
               // graph is about to go. Cancel sits where Delete was, so a
               // double-click on Delete lands on Cancel, not on the deletion.
-              <li key={entry.id} data-row-id={entry.id} className="flex flex-wrap items-center gap-3 py-2">
-                <span id={promptId} className="min-w-0 flex-1 text-[0.8125rem]">
-                  Delete <span className="font-medium">“{entry.name}”</span> from {where}?
+              <li key={entry.id} data-row-id={entry.id} className="flex-wrap">
+                <span id={promptId} className="gz-wb-dlg-ledger-ask">
+                  Delete “{entry.name}” from {where}?
                 </span>
                 <button
                   type="button"
-                  className="gz-btn border border-[var(--gz-danger)] px-2 text-[var(--gz-danger)] hover:bg-[color-mix(in_oklab,var(--gz-danger)_12%,transparent)]"
+                  className="gz-btn gz-wb-dlg-btn-danger"
                   onClick={(event) => {
                     // The second click of a double-click is not a decision.
                     if (event.detail > 1) return
@@ -154,7 +152,7 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
                 </button>
                 <button
                   type="button"
-                  className="gz-btn border px-2"
+                  className="gz-btn gz-btn-outline"
                   onClick={() => setConfirming(null)}
                   aria-describedby={promptId}
                   autoFocus
@@ -163,7 +161,7 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
                 </button>
               </li>
             ) : (
-              <li key={entry.id} data-row-id={entry.id} className="flex items-center gap-3 py-2">
+              <li key={entry.id} data-row-id={entry.id}>
                 <button
                   type="button"
                   onClick={() => {
@@ -172,23 +170,23 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
                     closeDialog()
                     replaceWorkingGraph({ kind: 'open', id: entry.id, source, name: entry.name })
                   }}
-                  className="min-w-0 flex-1 text-left"
+                  className="gz-wb-dlg-ledger-open"
                 >
-                  <span className="block truncate text-[0.875rem] font-medium">
-                    {entry.name}
+                  <span className="gz-wb-dlg-ledger-name">
+                    <span>{entry.name}</span>
                     {entry.id === savedId && savedWhere === source && (
-                      <span className="ml-2 gz-chip border-[var(--gz-accent)] text-[var(--gz-accent)]">
-                        open
-                      </span>
+                      <span className="gz-wb-dlg-open-mark">open</span>
                     )}
                   </span>
-                  <span className="gz-num block text-[0.6875rem] text-[var(--gz-faint)]">
-                    {entry.vertexCount}v · {entry.edgeCount}e · {formatDate(entry.updatedAt)}
+                  <span className="gz-wb-dlg-ledger-meta">
+                    {entry.vertexCount} {entry.vertexCount === 1 ? 'vertex' : 'vertices'} ·{' '}
+                    {entry.edgeCount} {entry.edgeCount === 1 ? 'edge' : 'edges'} ·{' '}
+                    <i>{formatDate(entry.updatedAt)}</i>
                   </span>
                 </button>
                 <button
                   type="button"
-                  className="gz-btn px-2 text-[var(--gz-danger)]"
+                  className="gz-wb-dlg-red-link"
                   onClick={() => setConfirming(entry.id)}
                   disabled={busy}
                   aria-label={`Delete ${entry.name}`}

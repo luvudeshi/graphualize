@@ -1,0 +1,602 @@
+/*
+ * The workbench's running head, its menus and the layout shell, set as the
+ * same book as the home page: paper with a grain, a Garamond with real small
+ * capitals, 1px ink rules, square corners and the three Byrne inks used for
+ * meaning (cobalt for "on" and focus, vermilion for unsaved work and danger).
+ *
+ * Every class here is prefixed `gz-wb-` and nothing on the home page carries
+ * one, so none of this can reach it. The account menu is shared with the home
+ * page; it is restyled only where it sits inside `.gz-wb-masthead`.
+ *
+ * The rules sit in the `components` layer, like home.css, so a Tailwind
+ * utility on the same element still wins.
+ */
+
+@layer components {
+  /* ---------------------------------------------------------------- */
+  /* Shell                                                             */
+  /* ---------------------------------------------------------------- */
+
+  .gz-wb-shell {
+    background-color: var(--gz-bg);
+    background-image: var(--gz-grain);
+    color: var(--gz-text);
+    font-family: var(--gz-serif);
+  }
+
+  /* The phone's "Properties" tab, floated over the canvas plate: an outlined
+     small-caps button like the home page's, never a pill. */
+  .gz-wb-float {
+    display: inline-flex;
+    height: 2.25rem;
+    align-items: center;
+    padding: 0 0.75rem 0.0625rem;
+    border: 1px solid var(--gz-ink);
+    border-radius: 0;
+    background: var(--gz-paper-light);
+    color: var(--gz-ink);
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .gz-wb-float:hover {
+    background: var(--gz-ink);
+    color: var(--gz-paper);
+  }
+
+  .gz-wb-float[aria-expanded='true'] {
+    background: var(--gz-ink);
+    color: var(--gz-paper);
+  }
+
+  /* The collapsed inspector's spine: a narrow ruled strip. */
+  .gz-wb-spine {
+    display: flex;
+    width: 1.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--gz-border);
+    background: var(--gz-panel);
+    color: var(--gz-faint);
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .gz-wb-spine:hover {
+    background: var(--gz-paper-deep);
+    color: var(--gz-text);
+  }
+
+  .gz-wb-shell :focus-visible {
+    border-radius: 0;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Running head                                                      */
+  /* ---------------------------------------------------------------- */
+
+  /* Its own layer, above the plate, the rail (z 30) and the floats, so the
+     running head and the sheets that hang from it are never painted over. */
+  .gz-wb-masthead {
+    position: relative;
+    z-index: 40;
+    display: flex;
+    min-height: 3rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.125rem;
+    row-gap: 0.25rem;
+    padding: 0.3125rem 0.625rem;
+    background-color: var(--gz-paper);
+    background-image: var(--gz-grain);
+    /* The running head's rule, in ink, as under the home page's. */
+    border-bottom: 1px solid var(--gz-ink);
+    color: var(--gz-ink);
+    font-family: var(--gz-serif);
+    font-feature-settings: normal;
+    font-kerning: normal;
+  }
+
+  @media (width >= 40rem) {
+    .gz-wb-masthead {
+      padding-inline: 1rem;
+    }
+  }
+
+  .gz-wb-masthead :focus-visible {
+    border-radius: 0;
+    outline: 2px solid var(--gz-accent);
+    outline-offset: 2px;
+  }
+
+  /* The wordmark: the three-point mark in the Byrne inks beside the name in
+     letter-spaced small capitals — the home page's, a size down. */
+  .gz-wb-brand {
+    display: inline-flex;
+    height: 2.25rem;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 0.75rem;
+    padding: 0 0.375rem 0.0625rem 0.25rem;
+    color: var(--gz-ink);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    transition: background-color 150ms ease;
+  }
+
+  .gz-wb-brand:hover {
+    background: var(--gz-paper-deep);
+  }
+
+  @media (width < 40rem) {
+    .gz-wb-brand {
+      margin-right: 0.25rem;
+      letter-spacing: 0.06em;
+    }
+
+    .gz-wb-brand-word {
+      display: none;
+    }
+  }
+
+  .gz-wb-brandmark {
+    flex-shrink: 0;
+  }
+
+  .gz-wb-brandmark-edges {
+    fill: none;
+    stroke: var(--gz-ink);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+  }
+
+  .gz-wb-brandmark [data-ink='red'] {
+    fill: var(--gz-red);
+  }
+
+  .gz-wb-brandmark [data-ink='blue'] {
+    fill: var(--gz-blue);
+  }
+
+  .gz-wb-brandmark [data-ink='yellow'] {
+    fill: var(--gz-yellow);
+  }
+
+  /* Menu names: plain Garamond, at the size it reads well at. The open menu
+     sits on the deeper paper with a cobalt rule beneath its name. */
+  .gz-wb-menu-trigger {
+    position: relative;
+    display: inline-flex;
+    height: 2.25rem;
+    align-items: center;
+    padding: 0 0.5625rem 0.0625rem;
+    border-radius: 0;
+    color: var(--gz-ink);
+    font-size: 1.0625rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    transition: background-color 150ms ease;
+  }
+
+  .gz-wb-menu-trigger:hover {
+    background: var(--gz-paper-deep);
+  }
+
+  .gz-wb-menu-trigger[aria-expanded='true'] {
+    background: var(--gz-paper-deep);
+  }
+
+  .gz-wb-menu-trigger[aria-expanded='true']::after {
+    content: '';
+    position: absolute;
+    right: 0.5625rem;
+    bottom: 0.3125rem;
+    left: 0.5625rem;
+    height: 2px;
+    background: var(--gz-blue);
+  }
+
+  @media (width < 40rem) {
+    .gz-wb-menu-trigger {
+      padding-inline: 0.4375rem;
+      font-size: 1rem;
+    }
+  }
+
+  .gz-wb-tools {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.375rem;
+    margin-left: auto;
+  }
+
+  /* Square icon buttons: the theme toggle, and the palette's lens. */
+  .gz-wb-icon-btn {
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0;
+    color: var(--gz-ink);
+    transition: background-color 150ms ease;
+  }
+
+  .gz-wb-icon-btn:hover {
+    background: var(--gz-paper-deep);
+  }
+
+  .gz-wb-sun {
+    fill: var(--gz-yellow);
+    stroke: var(--gz-yellow);
+    stroke-width: 1.8;
+    stroke-linecap: butt;
+  }
+
+  /* The command palette: a hairline-ruled slot with its shortcut in italic. */
+  .gz-wb-find-btn {
+    display: inline-flex;
+    height: 2.25rem;
+    align-items: center;
+    gap: 0.4375rem;
+    padding: 0 0.625rem 0.0625rem;
+    border: 1px solid var(--gz-border-strong);
+    border-radius: 0;
+    background: var(--gz-paper-light);
+    color: var(--gz-muted);
+    font-size: 0.9375rem;
+    font-style: italic;
+    line-height: 1;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .gz-wb-find-btn:hover {
+    border-color: var(--gz-ink);
+    background: var(--gz-paper-deep);
+    color: var(--gz-ink);
+  }
+
+  .gz-wb-find-btn kbd {
+    font-family: inherit;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  /*
+   * Save. Unsaved work: an ink-ruled small-caps button with a vermilion disc.
+   * Kept: no frame, just "Saved" in cobalt italic beside a tick. Saving: the
+   * same, in muted italic.
+   */
+  .gz-wb-save {
+    position: relative;
+    display: inline-flex;
+    height: 2.25rem;
+    align-items: center;
+    gap: 0.4375rem;
+    padding: 0 0.6875rem 0.0625rem;
+    border: 1px solid var(--gz-ink);
+    border-radius: 0;
+    color: var(--gz-ink);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    white-space: nowrap;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .gz-wb-save:hover {
+    background: var(--gz-ink);
+    color: var(--gz-paper);
+  }
+
+  .gz-wb-save[data-state='saved'],
+  .gz-wb-save[data-state='saving'] {
+    border-color: transparent;
+    font-size: 1rem;
+    font-weight: 500;
+    font-style: italic;
+    font-variant-caps: normal;
+    letter-spacing: 0;
+  }
+
+  .gz-wb-save[data-state='saved'] {
+    color: var(--gz-blue-text);
+  }
+
+  .gz-wb-save[data-state='saving'] {
+    color: var(--gz-muted);
+    cursor: progress;
+  }
+
+  .gz-wb-save[data-state='saved']:hover,
+  .gz-wb-save[data-state='saving']:hover {
+    border-color: var(--gz-border);
+    background: var(--gz-paper-deep);
+    color: var(--gz-ink);
+  }
+
+  /* Unsaved work: a vermilion disc, one of Byrne's three figures. */
+  .gz-wb-save-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--gz-red);
+  }
+
+  /* With the word hidden, the disc rides the corner of the icon. */
+  @media (width < 64rem) {
+    .gz-wb-save {
+      width: 2.25rem;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .gz-wb-save-dot {
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      box-shadow: 0 0 0 2px var(--gz-paper);
+    }
+  }
+
+  /* The account control, set like the home page's but a size down to sit
+     with the menus: square, in Garamond, hovering on the deeper paper. */
+  .gz-wb-masthead .gz-btn {
+    height: 2.25rem;
+    border-radius: 0;
+    font-family: var(--gz-serif);
+    font-size: 1rem;
+    font-weight: 500;
+    box-shadow: none;
+  }
+
+  .gz-wb-masthead .gz-btn:hover:not(:disabled) {
+    background: var(--gz-paper-deep);
+  }
+
+  .gz-wb-masthead .gz-btn.border {
+    border-color: var(--gz-border-strong);
+  }
+
+  .gz-wb-masthead .gz-btn.border:hover:not(:disabled) {
+    border-color: var(--gz-ink);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Menu sheets: the dropdowns and the right-click menu               */
+  /* ---------------------------------------------------------------- */
+
+  .gz-wb-sheet {
+    padding: 0.375rem 0;
+    border: 1px solid var(--gz-ink);
+    border-radius: 0;
+    background-color: var(--gz-paper-light);
+    background-image: var(--gz-grain);
+    color: var(--gz-ink);
+    font-family: var(--gz-serif);
+    font-feature-settings: normal;
+    box-shadow: none;
+  }
+
+  .gz-wb-sheet-rule {
+    height: 1px;
+    margin: 0.375rem 0.875rem;
+    background: var(--gz-border);
+  }
+
+  /* A section's name, in letter-spaced small capitals and the red of the
+     home page's markers, ruled off to the right. */
+  .gz-wb-sheet-section {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin: 0.5rem 0.875rem 0.1875rem;
+    color: var(--gz-red-text);
+    font-size: 0.71875rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .gz-wb-sheet-section::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: var(--gz-border);
+  }
+
+  .gz-wb-sheet > div:first-child > .gz-wb-sheet-section {
+    margin-top: 0.25rem;
+  }
+
+  .gz-wb-item {
+    position: relative;
+    display: flex;
+    width: 100%;
+    min-height: 1.875rem;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.1875rem 0.875rem 0.25rem 0.625rem;
+    border-radius: 0;
+    color: var(--gz-ink);
+    font-size: 0.96875rem;
+    line-height: 1.2;
+    text-align: left;
+  }
+
+  .gz-wb-item:focus {
+    outline: none;
+  }
+
+  /* The active item: the deeper paper, with a cobalt bar at its margin. */
+  .gz-wb-item:not(:disabled):hover,
+  .gz-wb-item:not(:disabled):focus {
+    background: var(--gz-paper-deep);
+  }
+
+  .gz-wb-item:not(:disabled):hover::before,
+  .gz-wb-item:not(:disabled):focus::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background: var(--gz-blue);
+  }
+
+  .gz-wb-item:disabled {
+    cursor: default;
+    color: var(--gz-faint);
+    opacity: 0.75;
+  }
+
+  /* Destructive: vermilion words, and a vermilion bar when active. */
+  .gz-wb-item[data-danger] {
+    color: var(--gz-red-text);
+  }
+
+  .gz-wb-item[data-danger]:not(:disabled):hover::before,
+  .gz-wb-item[data-danger]:not(:disabled):focus::before {
+    background: var(--gz-red);
+  }
+
+  .gz-wb-item-check {
+    display: inline-flex;
+    width: 0.875rem;
+    flex-shrink: 0;
+    justify-content: center;
+    color: var(--gz-blue-text);
+  }
+
+  /* No tick column (the right-click menu): the words take its place. */
+  .gz-wb-item > .gz-wb-item-label:first-child {
+    margin-left: 0.25rem;
+  }
+
+  .gz-wb-item-label {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* A family's symbol set as maths: an italic letter with a subscript in
+     lining figures. The subscript keeps preflight's drop of 0.25em, the
+     home page's, and the label gets the room below the line to show it. */
+  .gz-wb-item-math {
+    font-variant-numeric: lining-nums;
+    white-space: nowrap;
+  }
+
+  .gz-wb-item-math sub {
+    margin-left: 0.04em;
+    font-size: 0.75em;
+  }
+
+  .gz-wb-item-label:has(.gz-wb-item-math) {
+    padding-bottom: 0.1875em;
+    margin-bottom: -0.1875em;
+  }
+
+  /* Shortcuts, right-aligned in italic with lining figures. */
+  .gz-wb-item-key {
+    flex-shrink: 0;
+    padding-left: 1rem;
+    color: var(--gz-muted);
+    font-size: 0.875rem;
+    font-style: italic;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  .gz-wb-item:disabled .gz-wb-item-key {
+    color: inherit;
+  }
+}
+
+/*
+ * The signed-in account sheet, only as the workbench draws it. Outside the
+ * layer on purpose, so it wins over the sheet's own rounded, shadowed
+ * utilities; it only matches inside the workbench's header, never on the
+ * home page, which draws the same component.
+ */
+.gz-wb-masthead .gz-wb-account-sheet {
+  padding: 0.25rem 0;
+  border: 1px solid var(--gz-ink);
+  border-radius: 0;
+  background-color: var(--gz-paper-light);
+  background-image: var(--gz-grain);
+  box-shadow: none;
+}
+
+.gz-wb-masthead .gz-wb-account-sheet p {
+  font-size: 0.9375rem;
+}
+
+.gz-wb-masthead .gz-wb-account-sheet p + p,
+.gz-wb-masthead .gz-wb-account-sheet > p {
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.gz-wb-masthead .gz-wb-account-sheet > p {
+  color: var(--gz-muted);
+}
+
+.gz-wb-masthead .gz-wb-account-sheet [role='menuitem'] {
+  position: relative;
+  min-height: 1.875rem;
+  border-radius: 0;
+  padding-inline: 0.875rem;
+  font-size: 0.96875rem;
+}
+
+/* The name beside the avatar, at the header's reading size. */
+.gz-wb-masthead .gz-wb-account-name {
+  font-size: 0.9375rem;
+}
+
+/* Initials in place of a photo: one of Byrne's discs, paper inside an ink
+   ring, lettered in the book face, not a tinted bubble. */
+.gz-wb-masthead .gz-wb-avatar-initials {
+  border: 1px solid var(--gz-ink);
+  background: var(--gz-paper-light);
+  color: var(--gz-ink);
+  font-family: var(--gz-serif);
+  font-variant-numeric: lining-nums;
+  letter-spacing: 0.02em;
+}
+
+.gz-wb-masthead .gz-wb-account-sheet [role='menuitem']:hover,
+.gz-wb-masthead .gz-wb-account-sheet [role='menuitem']:focus {
+  background: var(--gz-paper-deep);
+  box-shadow: inset 3px 0 0 var(--gz-blue);
+}

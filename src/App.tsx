@@ -130,16 +130,20 @@ const Editor = ({ arrival }: { arrival: Route }) => {
   const wide = useIsWide()
   const inspectorOpen = useEditor((s) => s.inspectorOpen)
   const setInspectorOpen = useEditor((s) => s.setInspectorOpen)
+  const playing = useEditor((s) => s.algorithm !== null)
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[var(--gz-bg)] text-[var(--gz-text)]">
+    <div className="gz-wb-shell flex h-full flex-col overflow-hidden">
       <MenuBar />
 
       <div className="flex min-h-0 flex-1">
         <Toolbar />
 
         <main className="flex min-w-0 flex-1 flex-col">
-          <div className="relative min-h-0 flex-1">
+          {/* Clipped, so nothing drawn on the plate — the empty state on a
+              short phone canvas, say — can run out over the head or the
+              properties below it. */}
+          <div className="relative min-h-0 flex-1 overflow-hidden">
             <ErrorBoundary>
               <GraphCanvas />
             </ErrorBoundary>
@@ -147,7 +151,7 @@ const Editor = ({ arrival }: { arrival: Route }) => {
               <button
                 type="button"
                 onClick={() => setInspectorOpen(!inspectorOpen)}
-                className="absolute bottom-3 right-3 z-20 rounded-full border bg-[var(--gz-panel)] px-3 py-1.5 text-[0.8125rem] shadow-[var(--gz-shadow)]"
+                className="gz-wb-float absolute bottom-3 right-3 z-20"
                 aria-expanded={inspectorOpen}
               >
                 {inspectorOpen ? 'Hide properties' : 'Properties'}
@@ -168,7 +172,7 @@ const Editor = ({ arrival }: { arrival: Route }) => {
           <button
             type="button"
             onClick={() => setInspectorOpen(true)}
-            className="flex w-7 shrink-0 items-center justify-center border-l bg-[var(--gz-panel)] text-[var(--gz-faint)] hover:text-[var(--gz-text)]"
+            className="gz-wb-spine"
             aria-label="Show inspector"
           >
             <ChevronIcon className="rotate-180" />
@@ -176,8 +180,11 @@ const Editor = ({ arrival }: { arrival: Route }) => {
         )}
       </div>
 
+      {/* Stacked under the canvas, the properties take a shorter share while
+          an algorithm plays, so the run's own canvas is not squeezed to a
+          strip by the player above and the properties below. */}
       {!wide && inspectorOpen && (
-        <div className="h-[55vh] shrink-0 border-t">
+        <div className={`${playing ? 'h-[34dvh]' : 'h-[55vh]'} shrink-0 border-t`}>
           <ErrorBoundary>
             <Inspector />
           </ErrorBoundary>
