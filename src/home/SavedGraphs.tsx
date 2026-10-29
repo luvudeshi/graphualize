@@ -77,10 +77,10 @@ const SignInNudge = ({ pending, onSignIn }: { pending: number; onSignIn: () => v
       </svg>
     </span>
     <div className="min-w-0">
-      <p className="text-[0.875rem] font-medium tracking-[-0.01em]">
+      <p className="gz-home-nudge-title">
         {pending > 0 ? 'Keep these in your Google account' : 'Saving keeps graphs in this browser'}
       </p>
-      <p className="mt-0.5 text-[0.8125rem] leading-relaxed text-[var(--gz-muted)]">
+      <p className="gz-home-nudge-line text-[var(--gz-muted)]">
         {pending > 0
           ? `${pending === 1 ? '1 graph here is' : `${pending} graphs here are`} not in your account yet. Sign in to copy ${pending === 1 ? 'it' : 'them'} across and open ${pending === 1 ? 'it' : 'them'} on any device.`
           : 'Sign in with Google to save to your account instead, so your graphs follow you between devices.'}
@@ -89,7 +89,7 @@ const SignInNudge = ({ pending, onSignIn }: { pending: number; onSignIn: () => v
     <button
       type="button"
       onClick={onSignIn}
-      className="gz-home-btn gz-home-btn-quiet h-10 px-4 text-[0.8125rem]"
+      className="gz-home-nudge-btn"
     >
       <GoogleIcon />
       Continue with Google
@@ -154,26 +154,23 @@ export const SavedGraphs = () => {
       <SignInNudge pending={pendingLocalGraphCount()} onSignIn={() => void signIn()} />
     ) : null
 
-  if (documents.length === 0) return nudge ? <div className="mt-16 sm:mt-20">{nudge}</div> : null
+  if (documents.length === 0) return nudge ? <div className="gz-home-saved-section">{nudge}</div> : null
 
   const visible = showAll ? documents : documents.slice(0, INITIALLY_SHOWN)
   const hidden = documents.length - visible.length
 
   return (
-    <section className="mt-16 sm:mt-20" aria-labelledby="home-your-graphs">
-      <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2
-          id="home-your-graphs"
-          className="text-[1.0625rem] font-semibold tracking-[-0.02em]"
-        >
+    <section className="gz-home-saved-section" aria-labelledby="home-your-graphs">
+      <div className="gz-home-saved-head">
+        <h2 id="home-your-graphs" className="gz-home-saved-title">
           Your graphs
         </h2>
-        <span className="text-[0.75rem] text-[var(--gz-faint)]">
+        <span className="gz-home-saved-where text-[var(--gz-muted)]">
           {source === 'local' ? 'Saved in this browser' : 'In your Google account'}
         </span>
       </div>
 
-      <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="gz-home-saved-list">
         {visible.map((entry) => (
           // `group` drives the delete button's reveal on hover. The button is
           // always in the DOM and always focusable — only its opacity changes —
@@ -194,10 +191,8 @@ export const SavedGraphs = () => {
                 <GraphMarkIcon width={16} height={16} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[0.875rem] font-medium tracking-[-0.01em]">
-                  {entry.name}
-                </span>
-                <span className="gz-num mt-0.5 block truncate text-[0.6875rem] text-[var(--gz-faint)]">
+                <span className="gz-home-saved-name">{entry.name}</span>
+                <span className="gz-num gz-home-saved-meta text-[var(--gz-muted)]">
                   {entry.vertexCount}v · {entry.edgeCount}e · {relativeTime(entry.updatedAt)}
                 </span>
               </span>
@@ -216,7 +211,7 @@ export const SavedGraphs = () => {
                 })
               }
               aria-label={`Delete ${entry.name}`}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[var(--gz-faint)] opacity-0 transition-opacity hover:bg-[color-mix(in_oklab,var(--gz-danger)_12%,transparent)] hover:text-[var(--gz-danger)] focus:opacity-100 focus:outline-none focus-visible:ring-1 group-hover:opacity-100"
+              className="gz-home-saved-delete absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
             >
               <TrashIcon width={15} height={15} />
             </button>
@@ -228,7 +223,7 @@ export const SavedGraphs = () => {
         <button
           type="button"
           onClick={() => setShowAll(true)}
-          className="mt-3 text-[0.75rem] text-[var(--gz-muted)] underline underline-offset-2 hover:text-[var(--gz-text)]"
+          className="gz-home-saved-more text-[var(--gz-muted)]"
         >
           Show {hidden} more
         </button>

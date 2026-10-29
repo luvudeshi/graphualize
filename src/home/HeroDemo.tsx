@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import cytoscape, { type Core } from 'cytoscape'
 import { useTheme } from '../hooks/useTheme'
-import { canvasTheme, modeColor } from '../canvas/theme'
 import { buildStylesheet } from '../canvas/style'
 import { witnessToHighlight } from '../canvas/highlight'
 import { analyzeCore, analyzeMetrics, type InspectorRow } from '../graph/analysis'
-import type { HighlightMode, HighlightRequest } from '../graph/model/types'
+import type { HighlightRequest } from '../graph/model/types'
 import { prefersReducedMotion } from '../utils/platform'
 import {
   buildDemoDocument,
@@ -16,18 +15,38 @@ import {
 } from './demoGraph'
 import { Graph } from '../graph/model/graph'
 import { PauseIcon, PlayIcon } from '../components/Icons'
+import {
+  byrneCanvasOverrides,
+  byrneCanvasTheme,
+  byrnePalette,
+  DEMO_WITNESS_STROKE,
+  labelMargin,
+  labelSides,
+  tourInk,
+  witnessGlyph,
+  type Glyph,
+  type Ink,
+  type LabelSide,
+} from './byrne'
+import { DemoNotes } from './DemoNotes'
+import type { Box, Plot, Plotted } from './notes'
 
 const CYCLE_MS = 3400
 
-/** Room around the drawing. The compact layout is only used on small stages. */
-const FIT_PADDING: Record<DemoLayout, number> = { wide: 48, compact: 28 }
+/**
+ * Room around the drawing, which is also where the notes on the plate are
+ * written. The compact layout is only used on small stages.
+ */
+const FIT_PADDING: Record<DemoLayout, number> = { wide: 72, compact: 46 }
 const MAX_ZOOM = 1.15
 
 interface TourStop {
   row: InspectorRow
   highlight: HighlightRequest | null
-  /** The mode the witness is drawn in, so the row's swatch matches the canvas. */
-  mode: HighlightMode | null
+  /** The primary the witness is laid on in, so the row's glyph matches the canvas. */
+  ink: Ink
+  /** The shape the witness takes, which the row's glyph repeats. */
+  glyph: Glyph
 }
 
 const MoveIcon = () => (
@@ -76,7 +95,13 @@ export const HeroDemo = () => {
   const [announced, setAnnounced] = useState<InspectorRow | null>(null)
   const [still] = useState(prefersReducedMotion)
   const { dark } = useTheme()
-  const theme = useMemo(() => canvasTheme(dark), [dark])
+  const theme = useMemo(() => byrneCanvasTheme(dark), [dark])
+  const palette = byrnePalette(dark)
+  /** Where everything is drawn right now, for the notes written over it. */
+  const [plot, setPlot] = useState<Plot | null>(null)
+  const [layoutUp, setLayoutUp] = useState<DemoLayout>('wide')
+  /** Asks for the drawing to be measured again on the next frame. */
+  const remeasureRef = useRef<() => void>(() => {})
 
   const { doc, graph, stops } = useMemo(() => {
     const document = buildDemoDocument()
@@ -88,13 +113,14 @@ export const HeroDemo = () => {
     const picked = DEMO_ROW_IDS.map((id) => all.find((row) => row.id === id)).filter(
       (row): row is InspectorRow => Boolean(row),
     )
-    const tour = picked.map((row): TourStop => {
-      if (!row.witness) return { row, highlight: null, mode: null }
-      const highlight = witnessToHighlight(row.witness, built)
-      const mode =
-        Object.values(highlight.edges ?? {})[0] ?? Object.values(highlight.vertices ?? {})[0]
-      return { row, highlight, mode: mode ?? null }
-    })
+    const tour = picked.map(
+      (row, index): TourStop => ({
+        row,
+        highlight: row.witness ? witnessToHighlight(row.witness, built) : null,
+        ink: tourInk(index),
+        glyph: witnessGlyph(row.witness),
+      }),
+    )
     return { doc: document, graph: built, stops: tour }
   }, [])
 
@@ -124,15 +150,93 @@ export const HeroDemo = () => {
     })
     cyRef.current = instance
 
+    const labels = new Map(doc.vertices.map((v) => [v.id, v.label]))
+    const edges = doc.edges.map(({ id, source, target }) => ({ id, source, target }))
+
+    // Letter each vertex on its most open side. Done again whenever a vertex
+    // moves, so a letter never ends up lying along an edge that was dragged
+    // over to its side.
+    const sides = new Map<string, LabelSide>()
+    const letter = () => {
+      const placed = new Map<string, { x: number; y: number }>()
+      instance.nodes().forEach((node) => {
+        placed.set(node.id(), node.position())
+      })
+      const wanted = labelSides(placed, doc.edges)
+      instance.batch(() => {
+        instance.nodes().forEach((node) => {
+          const side = wanted.get(node.id())
+          const had = sides.get(node.id())
+          if (!side || (had && had.halign === side.halign && had.valign === side.valign)) return
+          sides.set(node.id(), side)
+          const margin = labelMargin(side)
+          node.data('labelMX', margin.x)
+          node.data('labelMY', margin.y)
+          node.data('labelH', side.halign)
+          node.data('labelV', side.valign)
+        })
+      })
+    }
+
+    // The notes over the drawing follow it: when a vertex is dragged, when the
+    // stage is refitted or the drawing swapped, and when a witness changes
+    // the size of its points. Measured at most once a frame.
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      letter()
+      const vertices = new Map<string, Plotted>()
+      const letters = new Map<string, Box>()
+      instance.nodes().forEach((node) => {
+        const at = node.renderedPosition()
+        vertices.set(node.id(), { x: at.x, y: at.y, r: node.renderedOuterWidth() / 2 })
+        const box = node.renderedBoundingBox({
+          includeNodes: false,
+          includeEdges: false,
+          includeLabels: true,
+          includeOverlays: false,
+        })
+        if (box.w > 0 && box.h > 0) letters.set(node.id(), { x0: box.x1, y0: box.y1, x1: box.x2, y1: box.y2 })
+      })
+      setPlot({
+        width: instance.width(),
+        height: instance.height(),
+        vertices,
+        letters,
+        names: labels,
+        edges,
+        stroke: DEMO_WITNESS_STROKE * instance.zoom(),
+      })
+    }
+    const remeasure = () => {
+      if (!frame) frame = window.requestAnimationFrame(measure)
+    }
+    remeasureRef.current = remeasure
+    instance.on('position', 'node', remeasure)
+    instance.on('viewport resize', remeasure)
+
+    // A dragged vertex stays on the plate, with room for its letter (set
+    // beside the disc, on whichever side is most open) inside the frame.
+    instance.on('drag', 'node', (event) => {
+      const node = event.target
+      const ext = instance.extent()
+      const zoom = instance.zoom()
+      const pad = { left: 36 / zoom, right: 46 / zoom, top: 38 / zoom, bottom: 32 / zoom }
+      const at = node.position()
+      const x = Math.min(Math.max(at.x, ext.x1 + pad.left), ext.x2 - pad.right)
+      const y = Math.min(Math.max(at.y, ext.y1 + pad.top), ext.y2 - pad.bottom)
+      if (x !== at.x || y !== at.y) node.position({ x, y })
+    })
+
     // The document is drawn wide. A narrow stage swaps in the compact drawing
     // of the same graph, and swaps back if the stage widens again.
-    const labels = new Map(doc.vertices.map((v) => [v.id, v.label]))
     let layout: DemoLayout = 'wide'
     const fit = () => {
       instance.resize()
       const wanted = demoLayoutFor(instance.width(), instance.height())
       if (wanted !== layout) {
         layout = wanted
+        setLayoutUp(wanted)
         const positions = demoPositions(wanted)
         instance.batch(() => {
           instance.nodes().forEach((node) => {
@@ -141,6 +245,7 @@ export const HeroDemo = () => {
           })
         })
       }
+      letter()
       instance.fit(instance.elements(), FIT_PADDING[layout])
       if (instance.zoom() > MAX_ZOOM) {
         instance.zoom({
@@ -149,6 +254,7 @@ export const HeroDemo = () => {
         })
         instance.center(instance.elements())
       }
+      remeasure()
     }
     const observer = new ResizeObserver(fit)
     observer.observe(containerRef.current)
@@ -156,24 +262,44 @@ export const HeroDemo = () => {
 
     return () => {
       observer.disconnect()
+      window.cancelAnimationFrame(frame)
+      remeasureRef.current = () => {}
       instance.destroy()
       cyRef.current = null
     }
   }, [doc])
 
-  /* Theme. */
+  /* Theme: the workbench's stylesheet, then the page's own ink on top. */
   useEffect(() => {
-    cyRef.current?.style(
-      buildStylesheet(theme, {
+    const sheet = [
+      ...buildStylesheet(theme, {
         directed: false,
         weighted: false,
         showLabels: true,
         reducedMotion: still,
       }),
-    )
-  }, [theme, still])
+      ...byrneCanvasOverrides(dark),
+    ]
+    cyRef.current?.style(sheet)
+    // The canvas letters its vertices in the page's italic, which may still be
+    // on its way; once it has arrived the canvas is drawn again with it.
+    let live = true
+    void document.fonts
+      ?.load('italic 500 22px "EB Garamond"')
+      .then(() => {
+        if (!live) return
+        cyRef.current?.style(sheet)
+        remeasureRef.current()
+      })
+      .catch(() => {})
+    remeasureRef.current()
+    return () => {
+      live = false
+    }
+  }, [theme, still, dark])
 
-  /* Highlight the witness of the active row. */
+  /* Highlight the witness of the active row, in that row's colour. */
+  const activeInk = stops[active] ? palette[stops[active].ink] : palette.ink
   useEffect(() => {
     const instance = cyRef.current
     const highlight = stops[active]?.highlight
@@ -181,18 +307,20 @@ export const HeroDemo = () => {
     instance.batch(() => {
       instance.nodes().forEach((node) => {
         const mode = highlight.vertices?.[node.id()]
-        if (mode) node.data('hlColor', modeColor(theme, mode))
+        if (mode) node.data('hlColor', activeInk)
         else node.removeData('hlColor')
         node.toggleClass('dimmed', Boolean(highlight.dimOthers) && !mode)
       })
       instance.edges().forEach((edge) => {
         const mode = highlight.edges?.[edge.id()]
-        if (mode) edge.data('hlColor', modeColor(theme, mode))
+        if (mode) edge.data('hlColor', activeInk)
         else edge.removeData('hlColor')
         edge.toggleClass('dimmed', Boolean(highlight.dimOthers) && !mode)
       })
     })
-  }, [active, stops, theme])
+    // A witness's points are drawn larger, which moves their letters out.
+    remeasureRef.current()
+  }, [active, stops, activeInk])
 
   /* Advance the tour, unless the visitor is interacting, stopped it, or prefers stillness. */
   const touring = !pointerInside && !focusInside && !stopped && !still && stops.length > 1
@@ -216,24 +344,39 @@ export const HeroDemo = () => {
     setStopped(!stopped)
   }
 
+  const current = stops[active]
+  const subject = useMemo(
+    () =>
+      current ? { id: current.row.id, value: current.row.value, witness: current.row.witness } : null,
+    [current],
+  )
+
   return (
     <div
       className="gz-demo"
       onPointerEnter={() => setPointerInside(true)}
       onPointerLeave={() => setPointerInside(false)}
-      onFocus={() => setFocusInside(true)}
+      // Focus on the pause/resume control is not a hold: Chrome focuses a
+      // clicked button, and Resume would otherwise keep the tour stopped.
+      onFocus={(event) =>
+        setFocusInside(!(event.target as Element).closest('.gz-demo-control'))
+      }
       onBlur={(event) => {
         // Moving from one row to the next is not leaving.
         if (!event.currentTarget.contains(event.relatedTarget)) setFocusInside(false)
       }}
     >
-      <div className="flex h-11 items-center gap-2.5 border-b px-4">
-        <span className="gz-demo-live" aria-hidden />
-        <span className="text-[0.8125rem] font-medium tracking-[-0.01em]">Live analysis</span>
-        <span className="gz-num hidden text-[0.75rem] text-[var(--gz-muted)] sm:inline">
-          · {graph.order} vertices · {graph.size} edges
+      <div className="gz-demo-head">
+        <span className="gz-demo-plate">Plate I.</span>
+        {/* The title and the counts are one flex item, so the first middot is
+            set off by a word space like the second, not by the head's gap. */}
+        <span>
+          <span className="gz-demo-title">Live analysis</span>
+          <span className="gz-num hidden text-[var(--gz-muted)] sm:inline">
+            {' '}· {graph.order} vertices · {graph.size} edges
+          </span>
         </span>
-        <span className="ml-auto flex items-center gap-1.5 text-[0.75rem] text-[var(--gz-muted)]">
+        <span className="gz-demo-hint ml-auto text-[var(--gz-muted)]">
           <MoveIcon />
           Drag a vertex
         </span>
@@ -242,24 +385,30 @@ export const HeroDemo = () => {
             type="button"
             onClick={toggleTour}
             aria-label={stopped ? 'Resume the tour' : 'Pause the tour'}
-            className="gz-demo-control ml-1.5"
+            className="gz-demo-control"
           >
             {stopped ? <PlayIcon width={13} height={13} /> : <PauseIcon width={13} height={13} />}
           </button>
         )}
       </div>
 
-      <div className="grid md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_23rem]">
-        <div className="gz-demo-canvas relative h-[300px] sm:h-[340px] md:h-[384px] lg:h-[364px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_23rem]">
+        <div className="gz-demo-canvas relative">
           <div ref={containerRef} className="h-full w-full" aria-hidden />
+          <DemoNotes
+            plot={plot}
+            subject={subject}
+            ink={current?.ink ?? 'red'}
+            glyph={current?.glyph ?? 'square'}
+            compact={layoutUp === 'compact'}
+          />
         </div>
 
-        <div className="border-t p-2.5 md:border-l md:border-t-0 md:p-3">
-          <p className="gz-label px-3 pb-2 pt-2">Properties</p>
-          <ul className="flex flex-col gap-1" aria-label="Properties of the example graph">
-            {stops.map(({ row, mode }, index) => {
+        <div className="gz-demo-side">
+          <p className="gz-demo-label">Properties</p>
+          <ul className="gz-demo-list" aria-label="Properties of the example graph">
+            {stops.map(({ row, ink, glyph }, index) => {
               const selected = index === active
-              const swatch = mode ? modeColor(theme, mode) : 'var(--gz-accent)'
               return (
                 <li key={row.id}>
                   <button
@@ -267,35 +416,23 @@ export const HeroDemo = () => {
                     onClick={() => pick(index)}
                     aria-pressed={selected}
                     className="gz-demo-row"
-                    style={{ '--gz-row': swatch } as CSSProperties}
+                    style={{ '--gz-row': `var(--gz-home-${ink})` } as CSSProperties}
                   >
-                    <span className="flex items-center gap-3">
-                      <span className="gz-demo-swatch" aria-hidden />
+                    <span className="gz-demo-line">
+                      <span className="gz-demo-glyph" data-glyph={glyph} aria-hidden />
+                      <span className="gz-demo-name">{row.label}</span>
+                      <span className="gz-demo-leader" aria-hidden />
                       <span
-                        className={`flex-1 text-[0.8125rem] ${
-                          selected ? 'font-medium text-[var(--gz-text)]' : 'text-[var(--gz-muted)]'
-                        }`}
-                      >
-                        {row.label}
-                      </span>
-                      <span
-                        className={`gz-num font-medium ${
-                          row.status === 'success'
-                            ? 'text-[var(--gz-success)]'
-                            : row.status === 'warning'
-                              ? 'text-[var(--gz-warning)]'
-                              : ''
-                        }`}
+                        className="gz-demo-value gz-num"
+                        data-status={row.status === 'success' || row.status === 'warning' ? row.status : undefined}
                       >
                         {row.value}
                       </span>
                     </span>
                     {selected && row.explanation && (
-                      // Two lines are reserved whether or not they are needed,
-                      // so the list does not jump as the tour moves on.
-                      <span className="gz-anim-in mt-1.5 block min-h-[3em] pl-5 text-[0.8125rem] leading-[1.5] text-[var(--gz-muted)]">
-                        {row.explanation}
-                      </span>
+                      // The list reserves two lines for this (home.css), so it
+                      // does not jump as the tour moves on.
+                      <span className="gz-demo-why gz-anim-in">{row.explanation}</span>
                     )}
                     {selected && touring && (
                       <span

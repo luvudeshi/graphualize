@@ -1,109 +1,301 @@
 /*
- * The home page's own styles.
+ * The home page's own styles, set after Oliver Byrne's 1847 Euclid: warm
+ * uncoated paper, black ink and three flat primaries (vermilion, chrome yellow,
+ * cobalt), a Garamond with real small caps and old-style figures, and nothing
+ * else — no shadows, no gradients, no rounded cards. The night edition is the
+ * same book printed in cream on indigo-black.
  *
- * Everything here is built from the --gz-* tokens in index.css, so both themes
- * follow without a second palette, and every class is prefixed `gz-home-`,
- * `gz-demo-`, `gz-thumb-` or `gz-algo-` so none of it can reach the
- * workbench. The rules sit in the `components` layer, so a Tailwind utility on
- * the same element still wins, exactly as it does for `.gz-btn`.
+ * Every class is prefixed `gz-home-`, `gz-demo-`, `gz-thumb-` or `gz-algo-`,
+ * and the palette lives on `.gz-home`, the page's root, where it also re-points
+ * the app's --gz-* tokens for the shared pieces drawn inside it (the account
+ * menu, the sign-in notice). None of it can reach the workbench. The rules sit
+ * in the `components` layer, so a Tailwind utility on the same element still
+ * wins, exactly as it does for `.gz-btn`.
  *
  * Motion is decoration only. Under prefers-reduced-motion every animation here
  * stops (bottom of the file), and index.css already flattens transitions.
+ *
+ * Keep the colours in step with byrne.ts, which the canvas reads.
  */
 
-:root {
-  --gz-home-dot: rgb(23 23 26 / 0.085);
-  --gz-home-glow: color-mix(in oklab, var(--gz-accent) 22%, transparent);
-  --gz-home-lift: 0 1px 2px rgb(17 17 26 / 0.05), 0 12px 32px -14px rgb(17 17 26 / 0.22);
+.gz-home {
+  --gz-home-paper: #f3ead3;
+  --gz-home-paper-deep: #ebdfc1;
+  --gz-home-ink: #1d1a14;
+  /* Captions, metadata and the dimmed parts of a figure: 7.6:1 on the paper. */
+  --gz-home-muted: #51483a;
+  --gz-home-hair: color-mix(in oklab, var(--gz-home-ink) 24%, transparent);
+  --gz-home-red: #c9381d;
+  /* The red, darkened just enough to pass AA as small text on the paper. */
+  --gz-home-red-text: #b3311a;
+  --gz-home-blue: #24519f;
+  --gz-home-blue-text: #24519f;
+  --gz-home-yellow: #e6a915;
+  /* Chrome yellow is a colour for areas. A hairline in it vanishes on cream,
+     so thin yellow lines are drawn in its ochre, at 3.6:1. */
+  --gz-home-yellow-line: #9c7205;
+  --gz-home-on-red: #f8f1de;
+  --gz-home-serif: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  /* Paper: a fine grain over a faint cloud, both drawn rather than fetched. */
+  --gz-home-grain:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .12 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.006 .012' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .42 0 0 0 0 .2 0 0 0 .12 -.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
+
+  /* The app's tokens, re-pointed for the shared components drawn here. */
+  --gz-bg: var(--gz-home-paper);
+  --gz-canvas: var(--gz-home-paper);
+  --gz-panel: var(--gz-home-paper);
+  --gz-elevated: #f8f2e1;
+  --gz-border: var(--gz-home-hair);
+  --gz-border-strong: color-mix(in oklab, var(--gz-home-ink) 55%, transparent);
+  --gz-text: var(--gz-home-ink);
+  --gz-muted: var(--gz-home-muted);
+  --gz-faint: #6f6453;
+  --gz-accent: var(--gz-home-blue);
+  --gz-accent-contrast: var(--gz-home-paper);
+  --gz-accent-soft: color-mix(in oklab, var(--gz-home-blue) 12%, var(--gz-home-paper));
+  --gz-success: var(--gz-home-blue-text);
+  --gz-warning: var(--gz-home-red-text);
+  --gz-danger: var(--gz-home-red-text);
+  --gz-shadow: 0 0 0 1px var(--gz-home-ink);
 }
 
-.dark {
-  --gz-home-dot: rgb(255 255 255 / 0.06);
-  --gz-home-glow: color-mix(in oklab, var(--gz-accent) 28%, transparent);
-  --gz-home-lift: 0 1px 2px rgb(0 0 0 / 0.5), 0 16px 40px -16px rgb(0 0 0 / 0.75);
+/*
+ * The night edition is the same book printed again, not the day page
+ * inverted: cream ink and the three primaries, each lifted for contrast
+ * (red 5.4:1, blue 4.4:1, yellow 9.5:1), on a deep indigo board that keeps
+ * its grain, with darker fibres through it, as dyed paper has.
+ */
+.dark .gz-home {
+  --gz-home-paper: #1a1d3d;
+  --gz-home-paper-deep: #242853;
+  --gz-home-ink: #ece2c6;
+  --gz-home-muted: #c2b9a0;
+  --gz-home-hair: color-mix(in oklab, var(--gz-home-ink) 26%, transparent);
+  --gz-home-red: #f2694a;
+  --gz-home-red-text: #f2694a;
+  /* Cobalt for colour (4.4:1, plenty for shapes and rules); text and fine
+     lines in blue use the lighter one (5.9:1). */
+  --gz-home-blue: #4f7fee;
+  --gz-home-blue-text: #6f9af0;
+  --gz-home-yellow: #f3be33;
+  --gz-home-yellow-line: #f3be33;
+  /* On the night edition's red, the board reads; cream does not. */
+  --gz-home-on-red: #1a1d3d;
+  --gz-home-grain:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .89 0 0 0 0 .78 0 0 0 .2 -.045'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .03' numOctaves='3' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .02 0 0 0 0 .02 0 0 0 0 .08 0 0 0 .55 -.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
+  --gz-elevated: #242853;
+  --gz-faint: #959ab8;
+  --gz-accent: var(--gz-home-blue-text);
+}
+
+/* Overscroll past either end of the page shows paper, not the app's grey. */
+html[data-route='home'] body {
+  background: #f3ead3;
+}
+
+html.dark[data-route='home'] body {
+  background: #1a1d3d;
+}
+
+/*
+ * The confirmation dialogs the saved list opens are the app's own. On this
+ * page they are set as a slip of the same paper: square, double-ruled like
+ * the plates, and in the page's face at a size Garamond reads well at. These
+ * rules are outside the layer on purpose, so they win over the dialog's own
+ * utilities, and they cannot reach the workbench: they only match inside
+ * the home page's root.
+ */
+.gz-home [role='dialog'] {
+  border-color: var(--gz-home-ink);
+  border-radius: 0;
+  background-color: var(--gz-home-paper);
+  background-image: var(--gz-home-grain);
+  box-shadow: none;
+  outline: 1px solid var(--gz-home-ink);
+  outline-offset: 4px;
+}
+
+.gz-home [role='dialog'] > header,
+.gz-home [role='dialog'] > footer {
+  border-color: var(--gz-home-hair);
+}
+
+.gz-home [role='dialog'] h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.gz-home [role='dialog'] p {
+  font-size: 1.0625rem;
+  line-height: 1.45;
+}
+
+.gz-home [role='dialog'] header p {
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+.gz-home [role='dialog'] .gz-btn {
+  height: 2.5rem;
+  border-radius: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.gz-home [role='dialog'] .gz-btn-primary {
+  background: var(--gz-home-red);
+  color: var(--gz-home-on-red);
+}
+
+.gz-home [role='dialog'] .gz-btn-primary:hover:not(:disabled) {
+  background: var(--gz-home-ink);
+  color: var(--gz-home-paper);
 }
 
 @layer components {
-  /* ---------------------------------------------------------------- */
-  /* Backdrop                                                          */
-  /* ---------------------------------------------------------------- */
-
-  .gz-home-backdrop {
-    position: absolute;
-    inset: 0 0 auto;
-    z-index: -1;
-    height: 70rem;
-    overflow: hidden;
-    pointer-events: none;
+  .gz-home {
+    position: relative;
+    isolation: isolate;
+    min-height: 100%;
+    overflow-x: clip;
+    background-color: var(--gz-home-paper);
+    background-image: var(--gz-home-grain);
+    color: var(--gz-home-ink);
+    font-family: var(--gz-home-serif);
+    font-size: 1.125rem;
+    line-height: 1.5;
+    font-feature-settings: normal;
+    font-variant-numeric: oldstyle-nums proportional-nums;
+    font-kerning: normal;
   }
 
-  /* Graph paper that fades out towards the edges and below the fold. */
-  .gz-home-backdrop::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(circle at center, var(--gz-home-dot) 1px, transparent 1.6px);
-    background-size: 24px 24px;
-    background-position: center top;
-    mask-image: radial-gradient(ellipse 70% 52% at 50% 18%, #000 25%, transparent 78%);
+  /* Square focus rings in the page's blue, to match the square controls. */
+  .gz-home :focus-visible {
+    border-radius: 0;
+    outline: 2px solid var(--gz-home-blue-text);
+    outline-offset: 3px;
   }
 
-  /* A wash of accent light from above the page. */
-  .gz-home-backdrop::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: -20rem;
-    width: min(72rem, 160vw);
-    height: 38rem;
-    transform: translateX(-50%);
-    background: radial-gradient(closest-side, var(--gz-home-glow), transparent);
+  .gz-home ::selection {
+    background: var(--gz-home-yellow);
+    color: #1d1a14;
+  }
+
+  /* Numbers on this page are set in the text face's old-style figures. */
+  .gz-home .gz-num {
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: 0;
+    font-variant-numeric: oldstyle-nums proportional-nums;
+  }
+
+  .gz-home-wrap {
+    width: 100%;
+    max-width: 78rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-wrap {
+      padding-inline: 2rem;
+    }
+  }
+
+  @media (width >= 64rem) {
+    .gz-home-wrap {
+      padding-inline: 3rem;
+    }
   }
 
   /* ---------------------------------------------------------------- */
-  /* Header                                                            */
+  /* Running head                                                      */
   /* ---------------------------------------------------------------- */
 
-  .gz-home-header {
-    border-bottom: 1px solid transparent;
-    transition:
-      background-color 200ms ease,
-      border-color 200ms ease;
+  .gz-home-head {
+    background-color: var(--gz-home-paper);
+    background-image: var(--gz-home-grain);
+    border-bottom: 1px solid var(--gz-home-ink);
   }
 
-  .gz-home-header[data-scrolled='true'] {
-    background: color-mix(in oklab, var(--gz-bg) 76%, transparent);
-    border-bottom-color: color-mix(in oklab, var(--gz-border) 85%, transparent);
-    backdrop-filter: saturate(1.6) blur(14px);
-    -webkit-backdrop-filter: saturate(1.6) blur(14px);
+  .gz-home-head-row {
+    display: flex;
+    height: 3.75rem;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .gz-home-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.08em;
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-brand {
+      gap: 0.625rem;
+      font-size: 1.1875rem;
+      letter-spacing: 0.12em;
+    }
+  }
+
+  /* The narrowest phones: the running head tightens, and below 352px the
+     wordmark gives way to the mark alone, so "Workbench" is never cut off. */
+  @media (width < 24rem) {
+    .gz-home-brand {
+      gap: 0.375rem;
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+    }
+
+    .gz-home-head .gz-home-icon-btn {
+      width: 2rem;
+    }
+  }
+
+  @media (width < 22rem) {
+    .gz-home-brand > span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   }
 
   .gz-home-mark {
-    display: inline-flex;
     flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 30%;
-    color: #fff;
-    background: linear-gradient(
-      150deg,
-      color-mix(in oklab, var(--gz-accent) 72%, white) 0%,
-      var(--gz-accent) 48%,
-      color-mix(in oklab, var(--gz-accent) 78%, black) 100%
-    );
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.32),
-      0 1px 2px rgb(17 17 26 / 0.18),
-      0 4px 12px -4px color-mix(in oklab, var(--gz-accent) 75%, transparent);
   }
 
-  .dark .gz-home-mark {
-    background: linear-gradient(
-      150deg,
-      color-mix(in oklab, var(--gz-accent) 85%, white) 0%,
-      color-mix(in oklab, var(--gz-accent) 80%, black) 55%,
-      color-mix(in oklab, var(--gz-accent) 55%, black) 100%
-    );
+  .gz-home-mark-edges {
+    fill: none;
+    stroke: var(--gz-home-ink);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+  }
+
+  .gz-home-mark [data-ink='red'],
+  .gz-home-fleuron [data-ink='red'] {
+    fill: var(--gz-home-red);
+  }
+
+  .gz-home-mark [data-ink='blue'],
+  .gz-home-fleuron [data-ink='blue'] {
+    fill: var(--gz-home-blue);
+  }
+
+  .gz-home-mark [data-ink='yellow'],
+  .gz-home-fleuron [data-ink='yellow'] {
+    fill: var(--gz-home-yellow);
   }
 
   .gz-home-icon-btn {
@@ -112,339 +304,890 @@
     height: 2.25rem;
     align-items: center;
     justify-content: center;
-    border-radius: 0.625rem;
-    color: var(--gz-muted);
+    color: var(--gz-home-ink);
+    transition: background-color 150ms ease;
+  }
+
+  .gz-home-icon-btn:hover {
+    background: var(--gz-home-paper-deep);
+  }
+
+  .gz-home-sun {
+    fill: var(--gz-home-yellow);
+    stroke: var(--gz-home-yellow);
+    stroke-width: 1.8;
+    stroke-linecap: butt;
+  }
+
+  /* The account menu's sign-in button, squared off and set in the page's face. */
+  .gz-home-head .gz-btn {
+    height: 2.25rem;
+    border-radius: 0;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  /* Hover on the page's own paper tint, like the theme toggle beside it,
+     not the app-wide grey film from index.css. */
+  .gz-home-head .gz-btn:hover:not(:disabled) {
+    background: var(--gz-home-paper-deep);
+  }
+
+  /* Secondary to the workbench button, but plainly live: a firmer edge on
+     the same 1.5px line. */
+  .gz-home-head .gz-btn.border {
+    border-width: 1.5px;
+    border-color: color-mix(in oklab, var(--gz-home-ink) 55%, transparent);
+  }
+
+  .gz-home-open {
+    display: inline-flex;
+    height: 2.25rem;
+    align-items: center;
+    padding: 0 0.625rem 0.125rem;
+    border: 1.5px solid var(--gz-home-ink);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
     transition:
       background-color 150ms ease,
       color 150ms ease;
   }
 
-  .gz-home-icon-btn:hover {
-    color: var(--gz-text);
-    background: color-mix(in oklab, var(--gz-border) 60%, transparent);
+  .gz-home-open:hover {
+    background: var(--gz-home-ink);
+    color: var(--gz-home-paper);
+  }
+
+  @media (width < 24rem) {
+    .gz-home-open {
+      padding: 0 0.5rem 0.125rem;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-open {
+      padding: 0 0.875rem 0.125rem;
+      font-size: 1.125rem;
+      letter-spacing: 0.1em;
+    }
   }
 
   /* ---------------------------------------------------------------- */
   /* Type                                                              */
   /* ---------------------------------------------------------------- */
 
+  /* "PROP. I." — the section markers, in red small capitals. */
+  .gz-home-prop {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    color: var(--gz-home-red-text);
+    font-size: 1.125rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.2em;
+    line-height: 1;
+  }
+
+  .gz-home-prop::after {
+    content: '';
+    width: 3.5rem;
+    height: 1px;
+    background: currentColor;
+  }
+
+  /* Two lines wherever there is room for them: the proposition, then what
+     it shows, in italic. */
   .gz-home-title {
-    font-size: clamp(2.375rem, 1.3rem + 4.4vw, 4.625rem);
-    font-weight: 600;
-    line-height: 1.02;
-    letter-spacing: -0.045em;
-    text-wrap: balance;
-  }
-
-  .gz-home-accent {
-    background-image: linear-gradient(
-      100deg,
-      var(--gz-accent) 15%,
-      color-mix(in oklab, var(--gz-accent) 60%, #c026d3) 95%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  .gz-home-h2 {
-    font-size: clamp(1.625rem, 1.15rem + 1.7vw, 2.5rem);
-    font-weight: 600;
-    line-height: 1.08;
-    letter-spacing: -0.04em;
-    text-wrap: balance;
-  }
-
-  /* ---------------------------------------------------------------- */
-  /* Buttons and chips                                                 */
-  /* ---------------------------------------------------------------- */
-
-  .gz-home-btn {
-    display: inline-flex;
-    max-width: 100%;
-    height: 2.875rem;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0 1.25rem;
-    border-radius: 0.8rem;
-    font-size: 0.9375rem;
+    margin-top: 1rem;
+    font-size: clamp(2.5rem, 1.15rem + 4.35vw, 5.5rem);
     font-weight: 500;
-    letter-spacing: -0.01em;
-    white-space: nowrap;
-    transition:
-      transform 180ms cubic-bezier(0.2, 0.7, 0.3, 1),
-      box-shadow 180ms ease,
-      background-color 180ms ease,
-      border-color 180ms ease,
-      color 180ms ease;
+    line-height: 0.96;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
   }
 
-  .gz-home-btn svg {
-    flex-shrink: 0;
-    transition: transform 180ms cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
-
-  .gz-home-btn:active {
-    transform: translateY(0) scale(0.98);
-  }
-
-  .gz-home-btn-primary {
-    color: var(--gz-accent-contrast);
-    background: var(--gz-accent);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.2),
-      inset 0 -1px 0 rgb(0 0 0 / 0.1),
-      0 1px 2px rgb(17 17 26 / 0.16),
-      0 10px 24px -10px color-mix(in oklab, var(--gz-accent) 85%, transparent);
-  }
-
-  .gz-home-btn-primary:hover {
-    background: color-mix(in oklab, var(--gz-accent) 90%, white);
-    transform: translateY(-1px);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.22),
-      inset 0 -1px 0 rgb(0 0 0 / 0.1),
-      0 2px 4px rgb(17 17 26 / 0.12),
-      0 16px 32px -12px color-mix(in oklab, var(--gz-accent) 90%, transparent);
-  }
-
-  .gz-home-btn-primary:hover svg {
-    transform: translateX(2px);
-  }
-
-  .gz-home-btn-quiet {
-    color: var(--gz-text);
-    background: color-mix(in oklab, var(--gz-panel) 82%, transparent);
-    border: 1px solid var(--gz-border);
-    box-shadow: 0 1px 2px rgb(17 17 26 / 0.05);
-  }
-
-  .gz-home-btn-quiet:hover {
-    border-color: var(--gz-border-strong);
-    transform: translateY(-1px);
-    box-shadow: var(--gz-home-lift);
-  }
-
-  .gz-home-btn-ink {
-    color: var(--gz-bg);
-    background: var(--gz-text);
-    box-shadow: 0 1px 2px rgb(17 17 26 / 0.16);
-  }
-
-  .gz-home-btn-ink:hover {
-    background: color-mix(in oklab, var(--gz-text) 84%, var(--gz-bg));
-  }
-
-  .gz-home-chip {
-    display: inline-flex;
-    height: 1.875rem;
-    align-items: center;
-    padding: 0 0.625rem;
-    border: 1px solid var(--gz-border);
-    border-radius: 0.5rem;
-    background: color-mix(in oklab, var(--gz-panel) 75%, transparent);
-    color: var(--gz-muted);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: -0.01em;
-    transition:
-      transform 160ms cubic-bezier(0.2, 0.7, 0.3, 1),
-      background-color 160ms ease,
-      border-color 160ms ease,
-      color 160ms ease;
-  }
-
-  .gz-home-chip:hover {
-    color: var(--gz-accent);
-    border-color: color-mix(in oklab, var(--gz-accent) 40%, var(--gz-border));
-    background: var(--gz-accent-soft);
-    transform: translateY(-1px);
-  }
-
-  .gz-home-chip:active {
-    transform: none;
-  }
-
-  /* Narrow enough that all six fit on one line of a phone. */
-  @media (width < 40rem) {
-    .gz-home-chip {
-      padding: 0 0.5rem;
+  /* With the whole width to itself, before the figure comes up beside it,
+     the title can be set larger. */
+  @media (40rem <= width < 64rem) {
+    .gz-home-title {
+      font-size: clamp(3.25rem, 0.5rem + 6.6vw, 4rem);
     }
   }
 
-  .gz-home-tag {
-    display: inline-flex;
-    height: 1.5rem;
-    align-items: center;
-    padding: 0 0.5rem;
-    border: 1px solid var(--gz-border);
-    border-radius: 999px;
-    color: var(--gz-muted);
-    font-size: 0.6875rem;
+  /* The second line is always what the title promises, in italic. */
+  .gz-home-title em {
+    display: block;
+    /* Clearance for the roman descenders above (the y of "theory" would
+       otherwise run into the italic k) without opening the tight leading. */
+    margin-top: 0.08em;
+    font-style: italic;
+    font-weight: 450;
+  }
+
+  .gz-home-h2 {
+    margin-top: 1rem;
+    font-size: clamp(2.125rem, 1.5rem + 2.3vw, 3.5rem);
     font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+
+  .gz-home-h2:focus-visible {
+    outline-offset: 6px;
   }
 
   /* ---------------------------------------------------------------- */
-  /* The demo stage                                                    */
+  /* Title page                                                        */
   /* ---------------------------------------------------------------- */
 
-  .gz-home-glow {
-    position: absolute;
-    z-index: -1;
-    inset: 6% 4% -6%;
-    background: radial-gradient(closest-side, var(--gz-home-glow), transparent);
-    filter: blur(28px);
-    pointer-events: none;
+  /*
+   * The title page. On a phone the figure is a small device set opposite the
+   * proposition's number, so the demo follows the calls to action directly.
+   * From tablet width up it stands beside the text, in a column exactly as
+   * wide as Plate I's property list below it, so the two read as one page.
+   */
+  .gz-home-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'prop fig'
+      'title title'
+      'lede lede'
+      'actions actions'
+      'quick quick';
+    column-gap: 0.75rem;
+    padding-top: 1.5rem;
   }
 
-  .gz-home-stage {
-    position: relative;
-    padding: 0.375rem;
-    border: 1px solid color-mix(in oklab, var(--gz-border) 85%, transparent);
-    border-radius: 1.5rem;
-    background: color-mix(in oklab, var(--gz-panel) 55%, transparent);
-    box-shadow:
-      0 1px 1px rgb(17 17 26 / 0.02),
-      0 24px 48px -28px rgb(17 17 26 / 0.22),
-      0 50px 100px -50px color-mix(in oklab, var(--gz-accent) 45%, transparent);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+  /* On a phone the proposition's rule runs on across the page to the device. */
+  .gz-home-hero-prop {
+    grid-area: prop;
+    align-self: center;
   }
 
-  .dark .gz-home-stage {
-    background: color-mix(in oklab, var(--gz-panel) 45%, transparent);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.04),
-      0 30px 80px -30px rgb(0 0 0 / 0.85),
-      0 50px 120px -50px color-mix(in oklab, var(--gz-accent) 50%, transparent);
+  .gz-home-hero-prop::after {
+    flex: 1;
   }
 
-  /* Light catching the top edge of the frame: a 1px accent border that fades
-     out down the sides, drawn as a masked ring so it follows the radius. */
-  .gz-home-stage::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    padding: 1px;
-    border-radius: inherit;
-    background: linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--gz-accent) 55%, transparent),
-      transparent 38%
-    );
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    -webkit-mask-composite: xor;
-    pointer-events: none;
+  .gz-home-hero .gz-home-title {
+    grid-area: title;
   }
 
-  .gz-demo {
-    overflow: hidden;
-    border: 1px solid var(--gz-border);
-    border-radius: 1.125rem;
-    background: var(--gz-panel);
+  .gz-home-hero .gz-home-lede {
+    grid-area: lede;
   }
 
-  .gz-demo-canvas {
-    background-color: var(--gz-canvas);
-    background-image: radial-gradient(circle at center, var(--gz-home-dot) 1px, transparent 1.6px);
-    background-size: 22px 22px;
-    background-position: center;
+  .gz-home-hero .gz-home-actions {
+    grid-area: actions;
   }
 
-  .gz-demo-live {
-    position: relative;
-    width: 0.4375rem;
-    height: 0.4375rem;
+  .gz-home-hero .gz-home-quick {
+    grid-area: quick;
+  }
+
+  .gz-home-hero-figure {
+    grid-area: fig;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* Beside the title only once there is room for both: below 1024px the
+     text column would be too narrow for a two-line title. */
+  @media (width >= 40rem) {
+    .gz-home-hero {
+      padding-top: 2rem;
+    }
+  }
+
+  @media (width >= 64rem) {
+    .gz-home-hero {
+      grid-template-columns: minmax(0, 1fr) calc(23rem + 0.75rem);
+      grid-template-areas:
+        'prop fig'
+        'title fig'
+        'lede fig'
+        'actions fig'
+        'quick fig';
+      column-gap: 3rem;
+      padding-top: 2.5rem;
+    }
+
+    .gz-home-hero-prop {
+      align-self: end;
+    }
+
+    .gz-home-hero-prop::after {
+      flex: none;
+    }
+
+    .gz-home-hero-figure {
+      align-self: center;
+      justify-content: center;
+    }
+  }
+
+  /* The enunciation, in italic as Byrne set his, opened by a drop capital
+     two lines deep. */
+  .gz-home-lede {
+    max-width: 36rem;
+    margin-top: 1.25rem;
+    font-size: clamp(1.1875rem, 1.06rem + 0.4vw, 1.375rem);
+    font-style: italic;
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+
+  .gz-home-lede::first-letter {
+    --gz-frame: var(--gz-home-on-red);
+    float: left;
+    /* The negative bottom margin keeps the float's box inside two lines, so
+       the third line returns to the margin. */
+    margin: 0.17em 0.22em -0.1em 0;
+    padding: 0.13em 0.17em 0.11em;
+    color: var(--gz-home-on-red);
+    font-size: 2.42em;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 0.8;
+    background:
+      linear-gradient(var(--gz-frame), var(--gz-frame)) 4px 4px / calc(100% - 8px) 1px no-repeat,
+      linear-gradient(var(--gz-frame), var(--gz-frame)) 4px calc(100% - 4px) / calc(100% - 8px) 1px no-repeat,
+      linear-gradient(var(--gz-frame), var(--gz-frame)) 4px 4px / 1px calc(100% - 8px) no-repeat,
+      linear-gradient(var(--gz-frame), var(--gz-frame)) calc(100% - 4px) 4px / 1px calc(100% - 8px) no-repeat,
+      var(--gz-home-red);
+  }
+
+  .gz-home-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 2rem;
+    margin-top: 1.625rem;
+  }
+
+  .gz-home-start {
+    display: inline-flex;
+    max-width: 100%;
+    height: 3.25rem;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0 1.5rem 0.125rem 1.625rem;
+    background: var(--gz-home-red);
+    color: var(--gz-home-on-red);
+    font-size: 1.375rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.11em;
+    white-space: nowrap;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .gz-home-start:hover {
+    background: var(--gz-home-ink);
+    color: var(--gz-home-paper);
+  }
+
+  .gz-home-start:active {
+    transform: translate(1px, 1px);
+  }
+
+  .gz-home-arrow {
     flex-shrink: 0;
-    border-radius: 999px;
-    background: var(--gz-success);
+    margin-top: 0.125rem;
+    transition: transform 180ms cubic-bezier(0.2, 0.7, 0.3, 1);
   }
 
-  .gz-demo-live::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: var(--gz-success);
-    animation: gz-demo-pulse 2.4s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+  .gz-home-start:hover .gz-home-arrow {
+    transform: translateX(3px);
+  }
+
+  .gz-home-browse {
+    padding-bottom: 0.125rem;
+    border-bottom: 2px solid var(--gz-home-blue-text);
+    font-size: 1.3125rem;
+    font-style: italic;
+    line-height: 1.2;
+    transition: color 150ms ease;
+  }
+
+  .gz-home-browse:hover {
+    color: var(--gz-home-blue-text);
+  }
+
+  /* "or open K5 · C8 …" — a line of mathematics, each term underscored in
+     one of the primaries. On a phone the six are set as a ruled table of
+     three by two, so none is ever left alone on a line. */
+  .gz-home-quick {
+    margin-top: 1.375rem;
+    font-size: 1.25rem;
+  }
+
+  .gz-home-quick-intro {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.14em;
+  }
+
+  .gz-home-quick-cmds {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid var(--gz-home-ink);
+  }
+
+  .gz-home-cmd {
+    display: flex;
+    min-height: 2.875rem;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--gz-home-hair);
+    line-height: 1.25;
+    white-space: nowrap;
+    transition: background-color 140ms ease;
+  }
+
+  .gz-home-cmd:nth-child(3n + 2) {
+    border-inline: 1px solid var(--gz-home-hair);
+  }
+
+  .gz-home-cmd:nth-child(n + 4) {
+    border-bottom-color: var(--gz-home-ink);
+  }
+
+  .gz-home-cmd > span {
+    padding: 0 0.125rem;
+    border-bottom: 3px solid var(--gz-cmd);
+  }
+
+  .gz-home-cmd:hover {
+    background: color-mix(in oklab, var(--gz-cmd) 18%, transparent);
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-quick {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem 1.125rem;
+    }
+
+    .gz-home-quick-intro {
+      display: inline;
+      margin: 0;
+      font-size: 1.25rem;
+      font-style: italic;
+      font-weight: 400;
+      font-variant-caps: normal;
+      letter-spacing: 0;
+    }
+
+    .gz-home-quick-cmds {
+      display: contents;
+    }
+
+    .gz-home-cmd,
+    .gz-home-cmd:nth-child(3n + 2),
+    .gz-home-cmd:nth-child(n + 4) {
+      display: inline;
+      min-height: 0;
+      border: 0;
+    }
+  }
+
+  .gz-home-cmd i {
+    font-style: italic;
+  }
+
+  .gz-home-cmd sub,
+  .gz-home-fig-name sub {
+    margin-left: 0.04em;
+    font-size: 0.66em;
+    font-style: normal;
+  }
+
+  /* The frontispiece: Euclid I.47 as a plane graph, its faces four-coloured.
+     A small device opposite the proposition's number on phones and narrow
+     tablets; beside the title from 1024px, never taller than about 275px, so
+     Plate I rises into the first screen. */
+  .gz-home-frontis {
+    width: 4.25rem;
+    margin: 0;
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-frontis {
+      width: 5.75rem;
+    }
+  }
+
+  @media (width >= 64rem) {
+    .gz-home-frontis {
+      width: 16rem;
+    }
+  }
+
+  .gz-home-frontis-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .gz-home-face {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: gz-home-face 800ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--gz-i, 0) * 150ms + 250ms);
+  }
+
+  .gz-home-face[data-ink='red'],
+  .gz-home-fill[data-ink='red'] {
+    fill: var(--gz-home-red);
+  }
+
+  .gz-home-face[data-ink='blue'],
+  .gz-home-fill[data-ink='blue'] {
+    fill: var(--gz-home-blue);
+  }
+
+  .gz-home-face[data-ink='yellow'],
+  .gz-home-fill[data-ink='yellow'] {
+    fill: var(--gz-home-yellow);
+  }
+
+  .gz-home-face[data-ink='ink'],
+  .gz-home-fill[data-ink='ink'] {
+    fill: var(--gz-home-ink);
+  }
+
+  .gz-home-fill[data-ink='faint'] {
+    fill: var(--gz-home-hair);
+  }
+
+  /* Cream dots on the blue face in both editions: the paper by day, the
+     (cream) ink by night. */
+  .gz-home-construct {
+    stroke: var(--gz-home-paper);
+    stroke-width: 2;
+    stroke-dasharray: 0.5 6;
+    stroke-linecap: round;
+  }
+
+  .dark .gz-home-construct {
+    stroke: var(--gz-home-ink);
+  }
+
+  .gz-home-frontis-edge {
+    stroke: var(--gz-home-ink);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .gz-home-frontis-vertex {
+    fill: var(--gz-home-ink);
+    stroke: var(--gz-home-paper);
+    stroke-width: 3;
+  }
+
+  /* As a device it goes without its caption, which would not fit. */
+  .gz-home-frontis-caption {
+    display: none;
+  }
+
+  @media (width >= 64rem) {
+    .gz-home-frontis-caption {
+      display: block;
+      margin-top: 0.875rem;
+      color: var(--gz-home-muted);
+      font-size: 1.0625rem;
+      font-style: italic;
+      line-height: 1.35;
+      text-align: center;
+    }
+  }
+
+  .gz-home-frontis-title {
+    color: var(--gz-home-red-text);
+    font-style: normal;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.1em;
+  }
+
+  .gz-home-frontis-sum {
+    display: block;
+    white-space: nowrap;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Plate I: the live demo                                            */
+  /* ---------------------------------------------------------------- */
+
+  .gz-home-plate-wrap {
+    margin-top: 2.25rem;
+  }
+
+  @media (width >= 48rem) {
+    .gz-home-plate-wrap {
+      margin-top: 2.5rem;
+    }
+  }
+
+  /* A plate's double rule: a border, and an outline set off from it. */
+  .gz-demo {
+    border: 1px solid var(--gz-home-ink);
+    outline: 1px solid var(--gz-home-ink);
+    outline-offset: 5px;
+    margin: 6px;
+  }
+
+  .gz-demo-head {
+    display: flex;
+    min-height: 3rem;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    padding: 0.375rem 0.625rem 0.375rem 1rem;
+    border-bottom: 1px solid var(--gz-home-ink);
+  }
+
+  @media (width < 40rem) {
+    .gz-demo-head {
+      gap: 0.25rem 0.5rem;
+      padding-left: 0.75rem;
+    }
+
+    .gz-demo-hint svg {
+      display: none;
+    }
+  }
+
+  /* On the narrowest phones the head is set a size smaller, and below 352px
+     the hint goes, so the pause control never drops to a line of its own. */
+  @media (width < 24rem) {
+    .gz-demo-head {
+      gap: 0.25rem 0.375rem;
+      padding-right: 0.5rem;
+    }
+
+    .gz-demo-head .gz-demo-plate,
+    .gz-demo-head .gz-demo-title,
+    .gz-demo-head .gz-demo-hint {
+      font-size: 1rem;
+    }
+
+    .gz-demo-head .gz-demo-plate {
+      letter-spacing: 0.1em;
+    }
+  }
+
+  @media (width < 22rem) {
+    .gz-demo-head .gz-demo-hint {
+      display: none;
+    }
+
+    /* The hint carried the push to the right; without it the control
+       takes the push itself, so it still closes the head on the right. */
+    .gz-demo-head .gz-demo-control {
+      margin-left: auto;
+    }
+  }
+
+  .gz-demo-plate {
+    color: var(--gz-home-red-text);
+    font-size: 1.125rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.16em;
+  }
+
+  .gz-demo-title {
+    font-size: 1.125rem;
+    font-style: italic;
+  }
+
+  .gz-demo-head .gz-num {
+    font-size: 1.0625rem;
+  }
+
+  .gz-demo-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 1.0625rem;
+    font-style: italic;
   }
 
   .gz-demo-control {
     display: inline-flex;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 2rem;
+    height: 2rem;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--gz-border);
-    border-radius: 0.5rem;
-    color: var(--gz-muted);
+    border: 1.5px solid var(--gz-home-ink);
+    color: var(--gz-home-ink);
     transition:
       background-color 150ms ease,
-      border-color 150ms ease,
       color 150ms ease;
   }
 
   .gz-demo-control:hover {
-    color: var(--gz-text);
-    border-color: var(--gz-border-strong);
-    background: color-mix(in oklab, var(--gz-border) 45%, transparent);
+    background: var(--gz-home-ink);
+    color: var(--gz-home-paper);
+  }
+
+  /* On phones the drawing is bound by the width, so the stage's height
+     follows the width too, rather than leaving paper empty under it. */
+  .gz-demo-canvas {
+    min-width: 0;
+    height: clamp(264px, 80vw, 330px);
+    background: transparent;
+  }
+
+  @media (width >= 40rem) {
+    .gz-demo-canvas {
+      height: 360px;
+    }
+  }
+
+  @media (width >= 48rem) {
+    .gz-demo-canvas {
+      height: 392px;
+    }
+  }
+
+  @media (width >= 64rem) {
+    .gz-demo-canvas {
+      height: 368px;
+    }
+  }
+
+  /* The notes written on the plate (DemoNotes): italic, with a hairline
+     leader in the property's own ink and its glyph as a match mark. */
+  .gz-demo-notes {
+    --gz-note: var(--gz-home-red);
+    --gz-note-line: var(--gz-home-red);
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .gz-demo-notes[data-ink='blue'] {
+    --gz-note: var(--gz-home-blue);
+    --gz-note-line: var(--gz-home-blue);
+  }
+
+  .gz-demo-notes[data-ink='yellow'] {
+    --gz-note: var(--gz-home-yellow);
+    --gz-note-line: var(--gz-home-yellow-line);
+  }
+
+  .gz-demo-note-rule {
+    fill: none;
+    stroke: var(--gz-note-line);
+    stroke-width: 1.4;
+  }
+
+  .gz-demo-note-dot {
+    fill: var(--gz-note-line);
+  }
+
+  /* Byrne's dotted line, for the extension lines out to a bracket. */
+  .gz-demo-note-extension {
+    fill: none;
+    stroke: var(--gz-home-ink);
+    stroke-width: 1.6;
+    stroke-dasharray: 0.01 4.2;
+    stroke-linecap: round;
+  }
+
+  .gz-demo-note-glyph {
+    fill: var(--gz-note);
+  }
+
+  /* A disc is ringed in ink, on the canvas and in the list alike. */
+  circle.gz-demo-note-glyph {
+    stroke: var(--gz-home-ink);
+    stroke-width: 1.2;
+  }
+
+  .gz-demo-note-text {
+    fill: var(--gz-home-ink);
+    font-family: var(--gz-home-serif);
+    font-size: 17px;
+    font-style: italic;
+    font-weight: 500;
+    paint-order: stroke;
+    stroke: var(--gz-home-paper);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+
+  .gz-demo-notes[data-compact] .gz-demo-note-text {
+    font-size: 15.5px;
+  }
+
+  .gz-demo-notes-in {
+    animation: gz-demo-notes-in 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .gz-demo-side {
+    padding: 1rem 1.125rem 1.25rem;
+    border-top: 1px solid var(--gz-home-ink);
+  }
+
+  @media (width >= 48rem) {
+    .gz-demo-side {
+      border-top: 0;
+      border-left: 1px solid var(--gz-home-ink);
+      padding: 1.125rem 1.375rem 1.25rem;
+    }
+  }
+
+  .gz-demo-label {
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--gz-home-ink);
+    color: var(--gz-home-muted);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.16em;
+  }
+
+  /* Room for five rows and a two-line explanation, so the list does not
+     jump as the tour moves on; a one-line explanation leaves its slack
+     under the last row, not inside the chosen one. */
+  .gz-demo-list {
+    display: flex;
+    min-height: calc(5 * 3.0925rem + 0.25rem + 2.84 * 1.09375rem);
+    flex-direction: column;
   }
 
   .gz-demo-row {
     position: relative;
     display: block;
     width: 100%;
-    overflow: hidden;
-    padding: 0.75rem 0.875rem;
-    border: 1px solid transparent;
-    border-radius: 0.75rem;
+    padding: 0.6rem 0 0.65rem;
+    border-bottom: 1px solid var(--gz-home-hair);
     text-align: left;
-    transition:
-      background-color 160ms ease,
-      border-color 160ms ease,
-      box-shadow 160ms ease;
   }
 
-  .gz-demo-row:hover {
-    background: color-mix(in oklab, var(--gz-border) 35%, transparent);
+  .gz-demo-line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
   }
 
-  .gz-demo-row[aria-pressed='true'] {
-    background: color-mix(in oklab, var(--gz-row) 7%, var(--gz-elevated));
-    border-color: color-mix(in oklab, var(--gz-row) 32%, var(--gz-border));
-    box-shadow:
-      0 1px 2px rgb(17 17 26 / 0.04),
-      0 10px 24px -16px color-mix(in oklab, var(--gz-row) 60%, transparent);
+  /* High-contrast mode would paint the glyphs in Canvas on Canvas, losing
+     the key that ties each row to the plate. */
+  @media (forced-colors: active) {
+    .gz-demo-glyph {
+      forced-color-adjust: none;
+    }
   }
 
-  /* The colour the row's witness is drawn in on the canvas. */
-  .gz-demo-swatch {
-    width: 0.5rem;
-    height: 0.5rem;
+  /* The witness's shape in the witness's colour: Byrne's symbols for words. */
+  .gz-demo-glyph {
+    display: inline-block;
     flex-shrink: 0;
-    border-radius: 999px;
+    width: 0.95rem;
+    height: 0.95rem;
+    align-self: center;
     background: var(--gz-row);
-    box-shadow: 0 0 0 0 transparent;
-    transition: box-shadow 160ms ease;
   }
 
-  .gz-demo-row[aria-pressed='true'] .gz-demo-swatch {
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--gz-row) 22%, transparent);
+  .gz-demo-glyph[data-glyph='triangle'] {
+    clip-path: polygon(50% 2%, 100% 96%, 0 96%);
+  }
+
+  .gz-demo-glyph[data-glyph='bar'] {
+    height: 0.3rem;
+  }
+
+  .gz-demo-glyph[data-glyph='disc'] {
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1.25px var(--gz-home-ink);
+  }
+
+  .gz-demo-name {
+    color: var(--gz-home-muted);
+    font-size: 1.1875rem;
+    transition: color 150ms ease;
+  }
+
+  .gz-demo-row:hover .gz-demo-name {
+    color: var(--gz-home-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--gz-row);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+
+  .gz-demo-row[aria-pressed='true'] .gz-demo-name {
+    color: var(--gz-home-ink);
+    font-weight: 600;
+  }
+
+  /* Dot leaders, as in a table of contents. */
+  .gz-demo-leader {
+    flex: 1;
+    min-width: 1rem;
+    height: 0.25rem;
+    background-image: radial-gradient(circle, var(--gz-home-muted) 0.9px, transparent 1.3px);
+    background-size: 0.5rem 0.25rem;
+    background-repeat: repeat-x;
+    /* Anchored at the value end, which every row shares, so the dots stand
+       in true columns down the list. */
+    background-position: right center;
+    opacity: 0.75;
+  }
+
+  /* One width for every value, set right, so every leader stops at the same
+     place. Values are in ink: on this plate red, blue and yellow belong to
+     the figures, and a coloured count would read as one of them. */
+  .gz-demo-value {
+    min-width: 1.6em;
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .gz-demo-value[data-status] {
+    color: var(--gz-home-ink);
+  }
+
+  .gz-demo-why {
+    display: block;
+    margin-top: 0.25rem;
+    text-wrap: pretty;
+    padding-left: 1.575rem;
+    color: var(--gz-home-muted);
+    font-size: 1.09375rem;
+    font-style: italic;
+    line-height: 1.42;
   }
 
   /* How long until the tour moves on; restarted whenever it resumes. */
   .gz-demo-progress {
     position: absolute;
-    left: 0.875rem;
-    right: 0.875rem;
-    bottom: 0;
-    height: 2px;
-    border-radius: 2px;
-    background: color-mix(in oklab, var(--gz-row) 65%, transparent);
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 3px;
+    background: var(--gz-row);
     transform-origin: left center;
     animation-name: gz-demo-progress;
     animation-timing-function: linear;
@@ -452,343 +1195,608 @@
   }
 
   /* ---------------------------------------------------------------- */
-  /* Feature tiles                                                     */
+  /* Saved graphs                                                      */
   /* ---------------------------------------------------------------- */
 
-  .gz-home-tile {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid var(--gz-border);
-    border-radius: 1.25rem;
-    background: var(--gz-panel);
-    box-shadow: 0 1px 2px rgb(17 17 26 / 0.03);
+  .gz-home-saved-section {
+    margin-top: 3.5rem;
   }
 
-  .gz-home-tile-visual {
-    position: relative;
-    isolation: isolate;
+  .gz-home-saved-head {
     display: flex;
-    height: 10.75rem;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--gz-home-ink);
+  }
+
+  .gz-home-saved-title {
+    font-size: 1.5rem;
+    font-weight: 500;
+    font-style: italic;
+  }
+
+  .gz-home-saved-where {
+    font-size: 1rem;
+    font-style: italic;
+  }
+
+  .gz-home-saved-list {
+    display: grid;
+    column-gap: 2rem;
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-saved-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (width >= 64rem) {
+    .gz-home-saved-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .gz-home-saved {
+    display: flex;
+    width: 100%;
     align-items: center;
-    justify-content: center;
-    gap: 1.75rem;
-    padding: 1rem 1.25rem;
-  }
-
-  .gz-home-tile-visual::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background-image: radial-gradient(circle at center, var(--gz-home-dot) 1px, transparent 1.6px);
-    background-size: 18px 18px;
-    background-position: center;
-    mask-image: radial-gradient(ellipse 60% 70% at 50% 50%, #000 10%, transparent 80%);
-  }
-
-  .gz-home-tile-visual > * {
-    position: relative;
-  }
-
-  /* A miniature of a workbench panel. */
-  .gz-home-mini {
-    border: 1px solid var(--gz-border);
-    border-radius: 0.75rem;
-    background: var(--gz-elevated);
-    box-shadow: var(--gz-home-lift);
+    gap: 0.75rem;
+    padding: 0.7rem 3rem 0.7rem 0;
+    border-bottom: 1px solid var(--gz-home-hair);
     text-align: left;
   }
 
-  .gz-algo-edge {
-    stroke: color-mix(in oklab, var(--gz-text) 22%, transparent);
-    stroke-width: 1.6;
-    stroke-linecap: round;
+  .gz-home-saved:hover .gz-home-saved-name {
+    text-decoration: underline;
+    text-decoration-color: var(--gz-home-red);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
   }
 
-  .gz-algo-edge[data-state='tree'] {
-    stroke: var(--gz-success);
-    stroke-width: 2.4;
-  }
-
-  .gz-algo-edge[data-state='active'] {
-    stroke: var(--gz-accent);
-    stroke-width: 2.8;
-  }
-
-  .gz-algo-node circle {
-    fill: var(--gz-panel);
-    stroke: color-mix(in oklab, var(--gz-text) 45%, transparent);
-    stroke-width: 1.5;
-  }
-
-  .gz-algo-node text {
-    fill: var(--gz-text);
-    font-size: 9.5px;
-    font-weight: 600;
-    font-family: var(--font-sans);
-  }
-
-  .gz-algo-node[data-state='visited'] circle {
-    fill: color-mix(in oklab, var(--gz-success) 14%, var(--gz-panel));
-    stroke: var(--gz-success);
-    stroke-width: 2;
-  }
-
-  .gz-algo-node[data-state='current'] circle {
-    fill: var(--gz-accent);
-    stroke: var(--gz-accent);
-    stroke-width: 2;
-  }
-
-  .gz-algo-node[data-state='current'] text {
-    fill: var(--gz-accent-contrast);
-  }
-
-  .gz-algo-node[data-state='frontier'] circle {
-    fill: color-mix(in oklab, var(--gz-warning) 12%, var(--gz-panel));
-    stroke: var(--gz-warning);
-    stroke-width: 2;
-    stroke-dasharray: 3 2.4;
-  }
-
-  .gz-algo-queued {
+  .gz-home-saved-icon {
     display: inline-flex;
-    width: 1.375rem;
-    height: 1.375rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border: 1px solid color-mix(in oklab, var(--gz-warning) 45%, var(--gz-border));
-    border-radius: 0.375rem;
-    background: color-mix(in oklab, var(--gz-warning) 10%, var(--gz-panel));
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
+    border: 1.5px solid var(--gz-home-ink);
+    color: var(--gz-home-ink);
   }
 
-  .gz-algo-track {
-    position: relative;
-    height: 4px;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--gz-border) 80%, transparent);
+  .gz-home-saved-name {
+    display: block;
+    overflow: hidden;
+    font-size: 1.1875rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .gz-algo-track > span {
-    position: absolute;
-    inset: 0 auto 0 0;
-    border-radius: inherit;
-    background: var(--gz-accent);
+  .gz-home-saved-meta {
+    display: block;
+    overflow: hidden;
+    font-size: 1rem;
+    font-style: italic;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .gz-algo-track > span::after {
-    content: '';
-    position: absolute;
-    right: -5px;
-    top: 50%;
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: var(--gz-panel);
-    border: 2px solid var(--gz-accent);
-    transform: translateY(-50%);
-  }
-
-  .gz-algo-play {
-    display: inline-flex;
-    width: 1.75rem;
-    height: 1.75rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: var(--gz-accent);
-    color: var(--gz-accent-contrast);
-  }
-
-  .gz-range {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    text-align: center;
-  }
-
-  .gz-range > .gz-num {
-    position: relative;
-    padding: 0.25rem 0;
-    font-size: 0.6875rem;
-    color: var(--gz-faint);
-  }
-
-  .gz-range > .gz-num[data-in='true'] {
-    color: var(--gz-accent);
-    font-weight: 500;
-  }
-
-  .gz-range-band {
-    position: absolute;
-    inset: 0;
-    grid-column: 3 / 6;
-    grid-row: 1;
-    border: 1px solid color-mix(in oklab, var(--gz-accent) 35%, transparent);
-    border-radius: 0.375rem;
-    background: var(--gz-accent-soft);
-  }
-
-  .gz-matrix {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(5, 1.375rem);
-    grid-auto-rows: 1.375rem;
-    gap: 0.125rem;
-    padding: 0.125rem 0.5rem;
-  }
-
-  /* Matrix brackets. */
-  .gz-matrix::before,
-  .gz-matrix::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 0.375rem;
-    border: 1.5px solid color-mix(in oklab, var(--gz-text) 55%, transparent);
-  }
-
-  .gz-matrix::before {
-    left: 0;
-    border-right: 0;
-    border-radius: 0.25rem 0 0 0.25rem;
-  }
-
-  .gz-matrix::after {
-    right: 0;
-    border-left: 0;
-    border-radius: 0 0.25rem 0.25rem 0;
-  }
-
-  .gz-matrix > .gz-num {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.3rem;
-    font-size: 0.6875rem;
-    color: color-mix(in oklab, var(--gz-text) 30%, transparent);
-  }
-
-  .gz-matrix > .gz-num[data-on='true'] {
-    background: var(--gz-accent-soft);
-    color: var(--gz-accent);
-    font-weight: 500;
-  }
-
-  .gz-select-box {
-    fill: none;
-    stroke: var(--gz-accent);
-    stroke-width: 1;
-    stroke-dasharray: 3 3;
-  }
-
-  .gz-select-handle {
-    fill: var(--gz-panel);
-    stroke: var(--gz-accent);
-    stroke-width: 1.2;
-  }
-
-  .gz-file {
-    display: inline-flex;
-    width: 3.25rem;
-    height: 1.625rem;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--gz-border);
-    border-radius: 0.4rem;
-    background: var(--gz-elevated);
-    color: var(--gz-muted);
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    box-shadow: 0 1px 2px rgb(17 17 26 / 0.05);
-  }
-
-  .gz-file[data-primary='true'] {
-    border-color: color-mix(in oklab, var(--gz-accent) 45%, var(--gz-border));
-    background: var(--gz-accent-soft);
-    color: var(--gz-accent);
-  }
-
-  .gz-window-dot {
-    width: 0.375rem;
-    height: 0.375rem;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--gz-text) 18%, transparent);
-  }
-
-  .gz-local-badge {
-    position: relative;
+  /* Square, like every control on the page, and red only when it means it. */
+  .gz-home-saved-delete {
     display: inline-flex;
     width: 2.25rem;
     height: 2.25rem;
     align-items: center;
     justify-content: center;
-    border-radius: 0.625rem;
-    background: var(--gz-accent-soft);
-    color: var(--gz-accent);
+    color: var(--gz-home-muted);
   }
 
-  .gz-local-badge::after {
-    content: '';
-    position: absolute;
-    right: -3px;
-    bottom: -3px;
-    width: 0.75rem;
-    height: 0.75rem;
-    border: 2px solid var(--gz-elevated);
-    border-radius: 999px;
-    background: var(--gz-success)
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6.2l2 2 4-4.4' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-      center / 100% no-repeat;
+  .gz-home-saved-delete:hover {
+    background: color-mix(in oklab, var(--gz-home-red) 14%, transparent);
+    color: var(--gz-home-red-text);
+  }
+
+  .gz-home-saved-more {
+    margin-top: 0.75rem;
+    font-size: 1.0625rem;
+    font-style: italic;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* A note in the margin, set off by rules, with a yellow block for a mark. */
+  .gz-home-nudge {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    /* On a phone the text runs to several lines; the mark belongs beside the
+       heading, not the middle of the block. */
+    align-items: start;
+    gap: 1rem 1.125rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--gz-home-ink);
+    border-bottom: 1px solid var(--gz-home-ink);
+  }
+
+  .gz-home-nudge > button {
+    grid-column: 1 / -1;
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-nudge {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+    }
+
+    .gz-home-nudge > button {
+      grid-column: auto;
+    }
+  }
+
+  .gz-home-nudge-icon {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    background: var(--gz-home-yellow);
+    color: #1d1a14;
+  }
+
+  @media (width < 40rem) {
+    .gz-home-nudge-icon {
+      margin-top: 0.125rem;
+    }
+  }
+
+  .gz-home-nudge-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  .gz-home-nudge-line {
+    margin-top: 0.125rem;
+    font-size: 1.0625rem;
+    font-style: italic;
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+
+  .gz-home-nudge-btn {
+    display: inline-flex;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    padding: 0 1.125rem 0.125rem;
+    border: 1.5px solid var(--gz-home-ink);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background-color 150ms ease;
+  }
+
+  .gz-home-nudge-btn:hover {
+    background: var(--gz-home-paper-deep);
   }
 
   /* ---------------------------------------------------------------- */
-  /* Example cards and thumbnails                                      */
+  /* Sections                                                          */
   /* ---------------------------------------------------------------- */
 
-  .gz-home-card {
+  .gz-home-section {
+    padding-top: 5rem;
+  }
+
+  @media (width >= 64rem) {
+    .gz-home-section {
+      padding-top: 7rem;
+    }
+  }
+
+  .gz-home-section-head {
+    margin-bottom: 2.25rem;
+  }
+
+
+  /* What the workbench does: the heading in the margin, the definitions
+     beside it. */
+  @media (width >= 64rem) {
+    .gz-home-features {
+      display: grid;
+      grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
+      gap: 5rem;
+      align-items: start;
+    }
+
+    .gz-home-features .gz-home-section-head {
+      position: sticky;
+      top: 6rem;
+      margin-bottom: 0;
+    }
+  }
+
+  .gz-home-defs {
+    border-top: 1px solid var(--gz-home-ink);
+  }
+
+  .gz-home-def {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 1.125rem;
+    padding: 1.125rem 0;
+    border-bottom: 1px solid var(--gz-home-hair);
+  }
+
+  .gz-home-def:last-child {
+    border-bottom-color: var(--gz-home-ink);
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-def {
+      grid-template-columns: 8.5rem minmax(0, 1fr);
+      gap: 2.25rem;
+      padding: 1.375rem 0;
+    }
+  }
+
+  @media (width < 24rem) {
+    .gz-home-def {
+      grid-template-columns: 4.25rem minmax(0, 1fr);
+      gap: 0.875rem;
+    }
+  }
+
+  /* The numerals hang in a gutter of their own, so the titles and the italic
+     lines beneath them share one left edge however wide the numeral is. */
+  .gz-home-def-body {
+    --gz-home-def-gutter: 2.125rem;
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-def-body {
+      --gz-home-def-gutter: 2.6rem;
+    }
+  }
+
+  .gz-home-def-no {
+    display: inline-block;
+    width: var(--gz-home-def-gutter);
+    text-indent: 0;
+    color: var(--gz-home-red-text);
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.08em;
+  }
+
+  .gz-home-def-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .gz-home-def-title {
+    padding-left: var(--gz-home-def-gutter);
+    text-indent: calc(-1 * var(--gz-home-def-gutter));
+    font-size: clamp(1.25rem, 1.1rem + 0.4vw, 1.5rem);
+    font-weight: 600;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .gz-home-def-line {
+    margin-top: 0.25rem;
+    padding-left: var(--gz-home-def-gutter);
+    color: var(--gz-home-muted);
+    font-size: 1.125rem;
+    font-style: italic;
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+
+  .gz-latex {
+    white-space: nowrap;
+  }
+
+  .gz-latex-t {
+    margin-left: -0.09em;
+  }
+
+  .gz-home-ink-line {
+    stroke: var(--gz-home-ink);
+    stroke-width: 1.5;
+    stroke-linecap: square;
+  }
+
+  .gz-home-ink-line[data-thin] {
+    stroke-width: 1;
+  }
+
+  /* Lines drawn across the yellow of a figure: cream on the night edition's
+     yellow barely reads, so there they take the board's indigo, as black
+     does on the day page. */
+  .dark .gz-home-def-svg polygon[data-ink='yellow'] ~ line.gz-home-ink-line {
+    stroke: var(--gz-home-paper);
+  }
+
+  .gz-home-stroke {
+    stroke-width: 4.5;
+    stroke-linecap: round;
+  }
+
+  .gz-home-stroke[data-ink='red'] {
+    stroke: var(--gz-home-red);
+  }
+
+  .gz-home-stroke[data-ink='blue'] {
+    stroke: var(--gz-home-blue);
+  }
+
+  /* Thin yellow lines take the deeper line ink: chrome yellow is too faint on
+     the day paper to read as a line. Fills keep the bright yellow. */
+  .gz-home-stroke[data-ink='yellow'] {
+    stroke: var(--gz-home-yellow-line);
+  }
+
+  /* Except in the matrix figure, where each entry is filled in the colour of
+     its edge: there the edge must be the same yellow as its cells. */
+  .gz-home-def-svg[data-fig='matrix'] .gz-home-stroke[data-ink='yellow'] {
+    stroke: var(--gz-home-yellow);
+  }
+
+  .gz-home-def-text {
+    fill: var(--gz-home-muted);
+    font-family: var(--gz-home-serif);
+    font-size: 12px;
+    font-variant-numeric: oldstyle-nums;
+  }
+
+  .gz-home-def-text[data-italic] {
+    fill: var(--gz-home-ink);
+    font-size: 17px;
+    font-style: italic;
+  }
+
+  .gz-algo-edge {
+    stroke: var(--gz-home-ink);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+  }
+
+  .gz-algo-edge[data-state='tree'] {
+    stroke: var(--gz-home-blue);
+    stroke-width: 4.5;
+  }
+
+  .gz-algo-edge[data-state='active'] {
+    stroke: var(--gz-home-red);
+    stroke-width: 4.5;
+  }
+
+  .gz-algo-node {
+    fill: var(--gz-home-ink);
+  }
+
+  .gz-algo-node[data-state='current'] {
+    fill: var(--gz-home-red);
+  }
+
+  .gz-algo-node[data-state='frontier'] {
+    fill: var(--gz-home-yellow);
+    stroke: var(--gz-home-ink);
+    stroke-width: 1.2px;
+  }
+
+  .gz-algo-node[data-state='idle'] {
+    fill: var(--gz-home-paper);
+    stroke: var(--gz-home-ink);
+    stroke-width: 1.4;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* The page of figures                                               */
+  /* ---------------------------------------------------------------- */
+
+  /* Plate II: the same double rule as Plate I, a running head, and the
+     figures set free on the paper rather than boxed into cells. */
+  .gz-home-figs {
+    margin: 6px;
+    border: 1px solid var(--gz-home-ink);
+    outline: 1px solid var(--gz-home-ink);
+    outline-offset: 5px;
+  }
+
+  .gz-home-figs-head {
+    display: flex;
+    min-height: 3rem;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.125rem 0.75rem;
+    padding: 0.625rem 1rem 0.5rem;
+    border-bottom: 1px solid var(--gz-home-ink);
+  }
+
+  .gz-home-figs-title {
+    font-size: 1.125rem;
+    font-style: italic;
+  }
+
+  .gz-home-figs-aside {
+    color: var(--gz-home-muted);
+    font-size: 1.0625rem;
+    font-style: italic;
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-figs-aside {
+      margin-left: auto;
+    }
+  }
+
+  .gz-home-plate {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem 0;
+    padding: 0.75rem 0.25rem 1rem;
+  }
+
+  .gz-home-plate > li {
+    display: flex;
+  }
+
+  .gz-home-plate > li[data-big] {
+    grid-column: 1 / -1;
+  }
+
+  @media (width >= 40rem) {
+    .gz-home-plate {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      padding: 1rem 0.75rem 1.25rem;
+    }
+
+    .gz-home-plate > li[data-big] {
+      grid-column: span 2;
+      grid-row: span 2;
+    }
+  }
+
+  /* On the twelve-column module: two small figures, the featured one across
+     four columns and two rows, two more; again; then the rest centred. */
+  @media (width >= 64rem) {
+    .gz-home-plate {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      row-gap: 0.75rem;
+      padding: 1.5rem 1.25rem 1.75rem;
+    }
+
+    .gz-home-plate > li {
+      grid-column: span 2;
+    }
+
+    .gz-home-plate > li[data-big] {
+      grid-column: span 4;
+      grid-row: span 2;
+    }
+
+    .gz-home-plate > li[data-tail] {
+      grid-column: var(--gz-tail-start, 1) / span 2;
+    }
+  }
+
+  .gz-home-fig {
+    position: relative;
     display: flex;
     width: 100%;
-    height: 100%;
     flex-direction: column;
-    overflow: hidden;
-    border: 1px solid var(--gz-border);
-    border-radius: 1rem;
-    background: var(--gz-panel);
-    text-align: left;
-    box-shadow: 0 1px 2px rgb(17 17 26 / 0.03);
-    transition:
-      transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1),
-      border-color 200ms ease,
-      box-shadow 200ms ease;
+    align-items: center;
+    padding: 0.25rem 0.375rem 0.75rem;
+    text-align: center;
+    transition: background-color 180ms ease;
   }
 
-  .gz-home-card:hover {
-    transform: translateY(-2px);
-    border-color: color-mix(in oklab, var(--gz-accent) 38%, var(--gz-border));
-    box-shadow: var(--gz-home-lift);
+  .gz-home-fig:hover {
+    background: color-mix(in oklab, var(--gz-home-paper-deep) 80%, transparent);
   }
 
-  .gz-home-card:active {
-    transform: translateY(0) scale(0.99);
+  .gz-home-fig:focus-visible {
+    outline-offset: -3px;
   }
 
-  .gz-home-card-art {
+  /* Every figure in a row gets the same box, so their numbers line up. */
+  .gz-home-fig-art {
     display: flex;
+    width: 100%;
+    aspect-ratio: 3 / 2;
     flex: none;
     align-items: center;
     justify-content: center;
-    border-bottom: 1px solid var(--gz-border);
-    background-color: var(--gz-canvas);
-    background-image: radial-gradient(circle at center, var(--gz-home-dot) 1px, transparent 1.6px);
-    background-size: 16px 16px;
-    background-position: center;
+  }
+
+  .gz-home-fig[data-big] .gz-home-fig-art {
+    aspect-ratio: 7 / 5;
+  }
+
+  /* The caption takes the rest of the cell and the counts sit on its floor,
+     so every count in a row (the featured figure's included) shares one line
+     however the names above them wrap. */
+  .gz-home-fig-caption {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.0625rem;
+    padding: 0 0.25rem;
+  }
+
+  .gz-home-fig-no {
+    color: var(--gz-home-red-text);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.12em;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .gz-home-fig-name {
+    font-size: 1.1875rem;
+    font-style: italic;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  /* The twelve-column cells are narrowest just above the breakpoint; a
+     slightly smaller name keeps the longest ones to two lines there. */
+  @media (64rem <= width < 80rem) {
+    .gz-home-fig-name {
+      font-size: 1.0625rem;
+    }
+  }
+
+  .gz-home-fig:hover .gz-home-fig-name {
+    text-decoration: underline;
+    text-decoration-color: var(--gz-home-red);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+
+  .gz-home-fig-count {
+    display: flex;
+    justify-content: center;
+    gap: 0.875rem;
+    margin-top: auto;
+    padding-top: 0.1875rem;
+    font-size: 1.0625rem;
+  }
+
+  .gz-home-fig-count > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .gz-home-fig-glyph {
+    fill: var(--gz-home-muted);
+  }
+
+  .gz-home-fig[data-big] .gz-home-fig-name {
+    font-size: 1.625rem;
+  }
+
+  .gz-home-fig-blurb {
+    max-width: 24rem;
+    margin-top: 0.25rem;
+    color: var(--gz-home-muted);
+    font-size: 1.0625rem;
+    line-height: 1.38;
+    text-wrap: balance;
   }
 
   .gz-thumb {
@@ -799,116 +1807,101 @@
 
   .gz-thumb-edge {
     fill: none;
-    stroke: color-mix(in oklab, var(--gz-text) 30%, transparent);
-    stroke-width: 1.4;
+    stroke: var(--gz-home-ink);
+    stroke-width: 3;
     stroke-linecap: round;
-    transition: stroke 200ms ease;
+    transition: stroke-width 200ms ease;
   }
 
-  .gz-thumb-arrow {
-    fill: color-mix(in oklab, var(--gz-text) 45%, transparent);
-    transition: fill 200ms ease;
+  .gz-home-fig:hover .gz-thumb-edge {
+    stroke-width: 4;
+  }
+
+  .gz-thumb-edge[data-ink='0'] {
+    stroke: var(--gz-home-red);
+  }
+
+  .gz-thumb-edge[data-ink='1'] {
+    stroke: var(--gz-home-blue);
+  }
+
+  .gz-thumb-edge[data-ink='2'] {
+    stroke: var(--gz-home-yellow-line);
+  }
+
+  /* Byrne's dotted line: the fifth ink, for a figure that four cannot colour. */
+  .gz-thumb-edge[data-ink='4'] {
+    stroke-dasharray: 0.01 5.6;
+    stroke-width: 3.4;
+  }
+
+  /* And a dashed one, should a figure ever need a sixth. */
+  .gz-thumb-edge[data-ink='5'] {
+    stroke-dasharray: 7 4.5;
+    stroke-linecap: butt;
+  }
+
+  .gz-home-fig:hover .gz-thumb-edge[data-ink='4'] {
+    stroke-width: 4.2;
+  }
+
+  .gz-thumb-arrow[data-ink='0'] {
+    fill: var(--gz-home-red);
+  }
+
+  .gz-thumb-arrow[data-ink='1'] {
+    fill: var(--gz-home-blue);
+  }
+
+  .gz-thumb-arrow[data-ink='2'] {
+    fill: var(--gz-home-yellow-line);
+  }
+
+  .gz-thumb-arrow[data-ink='3'],
+  .gz-thumb-arrow[data-ink='4'],
+  .gz-thumb-arrow[data-ink='5'] {
+    fill: var(--gz-home-ink);
   }
 
   .gz-thumb-vertex {
-    fill: var(--gz-panel);
-    stroke: color-mix(in oklab, var(--gz-text) 62%, transparent);
-    stroke-width: 1.4;
-    transition:
-      fill 200ms ease,
-      stroke 200ms ease;
-  }
-
-  .gz-home-card:hover .gz-thumb-edge {
-    stroke: color-mix(in oklab, var(--gz-accent) 55%, transparent);
-  }
-
-  .gz-home-card:hover .gz-thumb-arrow {
-    fill: var(--gz-accent);
-  }
-
-  .gz-home-card:hover .gz-thumb-vertex {
-    fill: var(--gz-accent-soft);
-    stroke: var(--gz-accent);
+    fill: var(--gz-home-ink);
+    stroke: var(--gz-home-paper);
+    stroke-width: 1.75;
   }
 
   /* ---------------------------------------------------------------- */
-  /* Saved graphs                                                      */
+  /* Colophon                                                          */
   /* ---------------------------------------------------------------- */
 
-  .gz-home-saved {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 3rem 0.75rem 0.75rem;
-    border: 1px solid var(--gz-border);
-    border-radius: 0.875rem;
-    background: var(--gz-panel);
-    text-align: left;
-    box-shadow: 0 1px 2px rgb(17 17 26 / 0.03);
-    transition:
-      transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1),
-      border-color 200ms ease,
-      box-shadow 200ms ease;
+  .gz-home-colophon {
+    margin-top: 6rem;
+    padding: 3rem 0 3.5rem;
+    border-top: 4px double var(--gz-home-ink);
+    text-align: center;
   }
 
-  .gz-home-saved:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in oklab, var(--gz-accent) 38%, var(--gz-border));
-    box-shadow: var(--gz-home-lift);
+  .gz-home-fleuron {
+    display: block;
+    margin: 0 auto 1.25rem;
   }
 
-  .gz-home-saved-icon {
-    display: inline-flex;
-    width: 2.25rem;
-    height: 2.25rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.625rem;
-    background: var(--gz-accent-soft);
-    color: var(--gz-accent);
+  .gz-home-colophon-name {
+    font-size: 1.375rem;
+    font-weight: 600;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.16em;
   }
 
-  /* Icon and text side by side, the button beneath them on a phone and
-     beside them anywhere wider. */
-  .gz-home-nudge {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.875rem 1rem;
-    padding: 1rem 1.125rem;
-    border: 1px solid var(--gz-border);
-    border-radius: 1rem;
-    background: var(--gz-panel);
-    box-shadow: 0 1px 2px rgb(17 17 26 / 0.03);
+  .gz-home-colophon-line {
+    margin-top: 0.125rem;
+    font-size: 1.1875rem;
+    font-style: italic;
   }
 
-  .gz-home-nudge > button {
-    grid-column: 1 / -1;
-  }
-
-  @media (width >= 40rem) {
-    .gz-home-nudge {
-      grid-template-columns: auto minmax(0, 1fr) auto;
-    }
-
-    .gz-home-nudge > button {
-      grid-column: auto;
-    }
-  }
-
-  .gz-home-nudge-icon {
-    display: inline-flex;
-    width: 2.5rem;
-    height: 2.5rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.75rem;
-    background: var(--gz-accent-soft);
-    color: var(--gz-accent);
+  .gz-home-colophon-small {
+    margin-top: 0.75rem;
+    color: var(--gz-home-muted);
+    font-size: 1rem;
   }
 
   /* ---------------------------------------------------------------- */
@@ -924,7 +1917,7 @@
 @keyframes gz-home-rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -932,15 +1925,25 @@
   }
 }
 
-@keyframes gz-demo-pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.55;
-  }
-  70%,
-  100% {
-    transform: scale(2.6);
+/* A face of the frontispiece being laid on, like a block of colour printed. */
+@keyframes gz-home-face {
+  from {
     opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A note being written in: it comes up out of the paper. */
+@keyframes gz-demo-notes-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -955,7 +1958,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .gz-home-rise,
-  .gz-demo-live::after,
+  .gz-home-face,
+  .gz-demo-notes-in,
   .gz-demo-progress {
     animation: none;
   }
