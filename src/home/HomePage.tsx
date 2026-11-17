@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useEditor } from '../state/store'
 import { useTheme } from '../hooks/useTheme'
 import { openEditor } from '../app/router'
@@ -55,8 +55,8 @@ const scrollToExamples = () => {
 }
 
 /**
- * The front door, laid out like the instrument it opens: the proposition and
- * its two keys beside a small quick-start unit, then the live demo as a panel
+ * The front door, laid out like the instrument it opens: the name and its
+ * two keys beside a small quick-start unit, then the live demo as a panel
  * of the real thing, what else the workbench does as a spec sheet, and the
  * examples as a tray of tiles. Every route into the product is one click, and
  * nothing here asks for an account.
@@ -67,11 +67,27 @@ export const HomePage = () => {
   const savedName = useEditor((s) => s.name)
   const hasSession = useEditor((s) => s.doc.vertices.length > 0)
 
+  // The hero's title is the name and the mark, so while it is on screen the
+  // head does not repeat them; they come up in the head once it scrolls away.
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const [titleInView, setTitleInView] = useState(false)
+  useEffect(() => {
+    const title = titleRef.current
+    if (!title || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      ([entry]) => setTitleInView(entry?.isIntersecting ?? false),
+      // The sticky head covers the top of the page.
+      { rootMargin: '-56px 0px 0px 0px' },
+    )
+    observer.observe(title)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div className="gz-home">
       <header className="gz-home-head sticky top-0 z-30">
         <div className="gz-home-wrap gz-home-head-row">
-          <span className="gz-home-brand">
+          <span className="gz-home-brand" data-tucked={titleInView || undefined}>
             <BrandMark />
             <span>Graphualize</span>
           </span>
@@ -102,16 +118,18 @@ export const HomePage = () => {
       </header>
 
       <main>
-        {/* The proposition beside the quick-start unit, set so that the live
-            demo rises into the first screen. */}
+        {/* The name beside the quick-start unit, set so that the live demo
+            rises into the first screen. */}
         <section className="gz-home-wrap gz-home-hero">
           <div className="gz-home-hero-copy">
-            <h1 className="gz-home-title gz-home-rise" style={rise(0)}>
-              Graph theory that shows its working.
+            <h1 ref={titleRef} className="gz-home-title gz-home-rise" style={rise(0)}>
+              <BrandMark />
+              Graphualize
             </h1>
             <p className="gz-home-lede gz-home-rise" style={rise(70)}>
-              A free graph theory workbench in your browser. Draw a{' '}graph, then click any
-              property to see why it’s true.
+              A free graph theory workbench that runs in your browser. Draw a graph, watch its
+              properties update as you edit, and click any property to see the vertices and
+              edges behind it.
             </p>
 
             <div className="gz-home-actions gz-home-rise" style={rise(140)}>
@@ -142,7 +160,7 @@ export const HomePage = () => {
         <section aria-labelledby="home-features" className="gz-home-wrap gz-home-section gz-home-features">
           <div className="gz-home-section-head">
             <h2 id="home-features" className="gz-home-h2">
-              Everything a graph theory course asks for.
+              Features
             </h2>
           </div>
           <FeatureGrid />
@@ -156,7 +174,7 @@ export const HomePage = () => {
           <div className="gz-home-section-head">
             {/* Focusable from script only, so "Browse examples" can take focus here. */}
             <h2 id="home-examples" tabIndex={-1} className="gz-home-h2">
-              Start from a classic.
+              Examples
             </h2>
           </div>
           <ExampleGallery />
@@ -167,7 +185,6 @@ export const HomePage = () => {
         <div className="gz-home-wrap">
           <BrandMark size={22} />
           <p className="gz-home-colophon-name">Graphualize</p>
-          <p className="gz-home-colophon-line">Draw graphs. Understand them.</p>
           <p className="gz-home-colophon-small">Built with React, TypeScript and Cytoscape.js</p>
         </div>
       </footer>
