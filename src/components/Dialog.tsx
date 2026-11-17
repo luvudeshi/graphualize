@@ -8,8 +8,6 @@ const FOCUSABLE =
 export interface DialogProps {
   open: boolean
   title: string
-  /** A short lowercase legend in the signal colour, set above the title. */
-  marker?: string
   description?: string
   onClose: () => void
   children: ReactNode
@@ -33,7 +31,6 @@ export interface DialogProps {
 export const Dialog = ({
   open,
   title,
-  marker,
   description,
   onClose,
   children,
@@ -111,7 +108,6 @@ export const Dialog = ({
       >
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            {marker && <span className="gz-wb-dialog-marker">{marker}</span>}
             <h2 id={titleId} className="gz-wb-dialog-title">
               {title}
             </h2>

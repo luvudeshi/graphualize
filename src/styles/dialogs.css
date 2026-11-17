@@ -113,19 +113,6 @@
   box-shadow: inset 0 -1px 0 var(--gz-wb-groove);
 }
 
-.gz-wb-dialog-marker {
-  display: block;
-  margin-bottom: 0.1875rem;
-  font-family: var(--font-mono);
-  font-stretch: 85%;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.3;
-  text-transform: lowercase;
-  color: var(--gz-accent-text);
-}
-
 .gz-wb-dialog .gz-wb-dialog-title {
   font-family: var(--font-sans);
   font-size: 1.0625rem;

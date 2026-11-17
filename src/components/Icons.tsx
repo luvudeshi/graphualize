@@ -19,7 +19,7 @@ export const CursorIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
-/** A point of the figure, inked solid as Byrne sets a vertex, with the
+/** A point of the figure, inked solid, with the
  *  construction ticks that say "place one here". */
 export const VertexIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>

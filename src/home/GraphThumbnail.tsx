@@ -7,8 +7,8 @@ import { EDGE_INKS, edgeInks } from './byrne'
  * A small, static drawing of a document, styled entirely from CSS (see
  * `.gz-thumb-*` in home.css) so it follows the theme without knowing about it.
  * Each edge carries one of the page's edge inks (`data-ink`), handed out as a
- * proper edge colouring: no two edges meeting at a vertex share one, as in
- * Byrne's plates. Decorative: the card around it carries the name.
+ * proper edge colouring: no two edges meeting at a vertex share one.
+ * Decorative: the tile around it carries the name.
  */
 export const GraphThumbnail = ({
   doc,

@@ -107,7 +107,6 @@ const SaveDialogBody = ({ asCopy, initialName }: { asCopy: boolean; initialName:
         if (!saving) close()
       }}
       title={asCopy ? 'Save as' : 'Save graph'}
-      marker={asCopy ? 'A copy' : 'Save'}
       width="max-w-md"
       initialFocus={inputRef}
       footer={
