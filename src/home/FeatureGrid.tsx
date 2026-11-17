@@ -11,7 +11,8 @@ import { EDGE_INKS, edgeInks } from './byrne'
  */
 
 /* A word joiner after the en dash keeps 'Bellman–Ford' from breaking at it. */
-const ALGORITHMS = 'BFS, DFS, Dijkstra, Bellman–⁠Ford, Prim, Kruskal, topological sort, colouring.'
+const ALGORITHMS =
+  'Step through BFS, DFS, Dijkstra, Bellman–⁠Ford, Prim, Kruskal, topological sort and greedy colouring, forwards or backwards.'
 
 const Figure = ({ children, name }: { children: ReactNode; name?: string }) => (
   <svg viewBox="0 0 120 80" className="gz-home-def-svg" data-fig={name} aria-hidden="true" focusable="false">
@@ -165,25 +166,25 @@ const LocalFigure = () => (
 )
 
 const DEFINITIONS: { title: string; line: ReactNode; figure: ReactNode }[] = [
-  { title: 'Step through algorithms', line: ALGORITHMS, figure: <BfsFigure /> },
+  { title: 'Algorithms', line: ALGORITHMS, figure: <BfsFigure /> },
   {
-    title: 'Honest about hard problems',
-    line: 'Exact within stated limits. Bounds, never guesses.',
+    title: 'Hard problems',
+    line: 'Chromatic number, maximum clique and Hamiltonian cycles are exact on small graphs. Past the limit you get bounds or “not computed”, not a guess.',
     figure: <BoundsFigure />,
   },
   {
-    title: 'Matrices and spectra',
-    line: <>Adjacency to Laplacian, copied as <span className="whitespace-nowrap">LaTeX</span>.</>,
+    title: 'Matrices',
+    line: 'Adjacency, degree, Laplacian, incidence and distance matrices, with eigenvalues. Copy any of them as LaTeX.',
     figure: <MatrixFigure />,
   },
   {
-    title: 'Export that stays sharp',
-    line: 'SVG, PNG, DOT, GraphML, CSV and JSON.',
+    title: 'Import and export',
+    line: 'SVG, PNG and TikZ for the drawing. JSON, CSV, DOT and GraphML for the data.',
     figure: <ExportFigure />,
   },
   {
-    title: 'Runs in your browser',
-    line: 'Nothing to install. No account needed.',
+    title: 'No install',
+    line: 'Runs in the browser with no account. Sign in only if you want your graphs saved across devices.',
     figure: <LocalFigure />,
   },
 ]

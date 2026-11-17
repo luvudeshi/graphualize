@@ -21,7 +21,7 @@ test.afterEach(async ({ page }) => {
 const demo = (page: Page) => page.getByRole('list', { name: 'Properties of the example graph' })
 
 test('the home page leads with the product and a live demo', async ({ page }) => {
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('shows its working')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Graphualize')
   // The demo is the real thing: its properties come from the analysis library.
   await expect(demo(page).getByRole('button', { name: /Bipartite/ })).toContainText('No')
   await expect(demo(page).getByText(/is a cycle of odd length 3/).first()).toBeVisible()
@@ -47,7 +47,7 @@ test('the tour can be paused, and stays paused once the pointer has gone', async
 
 test('browsing the examples scrolls to them without changing the route', async ({ page }) => {
   await page.getByRole('button', { name: 'Browse examples' }).click()
-  await expect(page.getByRole('heading', { name: 'Start from a classic.' })).toBeInViewport()
+  await expect(page.getByRole('heading', { name: 'Examples' })).toBeInViewport()
   expect(new URL(page.url()).hash).not.toContain('examples')
 })
 

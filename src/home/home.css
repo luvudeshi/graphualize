@@ -117,6 +117,15 @@
     font-size: 1.0625rem;
     font-weight: 600;
     letter-spacing: -0.02em;
+    transition:
+      opacity 200ms var(--gz-snap),
+      transform 320ms var(--gz-spring-big);
+  }
+
+  /* While the hero's title is on screen the head does not repeat it. */
+  .gz-home-brand[data-tucked] {
+    opacity: 0;
+    transform: translateY(0.375rem);
   }
 
   /* The narrowest phones: below 352px the wordmark gives way to the mark
@@ -243,11 +252,21 @@
     text-shadow: 0 -1px 0 rgb(0 0 0 / 0.45);
   }
 
+  /* The hero's title is the name with the mark beside it, the mark drawn at
+     the height of the letters. */
   .gz-home-title {
-    max-width: 11em;
-    font-size: clamp(2.625rem, 1.4rem + 4.6vw, 5rem);
-    line-height: 0.98;
-    letter-spacing: -0.04em;
+    display: flex;
+    align-items: center;
+    gap: 0.2em;
+    font-size: clamp(2.75rem, 1.4rem + 5.2vw, 5.25rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+
+  .gz-home-title .gz-home-mark {
+    width: 0.84em;
+    height: 0.84em;
   }
 
   .gz-home-h2 {
@@ -1858,11 +1877,6 @@
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.02em;
-  }
-
-  .gz-home-colophon-line {
-    color: var(--gz-muted);
-    font-size: 0.9375rem;
   }
 
   .gz-home-colophon-small {

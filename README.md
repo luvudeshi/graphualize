@@ -1,7 +1,5 @@
 # Graphualize
 
-**Draw graphs. Understand them.**
-
 Graphualize is a workbench for graph theory. You draw a graph, its properties
 update as you type, and clicking any property draws the mathematical reason on
 the graph itself: the odd cycle that stops it being bipartite, the two vertices

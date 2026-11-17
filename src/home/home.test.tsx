@@ -125,7 +125,7 @@ describe('HomePage', () => {
   it('leads with the product, not a sign-up', () => {
     render(<HomePage />)
     expect(
-      screen.getByRole('heading', { name: /shows its working/i, level: 1 }),
+      screen.getByRole('heading', { name: 'Graphualize', level: 1 }),
     ).toBeInTheDocument()
     expect(screen.getByTestId('hero-demo')).toBeInTheDocument()
     expect(screen.queryByText(/sign up|pricing|free trial/i)).not.toBeInTheDocument()
@@ -213,7 +213,7 @@ describe('HomePage', () => {
     try {
       render(<HomePage />)
       await user.click(screen.getByRole('button', { name: 'Browse examples' }))
-      const heading = screen.getByRole('heading', { name: 'Start from a classic.' })
+      const heading = screen.getByRole('heading', { name: 'Examples' })
       expect(heading).toHaveFocus()
       // Focus must not scroll as well, or it would cut the smooth scroll short.
       expect(focus.mock.contexts.at(-1)).toBe(heading)
