@@ -1,8 +1,9 @@
 import type { StylesheetJson } from 'cytoscape'
 import type { CanvasTheme } from './theme'
 
-/** The canvas is lettered in the app's text face, EB Garamond. */
-const SERIF = '"EB Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif'
+/** Vertices are lettered in the app's control face; weights, like every other reading, in its mono. */
+const SANS = '"Outfit", "Avenir Next", "Century Gothic", "Segoe UI", system-ui, sans-serif'
+const MONO = '"Martian Mono", ui-monospace, "SF Mono", Menlo, monospace'
 
 export interface StyleOptions {
   directed: boolean
@@ -31,25 +32,33 @@ export const buildStylesheet = (
   const transition = options.reducedMotion ? 0 : 120
   return [
     {
-      // A point of the figure: a disc of paper ringed in ink, lettered in
-      // italic Garamond, as Byrne letters the points of a Euclid plate.
+      // A point of the figure: a round keycap ringed in ink, shaded from
+      // its top edge to its bottom like every other key on the instrument.
       selector: 'node',
       style: {
         width: 34,
         height: 34,
         shape: 'ellipse',
         'background-color': theme.vertexFill,
+        'background-fill': 'linear-gradient',
+        'background-gradient-direction': 'to-bottom',
+        'background-gradient-stop-colors': `${theme.vertexFill} ${theme.vertexFillLow}`,
         'border-width': 1.5,
         'border-color': theme.vertexBorder,
         label: options.showLabels ? 'data(label)' : '',
         color: theme.vertexText,
-        'font-family': SERIF,
-        'font-style': 'italic',
-        'font-size': 18,
+        'font-family': SANS,
+        'font-size': 15,
         'font-weight': 500,
         'text-valign': 'center',
         'text-halign': 'center',
-        'transition-property': 'background-color, border-color, border-width, opacity',
+        // The lamp round a selected point, dark until it is selected.
+        'underlay-color': theme.selected,
+        'underlay-shape': 'ellipse',
+        'underlay-padding': 6,
+        'underlay-opacity': 0,
+        'transition-property':
+          'background-color, border-color, border-width, opacity, underlay-opacity',
         'transition-duration': transition,
         'overlay-opacity': 0,
         'z-index': 10,
@@ -66,25 +75,30 @@ export const buildStylesheet = (
     {
       selector: 'node.hovered',
       style: {
+        'background-fill': 'solid',
         'background-color': theme.vertexHover,
         'border-color': theme.selected,
         'border-width': 2,
       },
     },
     {
+      // Selected: the cap tints and a ring of the signal lights round it.
       selector: 'node:selected',
       style: {
+        'background-fill': 'solid',
         'background-color': theme.selectedFill,
         'border-color': theme.selected,
-        'border-width': 3,
+        'border-width': 2.5,
+        'underlay-opacity': 0.28,
         'z-index': 30,
       },
     },
     {
       // A colouring or partition: the part's ink laid on flat, still ringed
-      // in black so a pale pigment holds its edge on the paper.
+      // in ink so a pale pigment holds its edge on the screen.
       selector: 'node[fillColor]',
       style: {
+        'background-fill': 'solid',
         'background-color': 'data(fillColor)',
         color: 'data(inkColor)',
         'border-color': theme.vertexBorder,
@@ -99,10 +113,11 @@ export const buildStylesheet = (
     },
     {
       // A witness or an algorithm's state: the point filled with the
-      // highlight's ink (vermilion, cobalt or chrome yellow) inside an ink
-      // ring, like the figure on the home page.
+      // highlight's ink (the signal, its warm tint or the slate) inside an
+      // ink ring, like the figure on the home page.
       selector: 'node[hlColor]',
       style: {
+        'background-fill': 'solid',
         'background-color': 'data(hlColor)',
         'border-color': theme.vertexBorder,
         'border-width': 1.5,
@@ -110,7 +125,7 @@ export const buildStylesheet = (
       },
     },
     {
-      // The letter on a filled point: paper on the dark inks, ink on yellow.
+      // The letter on a filled point: light on the dark inks, ink on the pale one.
       selector: 'node[hlInk]',
       style: {
         color: 'data(hlInk)',
@@ -128,10 +143,13 @@ export const buildStylesheet = (
       },
     },
     {
+      // A filled point that is also selected keeps its ink ring; the lamp
+      // round it is what says so, since the signal may be its own fill.
       selector: 'node[hlColor]:selected, node[fillColor]:selected',
       style: {
-        'border-color': theme.selected,
-        'border-width': 3.5,
+        'border-color': theme.vertexBorder,
+        'border-width': 2.5,
+        'underlay-opacity': 0.4,
       },
     },
     {
@@ -154,17 +172,16 @@ export const buildStylesheet = (
         'arrow-scale': 1.25,
         'loop-direction': '-45deg',
         'loop-sweep': '-60deg',
-        // Weights are set in the text face on a slip of paper with an ink
-        // hairline, like the figures' labels on the home plates.
+        // Weights are readings, so they are set in the mono on a small tag.
         label: options.weighted && !options.weightSlips ? 'data(weightLabel)' : '',
-        'font-family': SERIF,
-        'font-size': 14,
+        'font-family': MONO,
+        'font-size': 11,
         'font-weight': 500,
         color: theme.edgeLabel,
         'text-background-color': theme.edgeLabelBg,
         'text-background-opacity': 1,
         'text-background-padding': '2px',
-        'text-background-shape': 'rectangle',
+        'text-background-shape': 'roundrectangle',
         'text-border-width': 1,
         'text-border-color': theme.edge,
         'text-border-opacity': 1,
@@ -186,19 +203,19 @@ export const buildStylesheet = (
       },
     },
     {
-      // A witness, path or cycle is laid on as a thick flat bar of ink.
+      // A witness, path or cycle is laid on as a thick bar of its ink.
       selector: 'edge[hlColor]',
       style: {
         'line-color': 'data(hlColor)',
         'target-arrow-color': 'data(hlColor)',
         'source-arrow-color': 'data(hlColor)',
-        'line-cap': 'butt',
+        'line-cap': 'round',
         width: 5,
         'z-index': 35,
       },
     },
     {
-      // A rejected edge is Byrne's dotted black line.
+      // A rejected edge is a dotted line in ink.
       selector: 'edge.rejected',
       style: {
         'line-style': 'dotted',

@@ -36,7 +36,7 @@ const Section = ({
   children: ReactNode
   note?: string
 }) => (
-  <section>
+  <section className="gz-wb-section">
     <h3 className="gz-wb-section-head">
       <button
         type="button"
@@ -46,8 +46,7 @@ const Section = ({
         className="gz-wb-section-btn"
       >
         <ChevronIcon width={11} height={11} className="gz-wb-chevron" aria-hidden="true" />
-        <span className="gz-wb-marker">{title}</span>
-        <span className="gz-wb-rule" aria-hidden="true" />
+        <span className="gz-marker gz-wb-marker">{title}</span>
         {count !== undefined && <span className="gz-wb-section-count gz-wb-num">{count}</span>}
       </button>
     </h3>
@@ -62,10 +61,14 @@ const Section = ({
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
+/** Rows seat one after another when a section appears; the index is capped so
+    a long list does not take seconds to arrive. */
+const SEAT_CAP = 8
+
 const RowList = ({ section }: { section: InspectorSection }) => (
   <div className="gz-wb-rows">
-    {section.rows.map((row) => (
-      <PropertyRow key={row.id} row={row} />
+    {section.rows.map((row, i) => (
+      <PropertyRow key={row.id} row={row} seat={Math.min(i, SEAT_CAP)} />
     ))}
   </div>
 )
@@ -126,8 +129,9 @@ export const Inspector = () => {
             role="switch"
             aria-checked={directed}
             onClick={() => setDirected(!directed)}
-            className="gz-wb-toggle"
+            className="gz-switch gz-wb-toggle"
           >
+            <span className="gz-switch-track" aria-hidden="true" />
             Directed
           </button>
           <button
@@ -135,8 +139,9 @@ export const Inspector = () => {
             role="switch"
             aria-checked={weighted}
             onClick={() => setWeighted(!weighted)}
-            className="gz-wb-toggle"
+            className="gz-switch gz-wb-toggle"
           >
+            <span className="gz-switch-track" aria-hidden="true" />
             Weighted
           </button>
         </div>
@@ -161,7 +166,7 @@ export const Inspector = () => {
           <input
             value={command}
             onChange={(event) => setCommand(event.target.value)}
-            className="gz-wb-command"
+            className="gz-input gz-wb-command"
             placeholder="K5, C8, G(20, 0.2) or A-B, B-C…"
             aria-label="Quick graph command"
             spellCheck={false}
@@ -169,7 +174,7 @@ export const Inspector = () => {
         </form>
       </div>
 
-      <div className="gz-scroll gz-wb-body">
+      <div className="gz-scroll gz-wb-insp-body">
         {hasSelection && (
           <Section
             id="selection"

@@ -58,21 +58,23 @@ export const StatusBar = () => {
 
   const visible = status && status.nonce !== expiredNonce ? status : null
 
+  // `lamp` is lit while there is work on the screen that is not kept — the
+  // same state that lights the lamp on the masthead's Save key.
   const savedState = syncing
-    ? { text: 'saving…', glyph: 'ring' }
+    ? { text: 'saving…', lamp: false }
     : savedId
       ? dirty
-        ? { text: 'unsaved changes', glyph: 'bar' }
+        ? { text: 'unsaved changes', lamp: true }
         : savedWhere === 'cloud'
-          ? { text: 'saved to your account', glyph: 'disc' }
-          : { text: 'saved in this browser', glyph: 'disc' }
+          ? { text: 'saved to your account', lamp: false }
+          : { text: 'saved in this browser', lamp: false }
       : hasContent
         ? signedOut
-          ? { text: 'not saved — saving keeps it in this browser', glyph: 'bar' }
-          : { text: 'not saved yet', glyph: 'bar' }
+          ? { text: 'not saved — saving keeps it in this browser', lamp: true }
+          : { text: 'not saved yet', lamp: true }
         : signedOut
-          ? { text: 'not signed in', glyph: 'ring' }
-          : { text: 'not saved yet', glyph: 'ring' }
+          ? { text: 'not signed in', lamp: false }
+          : { text: 'not saved yet', lamp: false }
 
   return (
     <footer className="gz-wb-status">
@@ -99,7 +101,7 @@ export const StatusBar = () => {
           className="gz-wb-witness"
           title="Clear the highlight"
         >
-          <span className="gz-wb-sign" data-glyph="triangle" aria-hidden />
+          <span className="gz-led" data-on="true" aria-hidden />
           <span className="gz-wb-witness-caption">{witnessCaption ?? 'highlighting'}</span>
           <span className="gz-wb-witness-clear">clear</span>
         </button>
@@ -109,8 +111,8 @@ export const StatusBar = () => {
           nothing is autosaved, and "saved" means different things signed in
           and signed out. */}
       <span className="gz-wb-saved">
-        <span className="gz-wb-sign" data-glyph={savedState.glyph} aria-hidden />
-        {savedState.text}
+        <span className="gz-led" data-on={savedState.lamp ? 'true' : undefined} aria-hidden />
+        <span className="gz-wb-saved-text">{savedState.text}</span>
       </span>
     </footer>
   )

@@ -10,9 +10,10 @@ that realise the diameter, the bridge whose removal disconnects it.
 It runs entirely in the browser. No account, no server, no upload, unless you
 choose to sign in, and then only the graphs you save go to your account.
 
-It is set like Oliver Byrne's 1847 colour-plate edition of Euclid: cream paper,
-black ink and three flat colours, in EB Garamond, with a night edition on deep
-indigo for dark mode.
+It is built to look and feel like a bench instrument: a matte chassis with a
+recessed screen, keys that travel when pressed, slide switches and one orange
+signal lamp, set in Outfit and Martian Mono, with a warm slate chassis for dark
+mode. Menus and dialogs float over it as frosted glass.
 
 ```
 Create  →  Inspect  →  Understand  →  Manipulate
@@ -20,7 +21,7 @@ Create  →  Inspect  →  Understand  →  Manipulate
 
 ## Screenshots
 
-The home page. Plate I is the real analysis library running on a real graph,
+The home page. The demo panel is the real analysis library running on a real graph,
 not a picture of one, with a note on the drawing naming what each property
 found:
 
@@ -31,7 +32,7 @@ The workbench, with the Petersen graph and the live inspector:
 ![The editor with the Petersen graph and the live inspector](docs/screenshot-editor.jpg)
 
 Clicking **Bipartite: No** draws the odd cycle that proves it and dims
-everything else, here in the night edition:
+everything else, here in dark mode:
 
 ![An odd cycle highlighted on a wheel graph in dark mode](docs/screenshot-witness.jpg)
 
@@ -47,8 +48,8 @@ Two ways in.
 **No install.** Build (or download) `Graphualize.html` and double-click it —
 one file with the script, the stylesheet and the icon inlined, running straight
 from `file://` with no server and no Node. The only things it fetches are the
-web fonts (EB Garamond and JetBrains Mono), which are a progressive
-enhancement: offline it falls back to a system serif and everything else works
+web fonts (Outfit and Martian Mono), which are a progressive
+enhancement: offline it falls back to system fonts and everything else works
 exactly the same.
 
 ```bash
@@ -120,10 +121,12 @@ odd-degree vertices, or a realising shortest path on the canvas.
 ## The home page
 
 `/` is a real front door rather than a splash screen: it explains what the tool
-does, then demonstrates it, set as a page from Byrne's Euclid. Plate I, in the
-first screen, is live: it runs the same analysis library as the workbench,
-cycles through five properties and draws the witness for each one, with an
-italic note on the drawing naming it ("the triangle ABC, of odd length", "a
+does, then demonstrates it. The hero carries a small quick-start unit: a
+display, a dial and six keys, one for each graph it can open; resting on a key
+(or turning the dial) draws that graph on the display first. Under it the demo
+panel is live: it runs the same analysis library as the workbench, cycles
+through five properties and draws the witness for each one, with a note on the
+drawing naming it ("the triangle ABC, of odd length", "a
 bridge", "cut vertex", a bracket for the diameter). Drag a vertex and the notes
 follow it while the mathematics stays put. The tour holds still while you point
 at it and has a pause button of its own, and on a phone the demo switches to a
@@ -132,10 +135,10 @@ genuinely has the properties the surrounding copy claims (three bridges, four
 articulation vertices, diameter 5, an odd cycle of length 3), so the marketing
 cannot drift away from the mathematics.
 
-Plate II shows the worked examples as numbered figures, each drawn with a proper
-edge colouring found by an exact search: four inks, and Byrne's dotted black
-line as a fifth where four cannot do (K5, the bridges of Königsberg). Tests
-check every colouring.
+The worked examples are a tray of tiles that lean towards the pointer, each
+drawn with a proper edge colouring found by an exact search: four inks, and a
+dotted line as a fifth where four cannot do (K5, the bridges of Königsberg).
+Tests check every colouring.
 
 Every route into the product is one click: **Start drawing**, a quick-start that
 opens the workbench with `K5`, `C8`, the Petersen graph, `K3,3`, `Q4` or
@@ -291,9 +294,9 @@ lines and text — sharp at any size and editable in Illustrator, Inkscape or
 LaTeX. Whatever witness or algorithm step is on screen can travel with it, so
 the odd cycle you highlighted is still highlighted in the file you paste into
 your write-up. PNG is captured from the canvas at 2× and matches the screen
-exactly. The SVG comes as a day or night drawing, in the same inks and Garamond as
-the canvas; the PNG keeps the inks on screen and takes only the day or night
-paper. Both offer an optional transparent background.
+exactly. The SVG comes as a day or night drawing, in the same inks and lettering
+as the canvas; the PNG keeps the inks on screen and takes only the day or night
+background. Both offer an optional transparent background.
 
 **TikZ.** For write-ups in LaTeX, the same drawing comes out as TikZ source:
 one named node per vertex, edges drawn between names (bent apart when they run

@@ -19,10 +19,10 @@ const SPEEDS = [0.6, 1.2, 2.4, 5]
  * A legend, because the states on the canvas are otherwise told apart by
  * colour alone. Only the states present in the current frame are listed, so it
  * stays short and matches what is actually on screen. Each state is one of
- * Byrne's glyphs in his inks: a vermilion disc for the current vertex, cobalt
- * for visited, chrome yellow ringed in ink for the frontier, a vermilion bar
- * for the edge being examined, a cobalt bar for an accepted edge and a dotted
- * ink line for a rejected one. An edge the step is examining is drawn as the
+ * the figure glyphs in the screen's own inks: a disc in the signal for the
+ * current vertex, slate for visited, the pale tint ringed in ink for the
+ * frontier, a signal bar for the edge being examined, a slate bar for an
+ * accepted edge and a dotted ink line for a rejected one. An edge the step is examining is drawn as the
  * current edge even when it is also accepted or rejected, so those two are
  * listed only when some edge actually shows them.
  */
@@ -166,11 +166,12 @@ export const AlgorithmPanel = () => {
   const step = session.steps[session.index]
   const atEnd = session.index >= session.steps.length - 1
   const stateEntries = Object.entries(step?.state ?? {})
-  // On the last step the result says the same things in red, so the running
-  // state would only repeat it (ORDER twice, COLOURS beside COLOURS USED).
+  // On the last step the result says the same things in the signal colour, so
+  // the running state would only repeat it (order twice, colours beside
+  // colours used).
   const shownState = atEnd && session.result?.length ? [] : stateEntries
   const last = Math.max(0, session.steps.length - 1)
-  // How far along the run is, 0 to 1, for the inked part of the scrubber.
+  // How far along the run is, 0 to 1, for the lit part of the scrubber's slot.
   const progress = { '--gz-wb-progress': last ? session.index / last : 0 } as CSSProperties
 
   return (
@@ -221,25 +222,31 @@ export const AlgorithmPanel = () => {
         </div>
 
         <div className="gz-wb-algo-main">
-          {/* Wraps on a narrow screen, so the description drops to its own line
-              instead of truncating to nothing beside the choices. */}
+          {/* Wraps when there is no room, so the readout drops to a line of
+              its own instead of truncating to nothing beside the choices. */}
           <div className="gz-wb-algo-head">
+            {/* The deck's lamp: lit while the run is playing. */}
+            <span aria-hidden className="gz-led gz-wb-algo-lamp" data-on={playing} />
             <span aria-hidden className="gz-marker gz-wb-algo-marker">
               Algorithm
             </span>
             <span className="gz-wb-algo-name">{session.title}</span>
             <RunOptions algorithmId={session.algorithmId} options={session.options} />
-            <span className="gz-wb-algo-count">
-              <span aria-hidden className="gz-label gz-wb-algo-count-label">
-                Step
+            <div className="gz-wb-algo-readout">
+              <span className="gz-wb-algo-count">
+                <span aria-hidden className="gz-label gz-wb-algo-count-label">
+                  Step
+                </span>
+                <span className="gz-num gz-wb-algo-count-figs">
+                  {session.index + 1}
+                  <span className="gz-wb-algo-count-of">/</span>
+                  {session.steps.length}
+                </span>
               </span>
-              <span className="gz-num gz-wb-algo-count-figs">
-                {session.index + 1}
-                <span className="gz-wb-algo-count-of">/</span>
-                {session.steps.length}
+              <span className="gz-wb-algo-desc" title={step?.description}>
+                {step?.description}
               </span>
-            </span>
-            <span className="gz-wb-algo-desc">{step?.description}</span>
+            </div>
           </div>
           <input
             type="range"
@@ -271,7 +278,7 @@ export const AlgorithmPanel = () => {
 
           <button
             type="button"
-            className="gz-btn gz-wb-algo-close"
+            className="gz-btn gz-btn-ghost gz-wb-algo-close"
             onClick={stop}
             aria-label="Exit visualisation"
             title="Exit visualisation"

@@ -2,11 +2,12 @@ import type { ReactNode } from 'react'
 import { EDGE_INKS, edgeInks } from './byrne'
 
 /**
- * What the workbench does beyond the demo above it, set as a short list of
- * numbered definitions, each with a small figure in the page's four inks.
- * The figures are inline SVG coloured from the --gz-home-* properties, so they
- * follow the theme and cost no request, and they are hidden from assistive
- * technology: the heading and line beside each carry the meaning.
+ * What the workbench does beyond the demo above it, set as a spec sheet: one
+ * row for each capability, with a small figure in the page's four inks shown
+ * on a readout beside it. The figures are inline SVG coloured from the
+ * --gz-home-* properties, so they follow the theme and cost no request, and
+ * they are hidden from assistive technology: the heading and line beside each
+ * carry the meaning.
  */
 
 /* A word joiner after the en dash keeps 'Bellman–Ford' from breaking at it. */
@@ -82,8 +83,8 @@ const BoundsFigure = () => (
 )
 
 /* The 5-cycle and its adjacency matrix, each entry in the colour of its edge.
-   The edges are coloured by the same proper edge colouring as the plate of
-   figures, so an odd cycle takes three inks, as it must. */
+   The edges are coloured by the same proper edge colouring as the example
+   tiles, so an odd cycle takes three inks, as it must. */
 const C5 = Array.from({ length: 5 }, (_, i) => {
   const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5
   return { x: 24 + 19 * Math.cos(angle), y: 41 + 19 * Math.sin(angle) }
@@ -163,36 +164,24 @@ const LocalFigure = () => (
   </Figure>
 )
 
-/* EB Garamond italic has no a–T kerning pair, so the word reads 'La TeX'
-   unless the T is pulled in by hand. */
-const LATEX = (
-  <span className="gz-latex">
-    La<span className="gz-latex-t">T</span>eX
-  </span>
-)
-
-const DEFINITIONS: { numeral: string; title: string; line: ReactNode; figure: ReactNode }[] = [
-  { numeral: 'I', title: 'Step through algorithms', line: ALGORITHMS, figure: <BfsFigure /> },
+const DEFINITIONS: { title: string; line: ReactNode; figure: ReactNode }[] = [
+  { title: 'Step through algorithms', line: ALGORITHMS, figure: <BfsFigure /> },
   {
-    numeral: 'II',
     title: 'Honest about hard problems',
     line: 'Exact within stated limits. Bounds, never guesses.',
     figure: <BoundsFigure />,
   },
   {
-    numeral: 'III',
     title: 'Matrices and spectra',
-    line: <>Adjacency to Laplacian, copied as {LATEX}.</>,
+    line: <>Adjacency to Laplacian, copied as <span className="whitespace-nowrap">LaTeX</span>.</>,
     figure: <MatrixFigure />,
   },
   {
-    numeral: 'IV',
     title: 'Export that stays sharp',
     line: 'SVG, PNG, DOT, GraphML, CSV and JSON.',
     figure: <ExportFigure />,
   },
   {
-    numeral: 'V',
     title: 'Runs in your browser',
     line: 'Nothing to install. No account needed.',
     figure: <LocalFigure />,
@@ -200,20 +189,15 @@ const DEFINITIONS: { numeral: string; title: string; line: ReactNode; figure: Re
 ]
 
 export const FeatureGrid = () => (
-  <ol className="gz-home-defs">
-    {DEFINITIONS.map(({ numeral, title, line, figure }) => (
-      <li key={numeral} className="gz-home-def">
+  <ul className="gz-home-defs">
+    {DEFINITIONS.map(({ title, line, figure }) => (
+      <li key={title} className="gz-home-def">
         <span className="gz-home-def-fig">{figure}</span>
         <div className="gz-home-def-body">
-          <h3 className="gz-home-def-title">
-            <span className="gz-home-def-no" aria-hidden="true">
-              {numeral}.
-            </span>
-            {title}
-          </h3>
+          <h3 className="gz-home-def-title">{title}</h3>
           <p className="gz-home-def-line">{line}</p>
         </div>
       </li>
     ))}
-  </ol>
+  </ul>
 )

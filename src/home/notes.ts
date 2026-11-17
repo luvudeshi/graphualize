@@ -93,7 +93,7 @@ export const GLYPH = 11
 export const GLYPH_GAP = 5
 export const NOTE_LINE = 20
 
-/** EB Garamond italic at the notes' size averages a little under half an em. */
+/** Outfit at the notes' size averages a little over half an em. */
 export const roughMeasure: Measure = (text) => text.length * 7.3
 
 const STAGE_MARGIN = 4

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
 import { Menu, type MenuItem } from './Menu'
@@ -15,7 +16,14 @@ import { copyShareLink } from '../state/share'
 import { requestSave, requestSaveAs } from '../state/save'
 import '../styles/header.css'
 
-/** The app's mark in the Byrne inks, as on the home page: three points, three primaries. */
+/**
+ * A part's place in the masthead's seating order. The parts are seated left
+ * to right on first paint, half a step apart, so the whole strip is down in
+ * well under a second.
+ */
+const seat = (order: number) => ({ '--gz-i': order * 0.5 }) as CSSProperties
+
+/** The app's mark: three vertices in the signal, the slate and the pale tint, joined in ink. */
 const BrandMark = ({ size = 24 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 26 26" className="gz-wb-brandmark" aria-hidden="true">
     <path d="M5 6.5L21 9.5L11.5 21Z" className="gz-wb-brandmark-edges" />
@@ -25,8 +33,8 @@ const BrandMark = ({ size = 24 }: { size?: number }) => (
   </svg>
 )
 
-/* The theme toggle's two states as flat shapes, the home page's own: an ink
-   crescent for the night edition, a yellow sun for the day. */
+/* The theme toggle's two states as flat shapes in the key's own ink: a
+   crescent to go dark, a sun to go light. */
 const MoonGlyph = () => (
   <svg width={19} height={19} viewBox="0 0 20 20" aria-hidden="true">
     <path d="M8.82 3.09A7.5 7.5 0 1 0 17.41 11.68A6.2 6.2 0 0 1 8.82 3.09Z" fill="currentColor" />
@@ -41,9 +49,9 @@ const SunGlyph = () => (
 )
 
 /**
- * A family's name with its symbol set as maths, as in the Generate dialog and
- * on the home page: an italic letter and a subscript. Its text still reads
- * "Complete K5", so the item's accessible name is unchanged.
+ * A family's name with its symbol set as the command that makes it: a letter
+ * and a subscript, in mono (header.css sets the letter upright). Its text
+ * still reads "Complete K5", so the item's accessible name is unchanged.
  */
 const FamilyName = ({ name, letter, size }: { name: string; letter: string; size: string }) => (
   <>
@@ -56,10 +64,10 @@ const FamilyName = ({ name, letter, size }: { name: string; letter: string; size
 )
 
 /**
- * Save, where it can be seen. Its label is the graph's save state — Save with
- * a dot while there is unsaved work, Saving… while a save is out, Saved once
- * it is kept — so whether a graph is safe is never something to go looking
- * for in a menu or the status bar.
+ * Save, where it can be seen: a key with a lamp. Its label is the graph's
+ * save state — Save with the lamp lit while there is unsaved work, Saving…
+ * while a save is out, Saved once it is kept — so whether a graph is safe is
+ * never something to go looking for in a menu or the status bar.
  */
 const SaveButton = () => {
   const dirty = useEditor((s) => s.dirty)
@@ -83,11 +91,12 @@ const SaveButton = () => {
       }
       title={`Save (${formatShortcut('mod+S')})`}
       data-state={syncing ? 'saving' : saved ? 'saved' : 'unsaved'}
-      className="gz-wb-save"
+      className="gz-btn gz-wb-save gz-anim-seat"
+      style={seat(8)}
     >
+      <span aria-hidden className="gz-led" data-on={unsaved && !syncing ? 'true' : undefined} />
       {saved ? <CheckIcon width={15} height={15} /> : <SaveIcon width={15} height={15} />}
       <span className="hidden lg:inline">{label}</span>
-      {unsaved && !syncing && <span aria-hidden className="gz-wb-save-dot" />}
     </button>
   )
 }
@@ -315,40 +324,52 @@ export const MenuBar = () => {
         onClick={() => navigate('/')}
         // The visible word is part of the label, so speech control still works.
         aria-label="Graphualize — back to the home page"
-        className="gz-wb-brand"
+        className="gz-wb-brand gz-anim-seat"
+        style={seat(0)}
       >
         <BrandMark />
         <span className="gz-wb-brand-word">Graphualize</span>
       </button>
 
-      <Menu label="File" items={fileItems} />
-      <Menu label="Edit" items={editItems} />
-      <Menu label="Generate" items={generateItems} />
-      <Menu label="Transform" items={transformItems} />
-      <Menu label="Algorithms" items={algorithmItems} />
-      <Menu label="View" items={viewItems} />
-      <Menu label="Help" items={helpItems} />
+      {/* Seated half a step apart, like the rest of the masthead. */}
+      <Menu label="File" items={fileItems} seat={0.5} />
+      <Menu label="Edit" items={editItems} seat={1} />
+      <Menu label="Generate" items={generateItems} seat={1.5} />
+      <Menu label="Transform" items={transformItems} seat={2} />
+      <Menu label="Algorithms" items={algorithmItems} seat={2.5} />
+      <Menu label="View" items={viewItems} seat={3} />
+      <Menu label="Help" items={helpItems} seat={3.5} />
 
       <div className="gz-wb-tools">
         <SaveButton />
         <button
           type="button"
-          className="gz-wb-find-btn"
+          className="gz-wb-find-btn gz-anim-seat"
+          style={seat(9)}
           onClick={act((s) => s.setCommandPaletteOpen(true))}
           aria-label="Open command palette"
         >
           <SearchIcon width={14} height={14} />
-          <kbd className="hidden sm:inline">{formatShortcut('mod+K')}</kbd>
+          {/* A placeholder, as in a field. The button's name is its label. */}
+          <span aria-hidden className="gz-wb-find-word hidden lg:inline-block">
+            find
+          </span>
+          <kbd className="hidden sm:inline-flex">{formatShortcut('mod+K')}</kbd>
         </button>
         <button
           type="button"
-          className="gz-wb-icon-btn"
+          className="gz-btn gz-wb-icon-btn gz-anim-seat"
+          style={seat(10)}
           onClick={act((s) => s.setTheme(dark ? 'light' : 'dark'))}
           aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
         >
           {dark ? <SunGlyph /> : <MoonGlyph />}
         </button>
-        <AccountMenu compact />
+        {/* A seat for the account control, which is drawn by a component
+            shared with the home page and so cannot carry the order itself. */}
+        <div className="gz-wb-account-slot gz-anim-seat" style={seat(11)}>
+          <AccountMenu compact />
+        </div>
       </div>
     </header>
   )

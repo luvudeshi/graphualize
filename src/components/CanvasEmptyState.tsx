@@ -1,24 +1,24 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useEditor } from '../state/store'
 import { runGraphCommand } from '../state/actions'
 import { modKey } from '../utils/platform'
 import '../styles/canvas.css'
 
 /**
- * The quick commands, each set as a mathematician would write it, and each
- * underlined in one of Byrne's three inks, as on the home page. The button is
- * named by the command itself, so what is read out is what the canvas runs.
+ * The quick commands, each a key lettered the way a mathematician would
+ * write it. The button is named by the command itself, so what is read out
+ * is what the canvas runs.
  */
-const QUICK: { command: string; ink: 'red' | 'blue' | 'yellow'; label: ReactNode }[] = [
-  { command: 'K5', ink: 'red', label: <><i>K</i><sub>5</sub></> },
-  { command: 'C8', ink: 'blue', label: <><i>C</i><sub>8</sub></> },
-  { command: 'Petersen', ink: 'yellow', label: 'Petersen' },
-  { command: 'K3,3', ink: 'red', label: <><i>K</i><sub>3,3</sub></> },
-  { command: 'Q3', ink: 'blue', label: <><i>Q</i><sub>3</sub></> },
-  { command: 'G(12,0.25)', ink: 'yellow', label: <><i>G</i>(12, 0.25)</> },
+const QUICK: { command: string; label: ReactNode }[] = [
+  { command: 'K5', label: <><i>K</i><sub>5</sub></> },
+  { command: 'C8', label: <><i>C</i><sub>8</sub></> },
+  { command: 'Petersen', label: 'Petersen' },
+  { command: 'K3,3', label: <><i>K</i><sub>3,3</sub></> },
+  { command: 'Q3', label: <><i>Q</i><sub>3</sub></> },
+  { command: 'G(12,0.25)', label: <><i>G</i>(12, 0.25)</> },
 ]
 
-/** Euclid's first postulate, drawn: three points joined in the three inks. */
+/** The smallest figure worth drawing: three points joined in the three inks. */
 const Figure = () => (
   <svg className="gz-wb-empty-figure" viewBox="0 0 72 60" aria-hidden="true">
     <line x1="10" y1="50" x2="36" y2="8" data-ink="red" />
@@ -39,9 +39,6 @@ export const CanvasEmptyState = () => {
       {/* Clicks pass through to the canvas ("click anywhere"); only the controls take them. */}
       <div className="gz-anim-in gz-wb-empty pointer-events-none">
         <Figure />
-        <p className="gz-marker gz-wb-empty-marker" aria-hidden="true">
-          Post. I.
-        </p>
         <p className="gz-wb-empty-prompt">
           {tool === 'vertex' ? (
             <>Click anywhere to place a vertex.</>
@@ -57,14 +54,13 @@ export const CanvasEmptyState = () => {
         </p>
         <div className="gz-wb-quick">
           <p className="gz-wb-quick-intro">or generate one</p>
-          {QUICK.map(({ command, ink, label }) => (
+          {QUICK.map(({ command, label }) => (
             <button
               key={command}
               type="button"
               aria-label={command}
               onClick={() => runGraphCommand(command)}
               className="gz-wb-cmd"
-              style={{ '--gz-cmd': `var(--gz-${ink})` } as CSSProperties}
             >
               {label}
             </button>

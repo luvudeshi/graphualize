@@ -5,7 +5,7 @@ const Chip = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
-    className="gz-wb-chip"
+    className="gz-chip gz-wb-chip"
   >
     {label}
   </button>
@@ -15,7 +15,7 @@ const Action = ({ label, onClick, danger }: { label: string; onClick: () => void
   <button
     type="button"
     onClick={onClick}
-    className="gz-wb-btn"
+    className="gz-btn gz-wb-btn"
     data-danger={danger || undefined}
   >
     {label}
@@ -47,10 +47,10 @@ export const SelectionPanel = () => {
     return (
       <div className="gz-wb-sel">
         <label className="gz-wb-field">
-          <span className="gz-wb-field-label">Label</span>
+          <span className="gz-label gz-wb-field-label">Label</span>
           <input
             key={`${vertexId}:${graph.label(vertexId)}`}
-            className="gz-wb-input"
+            className="gz-input gz-wb-input"
             defaultValue={graph.label(vertexId)}
             onBlur={(event) => renameVertex(vertexId, event.target.value)}
             onKeyDown={(event) => {
@@ -62,19 +62,16 @@ export const SelectionPanel = () => {
         <dl className="gz-wb-stats">
           <div className="gz-wb-stat">
             <dt>Degree</dt>
-            <span className="gz-wb-leader" aria-hidden="true" />
             <dd className="gz-wb-num">{graph.degree(vertexId)}</dd>
           </div>
           {directed && (
             <>
               <div className="gz-wb-stat">
                 <dt>Indegree</dt>
-                <span className="gz-wb-leader" aria-hidden="true" />
                 <dd className="gz-wb-num">{graph.inDegree(vertexId)}</dd>
               </div>
               <div className="gz-wb-stat">
                 <dt>Outdegree</dt>
-                <span className="gz-wb-leader" aria-hidden="true" />
                 <dd className="gz-wb-num">{graph.outDegree(vertexId)}</dd>
               </div>
             </>
@@ -82,7 +79,7 @@ export const SelectionPanel = () => {
         </dl>
 
         <div>
-          <span className="gz-wb-field-label">Neighbours</span>
+          <span className="gz-label gz-wb-field-label">Neighbours</span>
           <div className="gz-wb-chips">
             {neighbours.length === 0 && <span className="gz-wb-none">none</span>}
             {neighbours.map((id) => (
@@ -116,10 +113,10 @@ export const SelectionPanel = () => {
         </p>
         {weighted && (
           <label className="gz-wb-field">
-            <span className="gz-wb-field-label">Weight</span>
+            <span className="gz-label gz-wb-field-label">Weight</span>
             <input
               key={`${edgeId}:${edge.weight ?? 1}`}
-              className="gz-wb-input"
+              className="gz-input gz-wb-input"
               inputMode="decimal"
               defaultValue={String(edge.weight ?? 1)}
               onBlur={(event) => {

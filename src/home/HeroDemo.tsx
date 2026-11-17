@@ -281,11 +281,11 @@ export const HeroDemo = () => {
       ...byrneCanvasOverrides(dark),
     ]
     cyRef.current?.style(sheet)
-    // The canvas letters its vertices in the page's italic, which may still be
+    // The canvas letters its vertices in the page's face, which may still be
     // on its way; once it has arrived the canvas is drawn again with it.
     let live = true
     void document.fonts
-      ?.load('italic 500 22px "EB Garamond"')
+      ?.load('600 17px "Outfit"')
       .then(() => {
         if (!live) return
         cyRef.current?.style(sheet)
@@ -367,7 +367,8 @@ export const HeroDemo = () => {
       }}
     >
       <div className="gz-demo-head">
-        <span className="gz-demo-plate">Plate I.</span>
+        {/* Lit while the tour is running by itself. */}
+        <span className="gz-led" data-on={touring} aria-hidden="true" />
         {/* The title and the counts are one flex item, so the first middot is
             set off by a word space like the second, not by the head's gap. */}
         <span>
@@ -392,7 +393,7 @@ export const HeroDemo = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_23rem]">
+      <div className="gz-demo-body grid grid-cols-[minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_23rem]">
         <div className="gz-demo-canvas relative">
           <div ref={containerRef} className="h-full w-full" aria-hidden />
           <DemoNotes

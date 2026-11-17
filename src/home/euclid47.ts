@@ -1,7 +1,8 @@
 /**
- * The title page's figure: Euclid I.47, Byrne's most famous plate, drawn as a
- * plane graph. A 3-4-5 right triangle with a square on each side has nine
- * vertices and twelve edges; with the paper round it, five faces. Its caption
+ * The quick-start display's idle figure: Euclid I.47, the plate Oliver
+ * Byrne's coloured Euclid is best known for, drawn as a plane graph. A 3-4-5
+ * right triangle with a square on each side has nine vertices and twelve
+ * edges; with the plane round it, five faces. The display's reading
  * states Euler's formula for exactly this graph, and the unit tests check the
  * count, so the caption can never be wrong about the figure above it.
  */

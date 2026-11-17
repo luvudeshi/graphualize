@@ -1,13 +1,18 @@
 /*
- * The workbench's tools: the left rail, the status line at the foot of the
- * page and the toasts. They are set like the home page's furniture, as
- * pieces of the same Byrne book: square, ruled in ink and hairline, in
- * EB Garamond, with the three primaries kept for meaning (cobalt for what
- * is chosen, vermilion for what is wrong or is a witness, chrome yellow for
- * a caution) and Byrne's triangle, bar and disc standing in for words.
+ * The workbench's tools: the rail of keys on the left, the status strip
+ * along the bottom and the toasts. Each is one of the materials in
+ * index.css:
  *
- * Everything is built from the --gz-* tokens, so the night edition is the
- * same rules on the indigo board.
+ *   the rail    a raised plate on the chassis carrying square keycaps. The
+ *               tool in hand stays down, its icon in the signal colour and
+ *               its lamp lit; grooves milled into the plate part the groups.
+ *   the strip   a face of the chassis, read like a display: mono throughout,
+ *               the tool in hand in a small well, the save state by a lamp.
+ *   glass       the keys' tooltips and the toasts float over the instrument.
+ *
+ * The rules sit in the `components` layer, so a Tailwind utility on the same
+ * element still wins. Every colour is a token, so the dark chassis needs no
+ * rules of its own.
  */
 
 @layer components {
@@ -15,6 +20,12 @@
   /* The tool rail                                                     */
   /* ---------------------------------------------------------------- */
 
+  /* A module of its own: the shell gives it its place and the gutter round
+     it; this is the plate. Whenever it is shorter than its nine keys (a
+     short window, the stacked layout, a phone), it scrolls inside itself
+     rather than running on over what is below. The tooltips are pinned to
+     the viewport, so the clip never cuts them — which also means the plate
+     must never take a transform, a filter or a backdrop-filter. */
   .gz-wb-rail {
     position: relative;
     z-index: 30;
@@ -23,25 +34,27 @@
     flex-shrink: 0;
     flex-direction: column;
     align-items: center;
-    gap: 0.3125rem;
+    gap: 0.375rem;
     min-height: 0;
-    padding: 0.625rem 0.375rem;
+    padding: 0.5rem;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: none;
-    border-right: 1px solid var(--gz-border);
-    background-color: var(--gz-bg);
+    border-radius: var(--gz-r-panel);
+    background-color: var(--gz-face);
     background-image: var(--gz-grain);
-    /* Whenever the plate beside it is shorter than its nine squares (a short
-       window, the stacked layout, a phone), the rail scrolls inside its own
-       column rather than running on over the properties below it. The tags
-       are pinned to the viewport, so the clip never cuts them. A rule of ink
-       at the foot (and at the head, once scrolled) says there is more; where
-       scroll timelines are not supported, or nothing overflows, no rule is
-       drawn. */
+    box-shadow: var(--gz-raise-2);
   }
 
+  .gz-wb-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* A soft shade inside the lip the keys run under says there is more: at
+     the foot, and at the head once scrolled. It follows the scroll position
+     rather than the clock; where scroll timelines are not supported, or
+     nothing overflows, the plate is simply the plate. */
   @supports (animation-timeline: scroll()) {
     .gz-wb-rail {
       animation: gz-wb-rail-more linear both;
@@ -49,33 +62,25 @@
     }
   }
 
-  .gz-wb-rail::-webkit-scrollbar {
-    display: none;
-  }
-
   @keyframes gz-wb-rail-more {
-    /* Byrne's double rule: ink, a sliver of paper, ink. */
     from {
       box-shadow:
-        inset 0 -1px 0 var(--gz-text),
-        inset 0 -3px 0 var(--gz-bg),
-        inset 0 -4px 0 var(--gz-text);
+        var(--gz-raise-2),
+        inset 0 12px 10px -8px rgb(var(--gz-shade-rgb) / 0),
+        inset 0 -12px 10px -8px rgb(var(--gz-shade-rgb) / 0.3);
     }
     2%,
     98% {
       box-shadow:
-        inset 0 1px 0 var(--gz-text),
-        inset 0 3px 0 var(--gz-bg),
-        inset 0 4px 0 var(--gz-text),
-        inset 0 -1px 0 var(--gz-text),
-        inset 0 -3px 0 var(--gz-bg),
-        inset 0 -4px 0 var(--gz-text);
+        var(--gz-raise-2),
+        inset 0 12px 10px -8px rgb(var(--gz-shade-rgb) / 0.3),
+        inset 0 -12px 10px -8px rgb(var(--gz-shade-rgb) / 0.3);
     }
     to {
       box-shadow:
-        inset 0 1px 0 var(--gz-text),
-        inset 0 3px 0 var(--gz-bg),
-        inset 0 4px 0 var(--gz-text);
+        var(--gz-raise-2),
+        inset 0 12px 10px -8px rgb(var(--gz-shade-rgb) / 0.3),
+        inset 0 -12px 10px -8px rgb(var(--gz-shade-rgb) / 0);
     }
   }
 
@@ -85,129 +90,178 @@
     display: contents;
   }
 
-  /* A square of ink: the tools are drawn in the text colour, not a grey, so
-     the rail reads as type on the page rather than as faded chrome. */
+  /* A key's seat. The button is the hit target and holds still; the cap
+     inside it is what lifts and travels. The button itself must never be
+     transformed, or its tooltip — pinned to the viewport — would be placed
+     against the button instead and clipped by the rail. */
   .gz-wb-tool {
     position: relative;
     display: flex;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2rem;
+    height: 2rem;
     flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    border-radius: 0;
-    color: var(--gz-text);
-    transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease;
-  }
-
-  /* Engraved, not rounded: square ends and mitred corners on every stroke. */
-  .gz-wb-tool svg {
-    width: 1.0625rem;
-    height: 1.0625rem;
-    stroke-width: 1.55;
-    stroke-linecap: square;
-    stroke-linejoin: miter;
-  }
-
-  .gz-wb-tool:hover:not(:disabled) {
-    border-color: var(--gz-border);
-    background: var(--gz-paper-deep);
-  }
-
-  /* The tool in hand is a solid block of ink with the icon reversed out in
-     paper, the way Byrne inks a figure's chosen part. */
-  .gz-wb-tool[aria-pressed='true'],
-  .gz-wb-tool[aria-pressed='true']:hover:not(:disabled) {
-    border-color: var(--gz-text);
-    background: var(--gz-text);
-    color: var(--gz-bg);
-  }
-
-  .gz-wb-tool:disabled {
-    cursor: default;
-    color: var(--gz-faint);
-    opacity: 0.55;
+    border-radius: var(--gz-r-key);
+    color: var(--gz-ink);
   }
 
   .gz-wb-tool:focus-visible {
-    border-radius: 0;
     outline: 2px solid var(--gz-accent);
     outline-offset: 2px;
   }
 
-  /* A hairline between the groups, set off by a small gap like a rule
-     between paragraphs. */
-  .gz-wb-rail-rule {
-    width: 1.5rem;
-    height: 1px;
-    flex-shrink: 0;
-    margin: 0.4375rem 0;
-    background: var(--gz-border);
+  .gz-wb-tool:disabled {
+    cursor: default;
   }
 
-  /* The tooltip: a small paper tag pinned to the right of the button, ruled
-     in ink, with the tool's name, what it does in italic and its key in
-     small caps. It is decoration for sighted pointer and keyboard users;
-     the button's own name and description carry the same words. */
+  /* The keycap: 1px proud of the plate, lit along its top edge. */
+  .gz-wb-tool-cap {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: inherit;
+    background-color: var(--gz-key-bottom);
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow: var(--gz-raise-1);
+    transition:
+      transform 180ms var(--gz-spring),
+      box-shadow 180ms var(--gz-snap),
+      color 160ms var(--gz-snap);
+  }
+
+  .gz-wb-tool-cap svg {
+    width: 1.0625rem;
+    height: 1.0625rem;
+    stroke-width: 1.6;
+    transition: opacity 160ms var(--gz-snap);
+  }
+
+  /* Under the pointer the cap lifts a hair. */
+  @media (hover: hover) {
+    .gz-wb-tool:hover:not(:disabled) .gz-wb-tool-cap {
+      transform: translateY(-1px);
+      box-shadow: var(--gz-raise-1-hover);
+    }
+  }
+
+  /* Pressed it travels down; the tool in hand stays down. These come after
+     the lift and match its weight, so a held or chosen key never rises. */
+  .gz-wb-tool:active:not(:disabled) .gz-wb-tool-cap,
+  .gz-wb-tool[aria-pressed='true']:not(:disabled) .gz-wb-tool-cap {
+    transform: translateY(1px);
+    background-image: none;
+    box-shadow: var(--gz-press);
+    transition-duration: 70ms;
+    transition-timing-function: var(--gz-travel);
+  }
+
+  .gz-wb-tool[aria-pressed='true'] .gz-wb-tool-cap {
+    color: var(--gz-signal-text);
+  }
+
+  /* A key that cannot be pressed keeps its cap; its legend goes dim. */
+  .gz-wb-tool:disabled .gz-wb-tool-cap {
+    box-shadow:
+      inset 0 1px 0 var(--gz-spec-soft),
+      0 1px 1px rgb(var(--gz-shade-rgb) / 0.1);
+    color: var(--gz-faint);
+  }
+
+  .gz-wb-tool:disabled .gz-wb-tool-cap svg {
+    opacity: 0.55;
+  }
+
+  /* The lamp in the corner of a key that latches: lit on the tool in hand. */
+  .gz-led.gz-wb-tool-led {
+    position: absolute;
+    top: 0.1875rem;
+    right: 0.1875rem;
+    width: 0.25rem;
+    height: 0.25rem;
+  }
+
+  /* Between the groups: a short groove milled into the plate, shaded along
+     its upper lip and lit along its lower one. */
+  .gz-wb-rail-rule {
+    width: 1.25rem;
+    height: 2px;
+    flex-shrink: 0;
+    margin: 0.25rem 0;
+    border-radius: 1px;
+    background: linear-gradient(
+      180deg,
+      rgb(var(--gz-shade-rgb) / 0.26) 0 50%,
+      var(--gz-spec) 50% 100%
+    );
+  }
+
+  /* The tooltip: a chip of glass floated to the right of the key, with the
+     tool's name, what it does, and its shortcut on a small key. It is
+     decoration for sighted pointer and keyboard users; the button's own
+     name and description carry the same words. */
   .gz-wb-tip {
     position: fixed;
     z-index: 40;
     top: var(--gz-tip-y, 50%);
-    left: calc(var(--gz-tip-x, 100%) + 0.625rem);
+    left: calc(var(--gz-tip-x, 100%) + 0.875rem);
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 0.5rem;
-    padding: 0.1875rem 0.5625rem 0.25rem;
-    border: 1px solid var(--gz-text);
-    background-color: var(--gz-elevated);
-    background-image: var(--gz-grain);
-    color: var(--gz-text);
-    font-size: 0.9375rem;
+    padding: 0.3125rem 0.4375rem 0.3125rem 0.5625rem;
+    border: 1px solid var(--gz-glass-edge);
+    border-radius: var(--gz-r-key);
+    background-color: var(--gz-glass);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 40%);
+    box-shadow: var(--gz-raise-3);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
+    color: var(--gz-ink);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 400;
     line-height: 1.25;
     white-space: nowrap;
     pointer-events: none;
     visibility: hidden;
     opacity: 0;
-    transform: translate(-3px, -50%);
+    transform: translate(-4px, -50%) scale(0.96);
+    transform-origin: 0 50%;
     transition:
-      opacity 120ms ease,
-      transform 120ms ease,
-      visibility 120ms;
-  }
-
-  /* The tag's little pointer, a square turned on its corner. */
-  .gz-wb-tip::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: -4px;
-    width: 7px;
-    height: 7px;
-    border-bottom: 1px solid var(--gz-text);
-    border-left: 1px solid var(--gz-text);
-    background: var(--gz-elevated);
-    transform: translateY(-50%) rotate(45deg);
+      opacity 140ms var(--gz-snap),
+      transform 240ms var(--gz-spring),
+      visibility 0s linear 140ms;
   }
 
   .gz-wb-tip-name {
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .gz-wb-tip-hint {
     color: var(--gz-muted);
-    font-style: italic;
+    font-size: 0.75rem;
   }
 
   .gz-wb-tip-key {
-    color: var(--gz-red-text);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    display: inline-flex;
+    height: 1.125rem;
+    align-items: center;
+    padding: 0 0.3125rem;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: var(--gz-r-nib);
+    background-color: var(--gz-key-bottom);
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow:
+      inset 0 1px 0 var(--gz-spec),
+      0 1px 0 rgb(var(--gz-shade-rgb) / 0.16);
+    color: var(--gz-muted);
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
   }
 
   @media (hover: hover) {
@@ -223,25 +277,22 @@
     visibility: visible;
     opacity: 1;
     transform: translate(0, -50%);
+    transition-delay: 0s;
   }
 
-  /* A phone: smaller squares set closer, and no zoom group (the plate is
-     pinched to zoom, and Fit to screen is in the View menu), so the six
-     tools that are left fit beside the short plate without being cut. */
+  /* A phone: a narrower plate with the keys set closer, and no zoom group
+     (the screen is pinched to zoom, and Fit to screen is in the View menu),
+     so the six keys that are left fit beside a short screen without being
+     cut. */
   @media (width < 40rem) {
     .gz-wb-rail {
       width: 2.75rem;
-      gap: 0.125rem;
-      padding: 0.5rem 0.3125rem;
-    }
-
-    .gz-wb-tool {
-      width: 2rem;
-      height: 2rem;
+      gap: 0.25rem;
+      padding: 0.375rem;
     }
 
     .gz-wb-rail-rule {
-      margin: 0.3125rem 0;
+      margin: 0.1875rem 0;
     }
   }
 
@@ -252,23 +303,27 @@
   }
 
   /* ---------------------------------------------------------------- */
-  /* The status line                                                   */
+  /* The status strip                                                  */
   /* ---------------------------------------------------------------- */
 
   .gz-wb-status {
     display: flex;
-    min-height: 1.875rem;
+    min-height: 1.75rem;
     flex-shrink: 0;
     align-items: center;
-    gap: 0.875rem;
-    padding: 0 0.875rem;
-    border-top: 1px solid var(--gz-border);
-    background-color: var(--gz-bg);
+    gap: 0.75rem;
+    padding: 0 0.75rem;
+    border-top: 1px solid var(--gz-edge);
+    background-color: var(--gz-face);
     background-image: var(--gz-grain);
-    color: var(--gz-text);
-    font-size: 0.875rem;
+    box-shadow: inset 0 1px 0 var(--gz-spec-soft);
+    color: var(--gz-muted);
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
     line-height: 1.2;
-    font-variant-numeric: lining-nums tabular-nums;
   }
 
   .gz-wb-status-line {
@@ -279,9 +334,9 @@
     white-space: nowrap;
   }
 
-  /* The transient message is set in roman, in the ink of its tone. */
+  /* The transient message, in the ink of its tone. */
   .gz-wb-status-msg {
-    color: var(--gz-text);
+    color: var(--gz-ink);
   }
 
   .gz-wb-status-msg[data-tone='success'] {
@@ -292,46 +347,64 @@
     color: var(--gz-danger);
   }
 
-  /* The standing hint about the tool in hand: a caption, in italic. */
+  /* The standing hint about the tool in hand. */
   .gz-wb-status-hint {
     color: var(--gz-muted);
-    font-style: italic;
   }
 
+  /* The tool in hand, read off a small well. */
   .gz-wb-status-tool {
-    margin-right: 0.25rem;
-    color: var(--gz-red-text);
-    font-size: 0.75rem;
-    font-style: normal;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    display: inline-block;
+    margin-right: 0.375rem;
+    padding: 0 0.375rem;
+    border-radius: var(--gz-r-nib);
+    background-color: var(--gz-well);
+    box-shadow: var(--gz-sink);
+    color: var(--gz-ink);
+    font-weight: 500;
+    line-height: 1.125rem;
+    text-transform: lowercase;
   }
 
-  /* What is highlighted on the canvas, with a key back to it: the witness's
-     vermilion triangle, the caption in italic, and "clear" in small caps. */
+  /* What is highlighted on the screen, with a key back to it: a nib with a
+     lit lamp, the caption, and "clear". */
   .gz-wb-witness {
     display: inline-flex;
     max-width: 24rem;
-    height: 1.375rem;
-    flex-shrink: 0;
+    height: 1.25rem;
+    min-width: 0;
+    flex-shrink: 1;
     align-items: center;
     gap: 0.4375rem;
     overflow: hidden;
-    padding: 0 0.5rem;
-    border: 1px solid var(--gz-text);
-    border-radius: 0;
-    color: var(--gz-text);
-    font-size: 0.875rem;
-    transition: background-color 120ms ease;
+    padding: 0 0.4375rem;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: var(--gz-r-nib);
+    background-color: var(--gz-key-bottom);
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow: var(--gz-raise-1);
+    color: var(--gz-ink);
+    transition:
+      transform 180ms var(--gz-spring),
+      box-shadow 180ms var(--gz-snap);
   }
 
-  .gz-wb-witness:hover {
-    background: var(--gz-paper-deep);
+  @media (hover: hover) {
+    .gz-wb-witness:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--gz-raise-1-hover);
+    }
+  }
+
+  .gz-wb-witness:active {
+    transform: translateY(1px);
+    background-image: none;
+    box-shadow: var(--gz-press);
+    transition-duration: 70ms;
+    transition-timing-function: var(--gz-travel);
   }
 
   .gz-wb-witness:focus-visible {
-    border-radius: 0;
     outline: 2px solid var(--gz-accent);
     outline-offset: 2px;
   }
@@ -341,115 +414,68 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-style: italic;
   }
 
   .gz-wb-witness-clear {
     flex-shrink: 0;
     padding-left: 0.4375rem;
-    border-left: 1px solid var(--gz-border);
-    color: var(--gz-red-text);
-    font-size: 0.6875rem;
+    border-left: 1px solid var(--gz-edge);
+    color: var(--gz-signal-text);
     font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
   }
 
-  /* Where the graph is kept, with a glyph for the state of it: a cobalt
-     disc when it is kept, a vermilion bar when it is not. */
+  /* Where the graph is kept, by a lamp: lit while there is work that is not
+     kept, dark once it is. */
   .gz-wb-saved {
     display: inline-flex;
+    max-width: 75%;
     flex-shrink: 0;
     align-items: center;
     gap: 0.4375rem;
     color: var(--gz-muted);
-    font-style: italic;
   }
 
-  /* ---------------------------------------------------------------- */
-  /* Byrne's glyphs                                                    */
-  /* ---------------------------------------------------------------- */
-
-  .gz-wb-sign {
-    display: inline-block;
-    flex-shrink: 0;
-    width: 0.6875rem;
-    height: 0.6875rem;
-    background: var(--gz-text);
-  }
-
-  .gz-wb-sign[data-glyph='triangle'] {
-    background: var(--gz-red);
-    clip-path: polygon(50% 4%, 100% 96%, 0 96%);
-  }
-
-  .gz-wb-sign[data-glyph='disc'] {
-    border-radius: 999px;
-    background: var(--gz-blue);
-    box-shadow: inset 0 0 0 1.25px var(--gz-text);
-  }
-
-  .gz-wb-sign[data-glyph='bar'] {
-    height: 0.25rem;
-    background: var(--gz-red);
-  }
-
-  .gz-wb-sign[data-glyph='bar'][data-ink='yellow'] {
-    background: var(--gz-yellow);
-    box-shadow: 0 0 0 1px var(--gz-text);
-  }
-
-  .gz-wb-sign[data-glyph='ring'] {
-    border-radius: 999px;
-    background: transparent;
-    box-shadow: inset 0 0 0 1.25px var(--gz-faint);
-  }
-
-  @media (forced-colors: active) {
-    .gz-wb-sign {
-      forced-color-adjust: none;
-    }
+  .gz-wb-saved-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ---------------------------------------------------------------- */
   /* Toasts                                                            */
   /* ---------------------------------------------------------------- */
 
-  /* A slip of the lighter paper laid over the page, framed with the plates'
-     double rule: a line of ink, a sliver of paper, and a second line. */
+  /* A card of glass over the instrument, above the status strip. */
   .gz-wb-toast {
     display: flex;
     width: 100%;
-    max-width: 25rem;
+    max-width: 24rem;
     align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.75rem 0.625rem 0.8125rem 0.9375rem;
-    border: 1px solid var(--gz-text);
-    border-radius: 0;
-    background-color: var(--gz-elevated);
-    background-image: var(--gz-grain);
-    box-shadow:
-      0 0 0 3px var(--gz-elevated),
-      0 0 0 4px var(--gz-text);
-    color: var(--gz-text);
+    gap: 0.625rem;
+    padding: 0.625rem 0.5rem 0.6875rem 0.75rem;
+    border: 1px solid var(--gz-glass-edge);
+    border-radius: var(--gz-r-panel);
+    background-color: var(--gz-glass);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 40%);
+    box-shadow: var(--gz-raise-3);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
+    color: var(--gz-ink);
+    font-family: var(--font-sans);
     pointer-events: auto;
   }
 
-  .gz-wb-toast-glyph {
+  /* The status mark, on the title's line: a tick for done, a lit lamp for
+     a caution or a failure. */
+  .gz-wb-toast-mark {
     display: flex;
-    height: 1.375rem;
+    width: 0.875rem;
+    height: 1.25rem;
     flex-shrink: 0;
     align-items: center;
-  }
-
-  .gz-wb-toast-glyph .gz-wb-sign {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-
-  .gz-wb-toast-glyph .gz-wb-sign[data-glyph='bar'] {
-    width: 0.9375rem;
-    height: 0.3125rem;
+    justify-content: center;
+    color: var(--gz-ink);
   }
 
   .gz-wb-toast-body {
@@ -459,85 +485,80 @@
 
   .gz-wb-toast-title {
     overflow: hidden;
-    font-size: 1.0625rem;
+    font-size: 0.875rem;
     font-weight: 600;
-    line-height: 1.375rem;
+    letter-spacing: -0.005em;
+    line-height: 1.25rem;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-variant-numeric: lining-nums;
+  }
+
+  /* A failure is said in the signal colour; there is no second red. */
+  .gz-wb-toast[data-tone='error'] .gz-wb-toast-title {
+    color: var(--gz-signal-text);
   }
 
   .gz-wb-toast-detail {
     margin-top: 0.125rem;
     color: var(--gz-muted);
-    font-size: 0.9375rem;
-    font-style: italic;
+    font-size: 0.8125rem;
     line-height: 1.4;
   }
 
   .gz-wb-toast-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.625rem;
+    gap: 0.4375rem;
+    margin-top: 0.5625rem;
   }
 
-  /* Outlined small caps, like the home page's "Open the workbench". */
-  .gz-wb-toast-action {
-    display: inline-flex;
-    height: 1.875rem;
-    align-items: center;
-    padding: 0 0.75rem 0.0625rem;
-    border: 1px solid var(--gz-text);
-    border-radius: 0;
-    color: var(--gz-text);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
-  }
-
-  .gz-wb-toast-action:hover {
-    background: var(--gz-text);
-    color: var(--gz-bg);
-  }
-
-  .gz-wb-toast-close {
-    display: flex;
-    width: 1.75rem;
+  /* The actions are keycaps (`.gz-btn`), a size down. */
+  .gz-btn.gz-wb-toast-action {
     height: 1.75rem;
+    padding: 0 0.625rem;
+    white-space: nowrap;
+  }
+
+  /* Dismiss: a flat square with no cap of its own (`.gz-btn-ghost`). */
+  .gz-btn.gz-wb-toast-close {
+    width: 1.625rem;
+    height: 1.625rem;
     flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    margin: -0.375rem -0.25rem 0 0;
-    border: 1px solid transparent;
-    border-radius: 0;
+    margin-top: -0.1875rem;
+    padding: 0;
     color: var(--gz-muted);
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
   }
 
-  .gz-wb-toast-close svg {
-    stroke-width: 1.6;
-    stroke-linecap: square;
-  }
-
-  .gz-wb-toast-close:hover {
-    border-color: var(--gz-border);
-    background: var(--gz-paper-deep);
-    color: var(--gz-text);
+  .gz-btn.gz-wb-toast-close:hover {
+    color: var(--gz-ink);
   }
 
   .gz-wb-toast-action:focus-visible,
   .gz-wb-toast-close:focus-visible {
-    border-radius: 0;
     outline: 2px solid var(--gz-accent);
     outline-offset: 2px;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Without glass, without motion, in forced colours                  */
+  /* ---------------------------------------------------------------- */
+
+  /* Where the browser cannot blur what is behind, or has been asked not to
+     show through, the glass is an opaque face instead. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .gz-wb-tip,
+    .gz-wb-toast {
+      background-color: var(--gz-face-hi);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .gz-wb-tip,
+    .gz-wb-toast {
+      background-color: var(--gz-face-hi);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -545,4 +566,45 @@
       transition: none;
     }
   }
+
+  /* Forced colours drop the shadows and gradients that draw a key and say
+     which one is down; an outline in the system's colours stands in. */
+  @media (forced-colors: active) {
+    .gz-wb-tool-cap,
+    .gz-wb-witness {
+      border-color: ButtonText;
+    }
+
+    .gz-wb-tool[aria-pressed='true'] .gz-wb-tool-cap {
+      outline: 2px solid Highlight;
+      outline-offset: -3px;
+    }
+
+    .gz-wb-tip,
+    .gz-wb-toast {
+      border-color: CanvasText;
+    }
+
+    .gz-wb-rail-rule {
+      background: CanvasText;
+      forced-color-adjust: none;
+    }
+  }
+}
+
+/*
+ * Outside the layer on purpose: the motion classes in index.css are
+ * unlayered, so only an unlayered rule can adjust them.
+ *
+ * `.gz-anim-seat` fills forwards, which would leave `transform: none` on a
+ * cap for good and stop it from ever lifting or travelling again. A cap is
+ * only held before it is seated, not after.
+ */
+.gz-wb-rail .gz-anim-seat {
+  animation-fill-mode: backwards;
+}
+
+/* A toast comes up from the strip below it, not down from above. */
+.gz-wb-toast.gz-anim-pop {
+  transform-origin: 50% 100%;
 }
