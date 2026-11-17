@@ -37,8 +37,8 @@ interface Command {
 const NOTATION = /\b[A-Z][a-z](?:,[a-z])?\b|\b[A-Z]\([^)]*\)/g
 
 /**
- * The label with its notation set as maths. Matched letters stay underlined
- * in the plain words; a notation with any match is underlined whole. The
+ * The label with its notation set as maths. Matched letters are marked in
+ * the plain words; a notation with any match is marked whole. The
  * notation's plain text is kept for screen readers by MathName.
  */
 const LabelText = ({
@@ -337,7 +337,7 @@ const PaletteBody = () => {
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className="gz-wb-dialog gz-wb-palette gz-anim-pop relative z-10 w-full max-w-xl overflow-hidden"
+        className="gz-wb-dialog gz-wb-palette relative z-10 w-full max-w-xl"
       >
         <input
           autoFocus
@@ -391,7 +391,7 @@ const PaletteBody = () => {
               onClick={() => runAt(0)}
               className="gz-wb-palette-row gz-wb-palette-lead"
             >
-              <SparkIcon className="shrink-0 text-[var(--gz-red-text)]" />
+              <SparkIcon className="shrink-0 text-[var(--gz-accent-text)]" />
               <span className="flex-1">
                 Generate <span className="gz-num gz-wb-palette-maths">{parsed.canonical}</span>
               </span>
@@ -408,11 +408,11 @@ const PaletteBody = () => {
               onClick={() => runAt(0)}
               className="gz-wb-palette-row gz-wb-palette-lead"
             >
-              <EdgeIcon className="shrink-0 text-[var(--gz-red-text)]" />
+              <EdgeIcon className="shrink-0 text-[var(--gz-accent-text)]" />
               <span className="min-w-0 flex-1 truncate">
                 <span className="font-medium">{edgePreview.title}</span>
                 {edgePreview.notes.length > 0 && (
-                  <span className="italic text-[var(--gz-muted)]">
+                  <span className="gz-wb-palette-note">
                     {' '}
                     · {edgePreview.notes.join(' · ')}
                   </span>

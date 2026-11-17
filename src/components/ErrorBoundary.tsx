@@ -28,10 +28,11 @@ export class ErrorBoundary extends Component<Props, State> {
   override render() {
     if (!this.state.error) return this.props.children
     return (
-      <div className="gz-wb-dlg-erratum">
-        <div className="gz-wb-dlg-erratum-frame">
-          <p className="gz-wb-dlg-marker" aria-hidden="true">
-            Erratum.
+      <div className="gz-wb-dlg-fault">
+        <div className="gz-plate gz-wb-dlg-fault-plate">
+          <p className="gz-marker gz-wb-dlg-fault-lamp" aria-hidden="true">
+            <span className="gz-led" data-on="true" />
+            fault
           </p>
           <h1>Something went wrong in this panel.</h1>
           <p className="gz-wb-dlg-caption">

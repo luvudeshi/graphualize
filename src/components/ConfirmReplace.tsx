@@ -4,6 +4,7 @@ import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
 import { performReplacement } from '../state/replace'
 import { saveWithName } from '../state/save'
+import '../styles/dialogs2.css'
 
 /**
  * Asks before New or Open throws away unsaved work.

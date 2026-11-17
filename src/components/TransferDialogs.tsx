@@ -20,6 +20,7 @@ import {
   type DrawingOptions,
 } from '../state/drawing'
 import { unicodeLabels } from '../graph/serialization/tikz'
+import '../styles/dialogs2.css'
 
 const DATA_FORMATS = Object.keys(EXPORT_LABELS) as ExportFormat[]
 
@@ -31,7 +32,10 @@ const PICTURE_LABELS: Record<PictureFormat, string> = {
   tikz: 'TikZ',
 }
 
-/** A view (`tab`) or one of a set of choices (`toggle`), pressed when chosen. */
+/**
+ * A view (`tab`) or one of a set of choices (`toggle`): a key in a tray that
+ * stays down, with its lamp on, when chosen.
+ */
 const TabButton = ({
   active,
   onClick,
@@ -53,6 +57,7 @@ const TabButton = ({
   </button>
 )
 
+/** An option, drawn as a slide switch: the checkbox itself is the track. */
 const Toggle = ({
   checked,
   onChange,
@@ -237,10 +242,12 @@ const ExportBody = () => {
           )}
           {picture === 'svg' ? (
             /* The preview is the exact string that will be downloaded; the
-               child selectors only scale it down to fit the dialog. */
+               child selectors only scale it down to fit the dialog. A
+               transparent drawing is shown over a checker, so it can be seen
+               that nothing is behind it. */
             <div
               className="gz-wb-dlg-preview"
-              style={{ background: drawing.transparent ? undefined : 'var(--gz-paper-light)' }}
+              data-transparent={drawing.transparent || undefined}
               dangerouslySetInnerHTML={{ __html: svg }}
             />
           ) : (
@@ -299,7 +306,7 @@ const ImportBody = () => {
               }}
             />
           </label>
-          <button type="button" className="gz-btn gz-btn-outline" onClick={close}>
+          <button type="button" className="gz-btn" onClick={close}>
             Cancel
           </button>
           <button type="button" className="gz-btn gz-btn-primary" onClick={submit}>

@@ -5,6 +5,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from 'react'
 
@@ -21,7 +22,7 @@ export interface MenuItem {
   danger?: boolean
   /** Renders a divider above this item. */
   separatorBefore?: boolean
-  /** Names the group this item opens, as a small-caps rule above it. */
+  /** Names the group this item opens, as a legend on the rule above it. */
   section?: string
   checked?: boolean
   onSelect: () => void
@@ -33,11 +34,17 @@ export interface MenuProps {
   /** Optional custom trigger content. */
   children?: ReactNode
   align?: 'left' | 'right'
+  /**
+   * The trigger's place in the masthead's seating order: it is seated on
+   * first paint, this many steps after the first part. Left out, it is not
+   * animated.
+   */
+  seat?: number
 }
 
 /**
- * What goes above an item: a hairline, or a section's name in small capitals
- * ruled off to the right. A separator, so it is never a stop for the arrows.
+ * What goes above an item: a separator, or a section's name as a legend with
+ * the separator running on to its right. Never a stop for the arrows.
  */
 export const MenuRule = ({ item }: { item: MenuItem }) => {
   if (item.section) {
@@ -50,14 +57,21 @@ export const MenuRule = ({ item }: { item: MenuItem }) => {
   return item.separatorBefore ? <div role="separator" className="gz-wb-sheet-rule" /> : null
 }
 
-/** A tick in cobalt for an option that is on: a ruled mark, not a glyph. */
+/** A tick in the signal colour for an option that is on. */
 const Tick = () => (
   <svg width={12} height={12} viewBox="0 0 12 12" aria-hidden="true">
-    <path d="M1.5 6.5L4.6 9.5L10.5 2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    <path
+      d="M1.5 6.5L4.6 9.5L10.5 2.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 )
 
-/** An item's tick column, label and right-aligned italic shortcut. */
+/** An item's tick column, label and right-aligned shortcut. */
 export const MenuItemBody = ({ item, tickColumn = true }: { item: MenuItem; tickColumn?: boolean }) => (
   <>
     {tickColumn && <span className="gz-wb-item-check">{item.checked ? <Tick /> : null}</span>}
@@ -66,16 +80,20 @@ export const MenuItemBody = ({ item, tickColumn = true }: { item: MenuItem; tick
   </>
 )
 
+/** How far below the masthead's edge a sheet floats, in px. */
+const SHEET_GAP = 5
+
 /** A small keyboard-navigable dropdown used by the menu bar. */
-export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
+export const Menu = ({ label, items, children, align = 'left', seat }: MenuProps) => {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const rootRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuId = useId()
-  // Where the sheet hangs, from the top of its trigger's box: on the running
-  // head's ink rule, whichever row of a wrapped head the trigger sits on.
+  // Where the sheet hangs, from the top of its trigger's box: just clear of
+  // the masthead's lower edge, whichever row of a wrapped masthead the
+  // trigger sits on.
   const [sheetTop, setSheetTop] = useState<number | null>(null)
 
   useLayoutEffect(() => {
@@ -84,7 +102,7 @@ export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
       const root = rootRef.current
       const head = root?.closest('.gz-wb-masthead')
       setSheetTop(
-        root && head ? head.getBoundingClientRect().bottom - 1 - root.getBoundingClientRect().top : null,
+        root && head ? head.getBoundingClientRect().bottom + SHEET_GAP - root.getBoundingClientRect().top : null,
       )
     }
     place()
@@ -139,7 +157,8 @@ export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        className="gz-wb-menu-trigger"
+        className={seat === undefined ? 'gz-wb-menu-trigger' : 'gz-wb-menu-trigger gz-anim-seat'}
+        style={seat === undefined ? undefined : ({ '--gz-i': seat } as CSSProperties)}
         onClick={() => (open ? close(false) : setOpen(true))}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
@@ -157,7 +176,7 @@ export const Menu = ({ label, items, children, align = 'left' }: MenuProps) => {
           ref={listRef}
           role="menu"
           aria-label={label}
-          className={`gz-wb-sheet gz-anim-in absolute top-full z-40 mt-[5px] min-w-60 ${
+          className={`gz-wb-sheet gz-anim-pop absolute top-full z-40 mt-[5px] min-w-60 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
           style={sheetTop === null ? undefined : { top: sheetTop, marginTop: 0 }}

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { initialsFor, useAuth, type AuthProfile } from './store'
 import { GoogleIcon } from '../components/Icons'
+// The sheet and its item are drawn by the header's styles on either page.
+import '../styles/header.css'
 
 /**
  * Google's own mark on a neutral button, per Google's branding requirements for
@@ -52,7 +54,7 @@ const Avatar = ({ profile, size = 24 }: { profile: AuthProfile; size?: number })
   return (
     <span
       aria-hidden="true"
-      className="gz-wb-avatar-initials flex shrink-0 items-center justify-center rounded-full bg-[var(--gz-accent-soft)] font-semibold text-[var(--gz-accent)]"
+      className="gz-wb-avatar-initials flex shrink-0 items-center justify-center rounded-full"
       style={{ width: size, height: size, fontSize: size * 0.42 }}
     >
       {initials}
@@ -61,10 +63,11 @@ const Avatar = ({ profile, size = 24 }: { profile: AuthProfile; size?: number })
 }
 
 /*
- * `gz-wb-account-sheet`, `gz-wb-account-name` and `gz-wb-avatar-initials`
- * carry no style of their own: the workbench's header
- * (styles/header.css) restyles the sheet only inside `.gz-wb-masthead`, so the
- * home page's account menu is untouched by it.
+ * The control is a keycap (`.gz-btn`) and its sheet is glass (`.gz-glass`),
+ * both from index.css; what is on the sheet (`gz-wb-account-*`, and the
+ * `gz-wb-item` it shares with the menus) is set in styles/header.css. None of
+ * it depends on where the control is mounted, so it is drawn the same in the
+ * workbench's masthead and in the home page's header.
  */
 const SignedInMenu = ({ profile }: { profile: AuthProfile }) => {
   const signOut = useAuth((s) => s.signOut)
@@ -107,23 +110,19 @@ const SignedInMenu = ({ profile }: { profile: AuthProfile }) => {
         <div
           role="menu"
           aria-label="Account"
-          className="gz-wb-account-sheet gz-anim-pop absolute right-0 top-[calc(100%+6px)] z-40 w-64 rounded-lg border bg-[var(--gz-elevated)] p-1 shadow-[var(--gz-shadow)]"
+          className="gz-glass gz-wb-account-sheet gz-anim-pop absolute right-0 top-[calc(100%+6px)] z-40 w-64"
         >
-          <div className="flex items-center gap-2.5 px-2.5 py-2">
+          <div className="gz-wb-account-who">
             <Avatar profile={profile} size={32} />
-            <div className="min-w-0">
-              {profile.name && (
-                <p className="truncate text-[0.8125rem] font-medium">{profile.name}</p>
-              )}
-              {profile.email && (
-                <p className="truncate text-[0.75rem] text-[var(--gz-muted)]">{profile.email}</p>
-              )}
+            <div className="gz-wb-account-id">
+              {profile.name && <p className="gz-wb-account-id-name">{profile.name}</p>}
+              {profile.email && <p className="gz-wb-account-id-mail">{profile.email}</p>}
             </div>
           </div>
 
           {/* Where saves go is the one thing signing in changes, so it is said
               here plainly — along with the fact that signing out loses nothing. */}
-          <p className="border-t px-2.5 py-2 text-[0.75rem] leading-relaxed text-[var(--gz-faint)]">
+          <p className="gz-wb-account-note">
             Graphs you save go to your Google account. Signing out keeps them there, and
             saving then keeps graphs in this browser.
           </p>
@@ -135,7 +134,7 @@ const SignedInMenu = ({ profile }: { profile: AuthProfile }) => {
               setOpen(false)
               void signOut()
             }}
-            className="flex w-full items-center rounded-md px-2.5 py-[5px] text-left text-[0.8125rem] transition-colors hover:bg-[color-mix(in_oklab,var(--gz-border)_55%,transparent)] focus:bg-[color-mix(in_oklab,var(--gz-border)_55%,transparent)] focus:outline-none"
+            className="gz-wb-item"
           >
             Sign out
           </button>

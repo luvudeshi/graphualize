@@ -114,7 +114,7 @@ const SaveDialogBody = ({ asCopy, initialName }: { asCopy: boolean; initialName:
         <>
           <button
             type="button"
-            className="gz-btn border px-3 aria-disabled:opacity-50"
+            className="gz-btn aria-disabled:opacity-50"
             onClick={() => {
               if (!saving) close()
             }}
@@ -125,7 +125,7 @@ const SaveDialogBody = ({ asCopy, initialName }: { asCopy: boolean; initialName:
           <button
             type="submit"
             form="gz-save-form"
-            className="gz-btn gz-btn-primary px-3 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+            className="gz-btn gz-btn-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
             aria-disabled={!trimmed || saving || undefined}
           >
             {saving ? 'Saving…' : 'Save'}

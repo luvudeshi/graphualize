@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { openEditor } from '../app/router'
-import { generate } from '../graph/generators'
+import { generate, generatorById } from '../graph/generators'
 import { parseGraphCommand } from '../graph/generators/commands'
 import type { GraphDocument } from '../graph/model/types'
 import { Frontispiece } from './Frontispiece'
@@ -29,13 +29,27 @@ const DETENT_START = -150
 const DETENT_STEP = 50
 const detent = (position: number) => DETENT_START + position * DETENT_STEP
 
+/**
+ * A random graph has no drawing of its own, and a force layout of one is a
+ * tangle at this size, so the display sets its vertices round a circle, the
+ * way G(n, p) is usually drawn.
+ */
+const onCircle = (doc: GraphDocument): GraphDocument => ({
+  ...doc,
+  vertices: doc.vertices.map((vertex, i) => {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / doc.vertices.length
+    return { ...vertex, x: 100 * Math.cos(angle), y: 100 * Math.sin(angle) }
+  }),
+})
+
 /** What each key would open, drawn for the display. A command that fails to build shows nothing. */
 const buildPreviews = (): (GraphDocument | null)[] =>
   QUICK_START.map(({ command }) => {
     const parsed = parseGraphCommand(command)
     if (!parsed) return null
     try {
-      return generate(parsed.generatorId, parsed.params, { seed: DISPLAY_SEED })
+      const doc = generate(parsed.generatorId, parsed.params, { seed: DISPLAY_SEED })
+      return generatorById(parsed.generatorId)?.category === 'random' ? onCircle(doc) : doc
     } catch {
       return null
     }
@@ -54,7 +68,7 @@ const { vertices, edges, faces } = FRONTISPIECE_EULER
  * carry their own names, and nothing is shown there that is not said by them.
  */
 export const QuickUnit = () => {
-  const previews = useMemo(buildPreviews, [])
+  const previews = useMemo(() => buildPreviews(), [])
   /** The key under the pointer or holding focus. */
   const [resting, setResting] = useState<number | null>(null)
   /** Where the dial was last turned to; null is the idle figure. */

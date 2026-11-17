@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { MenuItemBody, MenuRule, type MenuItem } from './Menu'
+import '../styles/dialogs.css'
 
 export interface ContextMenuProps {
   x: number
@@ -66,7 +67,7 @@ export const ContextMenu = ({ x, y, items, onClose, label }: ContextMenuProps) =
       role="menu"
       aria-label={label}
       style={{ left, top, width }}
-      className="gz-wb-sheet gz-anim-pop fixed z-40"
+      className="gz-wb-sheet gz-wb-ctx gz-anim-pop fixed z-40"
     >
       {items.map((item) => (
         <div key={item.id}>

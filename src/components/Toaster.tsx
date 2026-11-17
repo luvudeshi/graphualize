@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useToast } from '../state/toast'
-import { CloseIcon } from './Icons'
+import { CheckIcon, CloseIcon } from './Icons'
 import '../styles/tools.css'
-
-/**
- * Byrne's symbols for the tone, in place of words: a cobalt disc for done, a
- * chrome-yellow bar for a caution, a vermilion triangle for a failure.
- */
-const GLYPH: Record<'success' | 'warning' | 'error', { glyph: string; ink?: string }> = {
-  success: { glyph: 'disc' },
-  warning: { glyph: 'bar', ink: 'yellow' },
-  error: { glyph: 'triangle' },
-}
 
 /** How long each tone stays up on its own. An error waits to be dismissed. */
 const LIFETIME: Record<'success' | 'warning' | 'error', number | null> = {
@@ -21,7 +11,9 @@ const LIFETIME: Record<'success' | 'warning' | 'error', number | null> = {
 }
 
 /**
- * The toast card, bottom centre above the status bar.
+ * The toast card, bottom centre above the status bar: glass, with a status
+ * mark for its tone in place of words — a tick for done, a lit lamp for a
+ * caution or a failure (whose title is also set in the signal colour).
  *
  * It is the visible answer; the status bar's live region remains the one that
  * is announced, so a screen reader does not hear every save twice. It holds
@@ -63,8 +55,6 @@ export const Toaster = () => {
     returnFocus.current = null
   }
 
-  const glyph = GLYPH[toast.tone]
-
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-4">
       <div
@@ -87,8 +77,12 @@ export const Toaster = () => {
         }}
         className="gz-anim-pop gz-wb-toast"
       >
-        <span className="gz-wb-toast-glyph" aria-hidden>
-          <span className="gz-wb-sign" data-glyph={glyph.glyph} data-ink={glyph.ink} />
+        <span className="gz-wb-toast-mark" aria-hidden>
+          {toast.tone === 'success' ? (
+            <CheckIcon width={14} height={14} strokeWidth={2.2} />
+          ) : (
+            <span className="gz-led" data-on="true" />
+          )}
         </span>
         <div className="gz-wb-toast-body">
           <p className="gz-wb-toast-title">{toast.title}</p>
@@ -99,7 +93,7 @@ export const Toaster = () => {
                 <button
                   key={action.label}
                   type="button"
-                  className="gz-wb-toast-action"
+                  className="gz-btn gz-wb-toast-action"
                   onClick={(event) => {
                     close(event.currentTarget.closest('[data-testid="toast"]'))
                     action.run()
@@ -113,7 +107,7 @@ export const Toaster = () => {
         </div>
         <button
           type="button"
-          className="gz-wb-toast-close"
+          className="gz-btn gz-btn-ghost gz-wb-toast-close"
           onClick={(event) => close(event.currentTarget.closest('[data-testid="toast"]'))}
           aria-label="Dismiss"
         >

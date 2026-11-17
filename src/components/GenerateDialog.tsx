@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useState, type CSSProperties, type ReactNode } from 'react'
 import { Dialog } from './Dialog'
 import { GENERATORS, defaultParams, estimateSize } from '../graph/generators'
 import {
@@ -29,9 +29,10 @@ const WEIGHT_MODES: { id: WeightMode; label: string; hint: string }[] = [
 ]
 
 /**
- * A generator's short name set as mathematics: Kₙ with an italic letter and a
- * subscript, G(n, p) with italic arguments, and plain names (grid, Petersen)
- * left roman. The accessible name stays the plain text, on the control.
+ * A generator's short name set as notation, in the mono: Kₙ with its index as
+ * a subscript, G(n, p) with its arguments spaced, and plain names (grid,
+ * Petersen) left as they are. The accessible name stays the plain text, on
+ * the control.
  */
 export const MathName = ({ text, className = '' }: { text: string; className?: string }) => {
   const visual = mathVisual(text)
@@ -93,6 +94,13 @@ const plainName = (name: string, shortName: string): ReactNode => {
   ))
 }
 
+/**
+ * How far along its slot a slider's value is, from 0 to 1. The stylesheet
+ * fills the slot with the signal colour up to there.
+ */
+const fraction = (value: number, min: number, max: number): number =>
+  max > min ? Math.min(1, Math.max(0, (value - min) / (max - min))) : 0
+
 /** An empty or half-typed field must not read as 0, so it becomes NaN and is refused. */
 const readWhole = (text: string): number => (text.trim() === '' ? Number.NaN : Number(text))
 
@@ -145,12 +153,12 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
       width="max-w-3xl"
       footer={
         <>
-          <button type="button" className="gz-btn border px-3" onClick={close}>
+          <button type="button" className="gz-btn" onClick={close}>
             Cancel
           </button>
           <button
             type="button"
-            className="gz-btn gz-btn-primary px-3"
+            className="gz-btn gz-btn-primary"
             aria-label={`Generate ${active.shortName}`}
             disabled={weightError !== null}
             onClick={() => {
@@ -163,7 +171,7 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
       }
     >
       <div className="gz-wb-gen grid gap-5 sm:grid-cols-[17.5rem_1fr]">
-        <nav aria-label="Generators" className="gz-wb-gen-index gz-scroll sm:max-h-[32rem] sm:pr-4">
+        <nav aria-label="Generators" className="gz-wb-gen-index gz-scroll sm:max-h-[32rem]">
           {(['classic', 'random'] as const).map((category) => (
             <div key={category} className="gz-wb-gen-group">
               <p className="gz-marker gz-wb-gen-cat">{category}</p>
@@ -210,6 +218,15 @@ export const GenerateDialog = ({ open }: { open: boolean }) => {
                   value={params[param.key] ?? param.default}
                   onChange={(event) => setParam(param.key, Number(event.target.value))}
                   className="gz-wb-range"
+                  style={
+                    {
+                      '--gz-frac': fraction(
+                        params[param.key] ?? param.default,
+                        param.min,
+                        param.max,
+                      ),
+                    } as CSSProperties
+                  }
                 />
                 {param.description && <span className="gz-wb-hint">{param.description}</span>}
               </label>

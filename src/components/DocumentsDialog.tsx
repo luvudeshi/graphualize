@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import { Dialog } from './Dialog'
 import { useEditor } from '../state/store'
 import { useUi } from '../state/ui'
@@ -13,6 +13,12 @@ const formatDate = (ms: number) =>
     hour: '2-digit',
     minute: '2-digit',
   })
+
+/**
+ * A row's place in the queue as the list is seated on opening. The stagger
+ * stops growing after the first few rows, so a long list is never late.
+ */
+const seat = (index: number) => ({ '--gz-i': Math.min(index, 8) }) as CSSProperties
 
 export const DocumentsDialog = ({ open }: { open: boolean }) => {
   const close = useUi((s) => s.closeDialog)
@@ -107,11 +113,11 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
     >
       {lastDeleted && (
         <div role="status" className="gz-wb-dlg-notice gz-wb-dlg-undo">
-          <span className="min-w-0 truncate italic">Deleted “{lastDeleted.name}”.</span>
+          <span className="min-w-0 truncate">Deleted “{lastDeleted.name}”.</span>
           <button
             ref={undoRef}
             type="button"
-            className="gz-wb-dlg-red-link"
+            className="gz-btn gz-wb-dlg-rowkey"
             onClick={() => void undo()}
             disabled={busy}
           >
@@ -127,12 +133,17 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
         </p>
       ) : (
         <ul ref={listRef} className="gz-wb-dlg-ledger">
-          {documents.map((entry) =>
+          {documents.map((entry, index) =>
             confirming === entry.id ? (
               // Asking in place keeps the list in view, so it is plain which
               // graph is about to go. Cancel sits where Delete was, so a
               // double-click on Delete lands on Cancel, not on the deletion.
-              <li key={entry.id} data-row-id={entry.id} className="flex-wrap">
+              <li
+                key={entry.id}
+                data-row-id={entry.id}
+                className="gz-anim-seat flex-wrap"
+                style={seat(index)}
+              >
                 <span id={promptId} className="gz-wb-dlg-ledger-ask">
                   Delete “{entry.name}” from {where}?
                 </span>
@@ -152,7 +163,7 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
                 </button>
                 <button
                   type="button"
-                  className="gz-btn gz-btn-outline"
+                  className="gz-btn"
                   onClick={() => setConfirming(null)}
                   aria-describedby={promptId}
                   autoFocus
@@ -161,7 +172,12 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
                 </button>
               </li>
             ) : (
-              <li key={entry.id} data-row-id={entry.id}>
+              <li
+                key={entry.id}
+                data-row-id={entry.id}
+                className="gz-anim-seat"
+                style={seat(index)}
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -186,7 +202,7 @@ export const DocumentsDialog = ({ open }: { open: boolean }) => {
                 </button>
                 <button
                   type="button"
-                  className="gz-wb-dlg-red-link"
+                  className="gz-btn gz-wb-dlg-rowkey"
                   onClick={() => setConfirming(entry.id)}
                   disabled={busy}
                   aria-label={`Delete ${entry.name}`}

@@ -91,51 +91,53 @@ export const MatrixSection = () => {
           instead.
         </p>
       ) : (
-        <div className="gz-scroll gz-wb-matrix-scroll">
-          <table className="gz-wb-matrix">
-            <thead>
-              <tr>
-                <th />
-                {active.colLabels.map((label, i) => (
-                  <th key={`${label}-${i}`} scope="col">
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {active.values.map((rowValues, r) => (
-                <tr key={active.rowLabels[r] ?? r}>
-                  <th
-                    scope="row"
-                    onClick={() => {
-                      const id = graph.vertexIds[r]
-                      if (id) select([id], [])
-                    }}
-                    title="Select this vertex"
-                  >
-                    {active.rowLabels[r]}
-                  </th>
-                  {rowValues.map((value, c) => (
-                    <td key={c} data-zero={value === 0 || undefined}>
-                      {formatCell(value)}
-                    </td>
+        <div className="gz-wb-matrix-well">
+          <div className="gz-scroll gz-wb-matrix-scroll">
+            <table className="gz-wb-matrix">
+              <thead>
+                <tr>
+                  <th />
+                  {active.colLabels.map((label, i) => (
+                    <th key={`${label}-${i}`} scope="col">
+                      {label}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {active.values.map((rowValues, r) => (
+                  <tr key={active.rowLabels[r] ?? r}>
+                    <th
+                      scope="row"
+                      onClick={() => {
+                        const id = graph.vertexIds[r]
+                        if (id) select([id], [])
+                      }}
+                      title="Select this vertex"
+                    >
+                      {active.rowLabels[r]}
+                    </th>
+                    {rowValues.map((value, c) => (
+                      <td key={c} data-zero={value === 0 || undefined}>
+                        {formatCell(value)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       <div className="gz-wb-copy">
-        <span className="gz-wb-copy-label">Copy as</span>
+        <span className="gz-label gz-wb-copy-label">Copy as</span>
         {(['text', 'csv', 'latex'] as const).map((kind) => (
           <button
             key={kind}
             type="button"
             onClick={() => void copy(kind)}
-            className="gz-wb-btn"
+            className="gz-btn gz-btn-outline gz-wb-btn gz-wb-btn-sm"
           >
             <CopyIcon width={12} height={12} aria-hidden="true" />
             {kind === 'latex' ? 'LaTeX' : kind.toUpperCase()}

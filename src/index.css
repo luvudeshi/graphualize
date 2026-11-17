@@ -868,22 +868,24 @@
 }
 
 .gz-anim-in {
-  animation: gz-fade-up 320ms var(--gz-spring-big) both;
+  animation: gz-fade-up 320ms var(--gz-spring-big) backwards;
 }
 
 .gz-anim-pop {
-  animation: gz-pop 300ms var(--gz-spring-big) both;
+  animation: gz-pop 300ms var(--gz-spring-big) backwards;
   transform-origin: 50% 0;
 }
 
-/* Staggered seating: set --gz-i (0, 1, 2 …) on each part. */
+/* Staggered seating: set --gz-i (0, 1, 2 …) on each part. These fill
+   backwards only, so once a part has arrived the animation lets go of its
+   transform and a key is free to lift and travel again. */
 .gz-anim-seat {
-  animation: gz-seat 620ms var(--gz-spring-big) both;
+  animation: gz-seat 620ms var(--gz-spring-big) backwards;
   animation-delay: calc(var(--gz-i, 0) * 55ms);
 }
 
 .gz-anim-veil {
-  animation: gz-veil 220ms var(--gz-snap) both;
+  animation: gz-veil 220ms var(--gz-snap) backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {

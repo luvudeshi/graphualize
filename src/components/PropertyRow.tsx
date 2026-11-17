@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useEditor } from '../state/store'
 import type { InspectorRow } from '../graph/analysis'
 import type { Exactness } from '../graph/model/types'
@@ -35,7 +36,11 @@ const withArrows = (text: string) =>
         ],
   )
 
-export const PropertyRow = ({ row }: { row: InspectorRow }) => {
+/**
+ * `seat` is the row's place in its section (0, 1, 2 …): given one, the row
+ * seats into the list that many beats after the first when it first mounts.
+ */
+export const PropertyRow = ({ row, seat }: { row: InspectorRow; seat?: number }) => {
   const activeWitness = useEditor((s) => s.activeWitness)
   const setWitness = useEditor((s) => s.setWitness)
   const active = activeWitness?.rowId === row.id
@@ -45,17 +50,31 @@ export const PropertyRow = ({ row }: { row: InspectorRow }) => {
 
   // A long value (a chromatic polynomial, a list of labels) reads far better on
   // its own line than squeezed into the right-hand column.
-  const stacked = row.value.length > 22
+  const stacked = row.value.length > 18
+
+  // Yes and No are set apart by weight of ink, whatever the row's status.
+  const answer = row.value === 'Yes' ? 'yes' : row.value === 'No' ? 'no' : undefined
+
+  const rowClass = seat === undefined ? 'gz-wb-row' : 'gz-wb-row gz-anim-seat'
+  const rowStyle = seat === undefined ? undefined : ({ '--gz-i': seat } as CSSProperties)
 
   const content = (
     <>
       <div className="gz-wb-line" data-stacked={stacked || undefined}>
-        <span className="gz-wb-mark" data-witness={clickable || undefined} aria-hidden="true" />
+        {/* The lamp of a row that can be shown on the screen: lit while it is. */}
+        <span
+          className={clickable ? 'gz-led gz-wb-mark' : 'gz-wb-mark'}
+          data-on={clickable ? active : undefined}
+          aria-hidden="true"
+        />
         <span className="gz-wb-row-name">{row.label}</span>
-        {!stacked && <span className="gz-wb-leader" aria-hidden="true" />}
         <span className="gz-wb-value-wrap">
           {chip && <span className="gz-wb-caveat">{chip}</span>}
-          <span className="gz-wb-value gz-wb-num" data-status={row.status || undefined}>
+          <span
+            className="gz-wb-value gz-wb-num"
+            data-status={row.status || undefined}
+            data-answer={answer}
+          >
             {row.value}
           </span>
         </span>
@@ -71,7 +90,7 @@ export const PropertyRow = ({ row }: { row: InspectorRow }) => {
 
   if (!clickable) {
     return (
-      <div className="gz-wb-row" title={row.explanation}>
+      <div className={rowClass} style={rowStyle} title={row.explanation}>
         {content}
       </div>
     )
@@ -83,7 +102,8 @@ export const PropertyRow = ({ row }: { row: InspectorRow }) => {
       onClick={() => setWitness(row.id, row.witness)}
       aria-pressed={active}
       title="Click to highlight this on the graph"
-      className="gz-wb-row"
+      className={rowClass}
+      style={rowStyle}
     >
       <span className="sr-only">
         {active ? 'Hide the visual explanation' : 'Show the visual explanation'}

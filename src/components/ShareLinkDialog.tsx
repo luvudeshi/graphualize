@@ -5,6 +5,7 @@ import { useUi } from '../state/ui'
 import { copyToClipboard } from '../state/actions'
 import { copiedMessage } from '../state/share'
 import { formatShortcut } from '../utils/platform'
+import '../styles/dialogs2.css'
 
 /**
  * The fallback for File → Copy share link when the clipboard said no: the
@@ -54,7 +55,7 @@ const ShareLinkBody = ({ url }: { url: string }) => {
           <button type="button" className="gz-btn" onClick={close}>
             Close
           </button>
-          <button type="button" className="gz-btn gz-btn-outline" onClick={() => void copy()}>
+          <button type="button" className="gz-btn gz-btn-primary" onClick={() => void copy()}>
             Copy
           </button>
         </>
@@ -71,7 +72,8 @@ const ShareLinkBody = ({ url }: { url: string }) => {
       />
       <p
         role={refused ? 'alert' : undefined}
-        className={`gz-wb-dlg-caption mt-2 ${refused ? 'text-[var(--gz-danger)]' : ''}`}
+        className="gz-wb-dlg-caption mt-2"
+        data-tone={refused ? 'danger' : undefined}
       >
         {refused
           ? `Copying is blocked here. Select the link and press ${formatShortcut('mod+C')}.`

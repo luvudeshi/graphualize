@@ -266,6 +266,7 @@
 
   .gz-home-hero {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2rem;
     padding-top: 2rem;
   }
@@ -1885,7 +1886,7 @@
 
   /* The hero's parts are seated one after another when the page loads. */
   .gz-home-rise {
-    animation: gz-seat 720ms var(--gz-spring-big) both;
+    animation: gz-seat 720ms var(--gz-spring-big) backwards;
     animation-delay: var(--gz-delay, 0ms);
   }
 }

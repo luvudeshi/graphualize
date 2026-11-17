@@ -1,6 +1,7 @@
 import { Dialog } from './Dialog'
 import { useUi } from '../state/ui'
 import { formatShortcut } from '../utils/platform'
+import '../styles/dialogs2.css'
 
 const GROUPS: { title: string; items: [string, string][] }[] = [
   {
@@ -56,7 +57,8 @@ const GROUPS: { title: string; items: [string, string][] }[] = [
 
 /**
  * A key, or alternatives split on " / ", each set as a keycap; a mouse
- * gesture ("Double-click a vertex") is said in italic, as it is not a key.
+ * gesture ("Double-click a vertex") is said in plain words, as it is not a
+ * key.
  */
 const Keys = ({ spec }: { spec: string }) => {
   if (/click|keys/i.test(spec)) return <span className="gz-wb-dlg-gesture">{spec}</span>

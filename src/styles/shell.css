@@ -30,6 +30,14 @@
     gap: 0.5rem;
   }
 
+  /* The rail is as tall as its keys, not the whole body: a short strip of
+     controls mounted at the screen's top corner. It still scrolls inside
+     itself when the body is shorter than it. */
+  .gz-wb-body > .gz-wb-rail {
+    align-self: flex-start;
+    max-height: 100%;
+  }
+
   /* The screen: a window cut into the chassis. Its shading is laid over the
      canvas rather than under it, so the figure passes beneath the lip. */
   .gz-wb-screen {
