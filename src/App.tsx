@@ -28,6 +28,7 @@ import { openSharedGraph } from './state/share'
 import { ChevronIcon } from './components/Icons'
 import { useAuth } from './auth/store'
 import { ConfirmLeave } from './components/ConfirmLeave'
+import './styles/shell.css'
 
 const useIsWide = () => {
   const [wide, setWide] = useState(
@@ -136,14 +137,16 @@ const Editor = ({ arrival }: { arrival: Route }) => {
     <div className="gz-wb-shell flex h-full flex-col overflow-hidden">
       <MenuBar />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="gz-wb-body flex min-h-0 flex-1">
         <Toolbar />
 
-        <main className="flex min-w-0 flex-1 flex-col">
-          {/* Clipped, so nothing drawn on the plate — the empty state on a
-              short phone canvas, say — can run out over the head or the
-              properties below it. */}
-          <div className="relative min-h-0 flex-1 overflow-hidden">
+        <main className="gz-wb-main flex min-w-0 flex-1 flex-col">
+          {/* The screen. Clipped, so nothing drawn on it — the empty state on
+              a short phone canvas, say — can run out over the head or the
+              properties below it. It fades in rather than moving: Cytoscape
+              measures its container once, and a transform would throw the
+              pointer off until the next resize. */}
+          <div className="gz-wb-screen gz-anim-veil relative min-h-0 flex-1 overflow-hidden">
             <ErrorBoundary>
               <GraphCanvas />
             </ErrorBoundary>
@@ -162,7 +165,7 @@ const Editor = ({ arrival }: { arrival: Route }) => {
         </main>
 
         {wide && inspectorOpen && (
-          <div className="w-[22rem] shrink-0 xl:w-[24rem]">
+          <div className="gz-wb-slot gz-anim-seat w-[22rem] shrink-0 xl:w-[24rem]">
             <ErrorBoundary>
               <Inspector />
             </ErrorBoundary>
@@ -184,7 +187,7 @@ const Editor = ({ arrival }: { arrival: Route }) => {
           an algorithm plays, so the run's own canvas is not squeezed to a
           strip by the player above and the properties below. */}
       {!wide && inspectorOpen && (
-        <div className={`${playing ? 'h-[34dvh]' : 'h-[55vh]'} shrink-0 border-t`}>
+        <div className={`gz-wb-slot gz-wb-slot-below ${playing ? 'h-[34dvh]' : 'h-[55vh]'} shrink-0`}>
           <ErrorBoundary>
             <Inspector />
           </ErrorBoundary>

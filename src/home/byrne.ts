@@ -3,11 +3,13 @@ import { canvasTheme, type CanvasTheme } from '../canvas/theme'
 import type { GraphWitness } from '../graph/model/types'
 
 /**
- * The home page is set like Oliver Byrne's 1847 Euclid: warm paper, black ink
- * and three flat primaries, and nothing else. These are the colours the
- * canvas and the SVG figures need as values; home.css holds the same ones as
- * `--gz-home-*` properties for everything drawn with CSS. Keep the two in step
- * (a test reads home.css and checks that they are).
+ * The figures on the home page are drawn in ink and three figure inks, an
+ * idea kept from Oliver Byrne's 1847 Euclid, where a coloured shape stands in
+ * for a word. Here the three are one family: `red` is the instrument's orange
+ * signal, `yellow` its pale warm tint and `blue` a cold slate. These are the
+ * colours the canvas and the SVG figures need as values; home.css holds the
+ * same ones as `--gz-home-*` properties for everything drawn with CSS. Keep
+ * the two in step (a test reads home.css and checks that they are).
  */
 export type Ink = 'red' | 'blue' | 'yellow' | 'ink'
 
@@ -24,28 +26,27 @@ export interface ByrnePalette {
 }
 
 const DAY: ByrnePalette = {
-  paper: '#f3ead3',
-  ink: '#1d1a14',
-  red: '#c9381d',
-  blue: '#24519f',
-  yellow: '#e6a915',
-  dim: '#857b6a',
-  dimText: '#5f5544',
+  paper: '#e8e5de',
+  ink: '#2a2927',
+  red: '#cf440d',
+  blue: '#46505a',
+  yellow: '#f1b48d',
+  dim: '#827e76',
+  dimText: '#5f5c56',
 }
 
 /**
- * The night edition is printed, not inverted: cream ink and the same three
- * primaries on a deep indigo board, each primary lifted until it holds its
- * own against the board (red 5.4:1, blue 4.4:1, yellow 9.5:1).
+ * By night the chassis is warm slate and the inks are lifted until each
+ * holds its own against it (signal 5.0:1, slate 5.4:1, tint 9.9:1).
  */
 const NIGHT: ByrnePalette = {
-  paper: '#1a1d3d',
-  ink: '#ece2c6',
-  red: '#f2694a',
-  blue: '#4f7fee',
-  yellow: '#f3be33',
-  dim: '#7b82a4',
-  dimText: '#a3a9c6',
+  paper: '#2b2a28',
+  ink: '#ece8df',
+  red: '#ff6b2c',
+  blue: '#94a0ac',
+  yellow: '#ffc29e',
+  dim: '#7d7a74',
+  dimText: '#a09c94',
 }
 
 export const byrnePalette = (dark: boolean): ByrnePalette => (dark ? NIGHT : DAY)
@@ -134,11 +135,11 @@ export const byrneCanvasOverrides = (dark: boolean): StylesheetJson => {
         height: DEMO_POINT,
         'background-color': p.ink,
         'border-width': 0,
+        'background-fill': 'solid',
         color: p.ink,
-        'font-family': '"EB Garamond", "Iowan Old Style", Georgia, serif',
-        'font-style': 'italic',
-        'font-weight': 500,
-        'font-size': 22,
+        'font-family': '"Outfit", "Avenir Next", "Segoe UI", system-ui, sans-serif',
+        'font-weight': 600,
+        'font-size': 17,
         'text-valign': 'top',
         'text-halign': 'right',
       },
@@ -155,15 +156,15 @@ export const byrneCanvasOverrides = (dark: boolean): StylesheetJson => {
     },
     {
       selector: 'node.hovered',
-      style: { 'border-width': 0, 'background-color': p.blue },
+      style: { 'border-width': 0, 'background-color': p.red },
     },
     {
       selector: 'node[hlColor]',
       style: {
         width: DEMO_WITNESS_POINT,
         height: DEMO_WITNESS_POINT,
-        // A hairline of ink round the point, as round every face of the
-        // frontispiece: it is what lets a yellow point stand on cream.
+        // A hairline of ink round the point: it is what lets a pale point
+        // stand on a pale screen.
         'border-width': 1.5,
         'border-color': p.ink,
         'background-color': 'data(hlColor)',
@@ -175,7 +176,7 @@ export const byrneCanvasOverrides = (dark: boolean): StylesheetJson => {
     },
     {
       selector: 'edge[hlColor]',
-      style: { width: DEMO_WITNESS_STROKE, 'line-color': 'data(hlColor)', 'line-cap': 'butt' },
+      style: { width: DEMO_WITNESS_STROKE, 'line-color': 'data(hlColor)', 'line-cap': 'round' },
     },
     { selector: '.dimmed', style: { opacity: 1 } },
     { selector: 'node.dimmed', style: { 'background-color': p.dim, color: p.dimText, 'text-opacity': 1 } },

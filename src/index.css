@@ -3,74 +3,233 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * The whole app is printed in the style of Oliver Byrne's 1847 colour-plate
- * Euclid, like the home page: cream paper, black ink and three flat
- * primaries (vermilion, chrome yellow, cobalt), set in EB Garamond. The
- * night edition is the same book on a deep indigo board, with the inks
- * lifted for contrast. The Byrne inks are tokens of their own; the --gz-*
- * roles below are built from them.
+ * Graphualize is built as a bench instrument: a matte chassis with a recessed
+ * screen, keys that travel when pressed, slide switches, one orange signal
+ * lamp. Three materials, and each has one job:
+ *
+ *   chassis  the matte body everything is mounted on (bone by day, warm
+ *            slate by night), with a fine grain so it never reads as a flat
+ *            fill. Panels and bars are faces of it.
+ *   keys     anything pressable is a keycap: raised 1–2px on a specular top
+ *            edge, lifts a hair on hover, travels down on press.
+ *   wells    anything you read from or type into is sunk into the chassis:
+ *            the canvas, text fields, readouts, switch tracks.
+ *   glass    anything that floats over the instrument (menus, dialogs, the
+ *            command palette, toasts) is frosted glass, never chassis.
+ *
+ * There is one light, above and slightly in front. Every raised edge has a
+ * 1px highlight on top and a shadow below; every well is the reverse.
+ *
+ * Colour: warm greys and a single burnt orange. Orange always means "live":
+ * the primary action, the selection, the thing on show. Figures need more
+ * than one ink, so the signal has two quieter companions in the same
+ * family — hot (orange), warm (its pale tint) and cold (slate) — which the
+ * older code still calls red, yellow and blue.
+ *
+ * Type: Outfit for everything you operate, Martian Mono for everything you
+ * read off — numbers, legends, commands.
+ *
+ * Motion: springs, on transform and opacity only. Keys answer in ~120ms;
+ * panels and switches settle in ~300ms with a little overshoot.
  */
 :root {
-  --gz-paper: #f3ead3;
-  --gz-paper-deep: #ebdfc1;
-  --gz-paper-light: #f8f2e1;
-  --gz-ink: #1d1a14;
-  --gz-red: #c9381d;
-  --gz-red-text: #b3311a;
-  --gz-blue: #24519f;
-  --gz-blue-text: #24519f;
-  --gz-yellow: #e6a915;
-  --gz-yellow-line: #9c7205;
-  --gz-on-red: #f8f1de;
-  --gz-hair: color-mix(in oklab, var(--gz-ink) 22%, transparent);
-  --gz-serif: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-  --gz-grain:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .12 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Surfaces */
+  --gz-chassis: #e8e5de;
+  --gz-face: #f1efe9;
+  --gz-face-hi: #f8f7f3;
+  --gz-well: #dbd7ce;
+  --gz-screen: #f5f3ee;
+  --gz-ink: #2a2927;
+  --gz-muted: #484642;
+  --gz-faint: #7c7971;
 
-  --gz-bg: var(--gz-paper);
-  --gz-canvas: var(--gz-paper-light);
-  --gz-panel: var(--gz-paper);
-  --gz-elevated: var(--gz-paper-light);
-  --gz-border: var(--gz-hair);
-  --gz-border-strong: color-mix(in oklab, var(--gz-ink) 55%, transparent);
+  /* The signal and its companions */
+  --gz-signal: #cf440d;
+  --gz-signal-text: #a83808;
+  --gz-on-signal: #fffdf9;
+  --gz-warm: #f1b48d;
+  --gz-warm-line: #a8653a;
+  --gz-cold: #46505a;
+
+  /* The light: a highlight for edges that face it, a shade for those that
+     do not. */
+  --gz-spec: rgb(255 255 255 / 0.95);
+  --gz-spec-soft: rgb(255 255 255 / 0.55);
+  --gz-shade-rgb: 46 38 30;
+  --gz-edge: rgb(var(--gz-shade-rgb) / 0.14);
+  --gz-edge-strong: rgb(var(--gz-shade-rgb) / 0.38);
+
+  /* Keycaps */
+  --gz-key-top: #fbfaf7;
+  --gz-key-bottom: #eceae3;
+  --gz-key-edge: rgb(var(--gz-shade-rgb) / 0.2);
+
+  /* Elevation. 1 is a key, 2 a panel or card, 3 something floating. */
+  --gz-raise-1:
+    inset 0 1px 0 var(--gz-spec), inset 0 -1px 0 rgb(var(--gz-shade-rgb) / 0.07),
+    0 1px 1px rgb(var(--gz-shade-rgb) / 0.14), 0 2px 3px rgb(var(--gz-shade-rgb) / 0.08);
+  --gz-raise-1-hover:
+    inset 0 1px 0 var(--gz-spec), inset 0 -1px 0 rgb(var(--gz-shade-rgb) / 0.07),
+    0 1px 1px rgb(var(--gz-shade-rgb) / 0.14), 0 4px 8px rgb(var(--gz-shade-rgb) / 0.12);
+  --gz-raise-2:
+    inset 0 1px 0 var(--gz-spec), inset 0 0 0 1px rgb(255 255 255 / 0.35),
+    0 1px 1px rgb(var(--gz-shade-rgb) / 0.1), 0 4px 8px rgb(var(--gz-shade-rgb) / 0.07),
+    0 14px 28px -8px rgb(var(--gz-shade-rgb) / 0.16);
+  --gz-raise-3:
+    inset 0 1px 0 var(--gz-spec), inset 0 0 0 1px rgb(255 255 255 / 0.3),
+    0 2px 4px rgb(var(--gz-shade-rgb) / 0.08), 0 12px 24px rgb(var(--gz-shade-rgb) / 0.12),
+    0 32px 64px -12px rgb(var(--gz-shade-rgb) / 0.28);
+  --gz-press:
+    inset 0 1px 3px rgb(var(--gz-shade-rgb) / 0.3), inset 0 0 0 1px rgb(var(--gz-shade-rgb) / 0.06);
+  /* A well: shaded under its top lip, lit along its bottom one. */
+  --gz-sink:
+    inset 0 1px 2px rgb(var(--gz-shade-rgb) / 0.24), inset 0 0 0 1px rgb(var(--gz-shade-rgb) / 0.07),
+    0 1px 0 var(--gz-spec);
+  --gz-sink-deep:
+    inset 0 2px 5px rgb(var(--gz-shade-rgb) / 0.26), inset 0 0 0 1px rgb(var(--gz-shade-rgb) / 0.1),
+    0 1px 0 var(--gz-spec);
+  --gz-lamp: 0 0 0 1px rgb(var(--gz-shade-rgb) / 0.25), 0 0 6px 1px rgb(207 68 13 / 0.55);
+
+  /* Glass */
+  --gz-glass: rgb(246 244 239 / 0.72);
+  --gz-glass-edge: rgb(255 255 255 / 0.7);
+  --gz-scrim: rgb(42 41 39 / 0.28);
+
+  /* Corners, by size of part */
+  --gz-r-chassis: 16px;
+  --gz-r-panel: 11px;
+  --gz-r-key: 7px;
+  --gz-r-well: 6px;
+  --gz-r-nib: 4px;
+
+  /* Springs. `spring` overshoots and settles; `snap` arrives fast and stops
+     dead; `travel` is a key going down. */
+  --gz-spring: cubic-bezier(0.3, 1.45, 0.45, 1);
+  --gz-spring-big: cubic-bezier(0.25, 1.25, 0.4, 1);
+  --gz-snap: cubic-bezier(0.2, 0.85, 0.25, 1);
+  --gz-travel: cubic-bezier(0.3, 0, 0.6, 1);
+
+  /* Grain: fine noise for the matte finish, and hairlines for brushed metal. */
+  --gz-grain:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .18 0 0 0 0 .15 0 0 0 0 .12 0 0 0 .22 -.02'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --gz-brushed: repeating-linear-gradient(
+    90deg,
+    rgb(255 255 255 / 0.05) 0 1px,
+    transparent 1px 2px,
+    rgb(var(--gz-shade-rgb) / 0.03) 2px 3px,
+    transparent 3px 5px
+  );
+
+  /* Roles, as the rest of the app names them */
+  --gz-bg: var(--gz-chassis);
+  --gz-canvas: var(--gz-screen);
+  --gz-panel: var(--gz-face);
+  --gz-elevated: var(--gz-face-hi);
+  --gz-border: var(--gz-edge);
+  --gz-border-strong: var(--gz-edge-strong);
   --gz-text: var(--gz-ink);
-  --gz-muted: #51483a;
-  --gz-faint: #6f6453;
-  --gz-accent: var(--gz-blue);
-  --gz-accent-contrast: var(--gz-paper);
-  --gz-accent-soft: color-mix(in oklab, var(--gz-blue) 12%, var(--gz-paper));
-  --gz-primary: var(--gz-red);
-  --gz-primary-contrast: var(--gz-on-red);
-  --gz-success: var(--gz-blue-text);
-  --gz-warning: var(--gz-red-text);
-  --gz-danger: var(--gz-red-text);
-  --gz-shadow: 0 0 0 1px var(--gz-ink);
+  --gz-accent: var(--gz-signal);
+  --gz-accent-text: var(--gz-signal-text);
+  --gz-accent-contrast: var(--gz-on-signal);
+  --gz-accent-soft: color-mix(in oklab, var(--gz-signal) 12%, var(--gz-face));
+  --gz-primary: var(--gz-signal);
+  --gz-primary-contrast: var(--gz-on-signal);
+  --gz-success: var(--gz-ink);
+  --gz-warning: var(--gz-signal-text);
+  --gz-danger: var(--gz-signal-text);
+  --gz-shadow: var(--gz-raise-3);
+
+  /* The three figure inks, under the names the figures use. */
+  --gz-red: var(--gz-signal);
+  --gz-red-text: var(--gz-signal-text);
+  --gz-blue: var(--gz-cold);
+  --gz-blue-text: var(--gz-cold);
+  --gz-yellow: var(--gz-warm);
+  --gz-yellow-line: var(--gz-warm-line);
+  --gz-on-red: var(--gz-on-signal);
+
   color-scheme: light;
 }
 
 .dark {
-  --gz-paper: #1a1d3d;
-  --gz-paper-deep: #242853;
-  --gz-paper-light: #1f2347;
-  --gz-ink: #ece2c6;
-  --gz-red: #f2694a;
-  --gz-red-text: #f2694a;
-  --gz-blue: #4f7fee;
-  --gz-blue-text: #6f9af0;
-  --gz-yellow: #f3be33;
-  --gz-yellow-line: #f3be33;
-  --gz-on-red: #1a1d3d;
-  --gz-hair: color-mix(in oklab, var(--gz-ink) 26%, transparent);
-  --gz-grain:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .89 0 0 0 0 .78 0 0 0 .2 -.045'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --gz-chassis: #2b2a28;
+  --gz-face: #333230;
+  --gz-face-hi: #3c3b38;
+  --gz-well: #201f1e;
+  --gz-screen: #1a1a19;
+  --gz-ink: #ece8df;
+  --gz-muted: #bdb8ae;
+  --gz-faint: #8b877f;
 
-  --gz-elevated: var(--gz-paper-deep);
-  --gz-muted: #c2b9a0;
-  --gz-faint: #959ab8;
-  --gz-accent: var(--gz-blue-text);
-  --gz-accent-contrast: var(--gz-paper);
-  --gz-accent-soft: color-mix(in oklab, var(--gz-blue) 18%, var(--gz-paper));
+  --gz-signal: #ff6b2c;
+  --gz-signal-text: #ff7a42;
+  --gz-on-signal: #1b1a18;
+  --gz-warm: #ffc29e;
+  --gz-warm-line: #ffc29e;
+  --gz-cold: #94a0ac;
+
+  --gz-spec: rgb(255 255 255 / 0.13);
+  --gz-spec-soft: rgb(255 255 255 / 0.07);
+  --gz-shade-rgb: 0 0 0;
+  --gz-edge: rgb(255 255 255 / 0.09);
+  --gz-edge-strong: rgb(255 255 255 / 0.3);
+
+  --gz-key-top: #484642;
+  --gz-key-bottom: #3a3936;
+  --gz-key-edge: rgb(0 0 0 / 0.55);
+
+  --gz-raise-1:
+    inset 0 1px 0 var(--gz-spec), inset 0 -1px 0 rgb(0 0 0 / 0.2), 0 1px 1px rgb(0 0 0 / 0.4),
+    0 2px 4px rgb(0 0 0 / 0.25);
+  --gz-raise-1-hover:
+    inset 0 1px 0 rgb(255 255 255 / 0.18), inset 0 -1px 0 rgb(0 0 0 / 0.2),
+    0 1px 1px rgb(0 0 0 / 0.4), 0 5px 10px rgb(0 0 0 / 0.35);
+  --gz-raise-2:
+    inset 0 1px 0 var(--gz-spec), inset 0 0 0 1px rgb(255 255 255 / 0.04),
+    0 1px 1px rgb(0 0 0 / 0.35), 0 4px 8px rgb(0 0 0 / 0.22), 0 16px 32px -8px rgb(0 0 0 / 0.45);
+  --gz-raise-3:
+    inset 0 1px 0 rgb(255 255 255 / 0.16), inset 0 0 0 1px rgb(255 255 255 / 0.05),
+    0 2px 4px rgb(0 0 0 / 0.3), 0 12px 24px rgb(0 0 0 / 0.35), 0 32px 64px -12px rgb(0 0 0 / 0.6);
+  --gz-press: inset 0 1px 3px rgb(0 0 0 / 0.6), inset 0 0 0 1px rgb(0 0 0 / 0.3);
+  --gz-sink:
+    inset 0 1px 2px rgb(0 0 0 / 0.55), inset 0 0 0 1px rgb(0 0 0 / 0.3), 0 1px 0 var(--gz-spec-soft);
+  --gz-sink-deep:
+    inset 0 2px 6px rgb(0 0 0 / 0.6), inset 0 0 0 1px rgb(0 0 0 / 0.4), 0 1px 0 var(--gz-spec-soft);
+  --gz-lamp: 0 0 0 1px rgb(0 0 0 / 0.5), 0 0 8px 1px rgb(255 107 44 / 0.7);
+
+  --gz-glass: rgb(58 57 54 / 0.68);
+  --gz-glass-edge: rgb(255 255 255 / 0.14);
+  --gz-scrim: rgb(0 0 0 / 0.5);
+
+  --gz-grain:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .92 0 0 0 .16 -.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  --gz-success: var(--gz-ink);
+  --gz-accent-soft: color-mix(in oklab, var(--gz-signal) 18%, var(--gz-face));
   color-scheme: dark;
+}
+
+/* A real spring where the browser can draw one: the same settle, with the
+   second, smaller rebound a cubic-bezier cannot make. */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --gz-spring: linear(
+      0,
+      0.19 3.6%,
+      0.62 9.5%,
+      0.92 14.4%,
+      1.07 18.6%,
+      1.13 22.4%,
+      1.14 25.4%,
+      1.11 30.6%,
+      1.03 39.6%,
+      0.995 45.8%,
+      0.985 52.6%,
+      0.99 62%,
+      1.002 76%,
+      1
+    );
+  }
 }
 
 @theme inline {
@@ -90,8 +249,8 @@
   --color-warn: var(--gz-warning);
   --color-bad: var(--gz-danger);
 
-  --font-sans: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', monospace;
+  --font-sans: 'Outfit', 'Avenir Next', 'Century Gothic', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Martian Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
 }
 
 @layer base {
@@ -115,35 +274,48 @@
     min-height: 100%;
   }
 
-  /* The app is printed on the grained paper, in Garamond with its own
-     kerning and ligatures and lining figures for the numbers a workbench
-     is full of. (The home page sets old-style figures on its own root.) */
+  /* The chassis: matte, grained, and lit from above — the top of the page
+     catches a little more of the room's light than the bottom. */
   body {
     background-color: var(--gz-bg);
-    background-image: var(--gz-grain);
+    background-image:
+      var(--gz-grain),
+      radial-gradient(120% 70% at 30% -10%, var(--gz-spec-soft), transparent 62%);
+    background-attachment: scroll, fixed;
     color: var(--gz-text);
     font-family: var(--font-sans);
-    font-feature-settings: normal;
+    font-size: 0.875rem;
+    font-feature-settings: 'ss01';
     font-kerning: normal;
-    font-variant-ligatures: common-ligatures;
-    font-variant-numeric: lining-nums;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     overscroll-behavior: none;
   }
 
-  /* Square focus rings in cobalt, to match the square controls. */
+  /* Martian Mono is drawn wide; a notch of condensing sets it at the width
+     a data column expects without losing its squareness. */
+  code,
+  kbd,
+  samp,
+  pre,
+  .font-mono {
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+  }
+
   :focus-visible {
     outline: 2px solid var(--gz-accent);
     outline-offset: 2px;
-    border-radius: 0;
+    border-radius: var(--gz-r-nib);
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--gz-blue) 24%, var(--gz-paper));
+    background: color-mix(in oklab, var(--gz-signal) 30%, transparent);
     color: var(--gz-text);
   }
 
+  /* Scrollbars are a slot milled into the chassis with a nib riding in it. */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -152,291 +324,465 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: color-mix(in oklab, var(--gz-border-strong) 70%, transparent);
+    background: color-mix(in oklab, var(--gz-ink) 26%, transparent);
     border: 3px solid transparent;
     background-clip: padding-box;
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--gz-border-strong);
+    background: color-mix(in oklab, var(--gz-ink) 46%, transparent);
     background-clip: padding-box;
   }
-
-  /* In the workbench the scrollbars are thin square ink rules in a
-     hairline-ruled gutter. (The home page keeps the scrollbar it has.) */
-  html:not([data-route='home']) ::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
-  }
-  html:not([data-route='home']) ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  html:not([data-route='home']) ::-webkit-scrollbar-thumb {
-    background: color-mix(in oklab, var(--gz-text) 34%, transparent);
-    border: 3px solid transparent;
-    border-radius: 0;
-    background-clip: padding-box;
-  }
-  html:not([data-route='home']) ::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in oklab, var(--gz-text) 60%, transparent);
-    background-clip: padding-box;
-  }
-  html:not([data-route='home']) ::-webkit-scrollbar-corner {
+  ::-webkit-scrollbar-corner {
     background: transparent;
   }
 
   @supports not selector(::-webkit-scrollbar) {
-    html:not([data-route='home']) * {
+    * {
       scrollbar-width: thin;
-      scrollbar-color: color-mix(in oklab, var(--gz-text) 34%, transparent) transparent;
+      scrollbar-color: color-mix(in oklab, var(--gz-ink) 30%, transparent) transparent;
     }
   }
 }
 
 /*
- * The shared pieces, set like the home page's plates. Everything is square,
- * ruled in 1px hairlines and set in EB Garamond; labels are letter-spaced
- * small caps. Colour carries meaning: cobalt is selection and focus,
- * vermilion the primary action and warnings, chrome yellow a highlight.
- *
- * The home page draws a few of these (the account menu's sign-in button and
- * the saved-graph dialogs) and styles them itself in home.css; the rules that
- * would visibly change them are fenced off with :where(:not(.gz-home *)),
- * which adds no specificity, so a Tailwind utility still wins as before.
+ * The shared parts. Each is one of the materials above; screens compose
+ * them rather than restating shadows. They sit in the `components` layer, so
+ * a Tailwind utility on the same element still wins.
  */
 @layer components {
+  /* ------------------------------------------------------------------ */
+  /* Surfaces                                                            */
+  /* ------------------------------------------------------------------ */
+
+  /* A face of the chassis: a bar or a side panel. */
   .gz-panel {
-    background: var(--gz-panel);
+    background-color: var(--gz-panel);
+    background-image: var(--gz-grain);
     border-color: var(--gz-border);
   }
 
-  /* Numbers in the text face, with lining, even-width figures so columns of
-     counts and degrees line up. */
-  .gz-num {
-    font-family: var(--font-sans);
-    font-size: 0.9375rem;
-    font-variant-numeric: lining-nums tabular-nums;
-    letter-spacing: 0;
+  /* The chassis' own finish, for anything that should match the body. */
+  .gz-paper {
+    background-color: var(--gz-bg);
+    background-image: var(--gz-grain);
   }
 
-  /* Only what people type or copy as code keeps a monospace. */
-  .gz-code {
+  /* A raised plate standing on the chassis: a card, a module. */
+  .gz-plate {
+    border-radius: var(--gz-r-panel);
+    background-color: var(--gz-face);
+    background-image: var(--gz-grain);
+    box-shadow: var(--gz-raise-2);
+  }
+
+  /* A recess: a readout, a tray. */
+  .gz-well {
+    border-radius: var(--gz-r-well);
+    background-color: var(--gz-well);
+    box-shadow: var(--gz-sink);
+  }
+
+  /* Frosted glass, for whatever floats above the instrument. */
+  .gz-glass {
+    border: 1px solid var(--gz-glass-edge);
+    border-radius: var(--gz-r-panel);
+    background-color: var(--gz-glass);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 40%);
+    box-shadow: var(--gz-raise-3);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
+  }
+
+  /* The veil behind a dialog. */
+  .gz-scrim {
+    background: var(--gz-scrim);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Type                                                                */
+  /* ------------------------------------------------------------------ */
+
+  /* Anything read off the instrument: counts, degrees, weights. */
+  .gz-num {
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-stretch: 85%;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0;
   }
 
-  /* A field label: letter-spaced small caps in muted ink. */
+  /* What people type or copy as code. */
+  .gz-code {
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  /* A legend printed on the chassis beside a control: small lowercase mono,
+     as on the hardware this is modelled on. */
   .gz-label {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    font-variant-caps: all-small-caps;
-    letter-spacing: 0.14em;
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
     line-height: 1.3;
+    text-transform: lowercase;
     color: var(--gz-muted);
   }
 
-  /* A section marker, like the home page's "Prop. I." and "Properties":
-     the same small caps in the red. */
+  /* The same legend in the signal colour: the name of a section. */
   .gz-marker {
-    font-size: 0.9375rem;
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.6875rem;
     font-weight: 600;
-    font-variant-caps: all-small-caps;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.02em;
     line-height: 1.3;
-    color: var(--gz-red-text);
+    text-transform: lowercase;
+    color: var(--gz-accent-text);
   }
 
-  /* Plain button: Garamond text on the paper; hover lays the deeper paper
-     under it. Square, so it sits flush with the rules around it. */
+  /* ------------------------------------------------------------------ */
+  /* Keys                                                                */
+  /* ------------------------------------------------------------------ */
+
+  /* A keycap. It stands 1px proud, lifts a hair under the pointer and
+     travels down when pressed; the shadow goes with it. */
   .gz-btn {
+    position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.375rem;
-    border-radius: 0;
-    padding: 0.3125rem 0.625rem;
-    font-size: 0.9375rem;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: var(--gz-r-key);
+    padding: 0.3125rem 0.75rem;
+    background-color: var(--gz-key-bottom);
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow: var(--gz-raise-1);
+    font-size: 0.8125rem;
     font-weight: 500;
     line-height: 1.25;
     color: var(--gz-text);
+    cursor: pointer;
+    user-select: none;
     transition:
-      background-color 120ms ease,
-      color 120ms ease,
-      border-color 120ms ease;
+      transform 180ms var(--gz-spring),
+      box-shadow 180ms var(--gz-snap),
+      filter 180ms var(--gz-snap);
+    will-change: transform;
   }
 
-  .gz-btn:where(:not(.gz-home *)):hover:not(:disabled) {
-    background: var(--gz-paper-deep);
+  .gz-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--gz-raise-1-hover);
+  }
+
+  .gz-btn:active:not(:disabled),
+  .gz-btn[aria-pressed='true'],
+  .gz-btn[aria-expanded='true'] {
+    transform: translateY(1px);
+    box-shadow: var(--gz-press);
+    background-image: linear-gradient(180deg, var(--gz-key-bottom), var(--gz-key-bottom));
+    transition-duration: 70ms;
+    transition-timing-function: var(--gz-travel);
   }
 
   .gz-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.45;
     cursor: default;
   }
 
-  /* The primary action, like "Start drawing": a flat block of vermilion
-     with small caps in the paper; hover turns it to ink. */
+  /* The one orange key on a panel: the primary action. */
   .gz-btn-primary {
-    background: var(--gz-primary);
-    color: var(--gz-primary-contrast);
-  }
-
-  .gz-btn-primary:where(:not(.gz-home *)) {
+    border-color: color-mix(in oklab, var(--gz-signal) 70%, black);
+    background-color: var(--gz-signal);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--gz-signal) 88%, white),
+      var(--gz-signal) 55%,
+      color-mix(in oklab, var(--gz-signal) 90%, black)
+    );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.45),
+      inset 0 -1px 0 rgb(0 0 0 / 0.18),
+      0 1px 1px rgb(var(--gz-shade-rgb) / 0.2),
+      0 3px 6px color-mix(in oklab, var(--gz-signal) 35%, transparent);
+    color: var(--gz-on-signal);
     font-weight: 600;
-    font-variant-caps: all-small-caps;
-    letter-spacing: 0.1em;
   }
 
   .gz-btn-primary:hover:not(:disabled) {
-    background: var(--gz-text);
-    color: var(--gz-bg);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.5),
+      inset 0 -1px 0 rgb(0 0 0 / 0.18),
+      0 1px 1px rgb(var(--gz-shade-rgb) / 0.2),
+      0 6px 14px color-mix(in oklab, var(--gz-signal) 42%, transparent);
+    filter: brightness(1.04);
   }
 
-  /* The outlined button, like "Open the workbench": a 1px ink rule round
-     letter-spaced small caps; hover fills it with ink. */
+  .gz-btn-primary:active:not(:disabled) {
+    background-image: none;
+    box-shadow:
+      inset 0 2px 4px rgb(0 0 0 / 0.35),
+      inset 0 0 0 1px rgb(0 0 0 / 0.12);
+    filter: brightness(0.96);
+  }
+
+  /* A secondary key: the same cap with a firmer edge and a mono legend. */
   .gz-btn-outline {
-    border: 1px solid var(--gz-text);
-    font-weight: 600;
-    font-variant-caps: all-small-caps;
-    letter-spacing: 0.1em;
+    border-color: var(--gz-edge-strong);
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.71875rem;
+    letter-spacing: 0.01em;
   }
 
-  .gz-btn-outline:where(:not(.gz-home *)):hover:not(:disabled) {
-    background: var(--gz-text);
-    color: var(--gz-bg);
+  /* A flat control with no cap of its own, for dense rows where a full key
+     would crowd: it only shows a face while you are on it. */
+  .gz-btn-ghost {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
   }
 
-  /* A tag or toggle: square, hairline-ruled small caps. "On" is printed in
-     ink (or cobalt, with .gz-chip-blue). */
+  .gz-btn-ghost:hover:not(:disabled) {
+    transform: none;
+    background: color-mix(in oklab, var(--gz-ink) 7%, transparent);
+    box-shadow: none;
+  }
+
+  .gz-btn-ghost:active:not(:disabled) {
+    transform: scale(0.96);
+    background: color-mix(in oklab, var(--gz-ink) 12%, transparent);
+    box-shadow: none;
+  }
+
+  /* A tag or small toggle: a nib. "On" sinks and lights. */
   .gz-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.3125rem;
-    border-radius: 0;
-    border: 1px solid var(--gz-border-strong);
-    padding: 0 0.4375rem 0.0625rem;
-    font-size: 0.9rem;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: var(--gz-r-nib);
+    padding: 0.0625rem 0.4375rem;
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow: var(--gz-raise-1);
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.6875rem;
     font-weight: 500;
-    font-variant-caps: all-small-caps;
-    font-variant-numeric: lining-nums tabular-nums;
-    letter-spacing: 0.08em;
-    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
     color: var(--gz-muted);
     white-space: nowrap;
+    transition:
+      transform 160ms var(--gz-spring),
+      box-shadow 160ms var(--gz-snap);
   }
 
   .gz-chip-on,
   .gz-chip[aria-pressed='true'],
   .gz-chip[data-on='true'] {
-    border-color: var(--gz-text);
-    background: var(--gz-text);
-    color: var(--gz-bg);
+    transform: translateY(1px);
+    border-color: color-mix(in oklab, var(--gz-signal) 70%, black);
+    background: var(--gz-signal);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.3);
+    color: var(--gz-on-signal);
   }
 
-  .gz-chip-blue.gz-chip-on,
-  .gz-chip-blue[aria-pressed='true'],
-  .gz-chip-blue[data-on='true'] {
-    border-color: var(--gz-blue);
-    background: var(--gz-blue);
-    color: var(--gz-paper-light);
-  }
+  /* ------------------------------------------------------------------ */
+  /* Wells                                                               */
+  /* ------------------------------------------------------------------ */
 
-  /* Text fields: a lighter sheet laid on the paper, square, with a firm
-     enough edge to find (3:1); focus is the page's square cobalt ring. */
+  /* A text field is a slot cut into the chassis. Focus lights its rim. */
   .gz-input {
-    background: var(--gz-paper-light);
-    border: 1px solid var(--gz-border-strong);
-    border-radius: 0;
-    padding: 0.3125rem 0.5rem;
-    font-size: 0.9375rem;
-    font-variant-numeric: lining-nums tabular-nums;
-    line-height: 1.3;
-    color: var(--gz-text);
     width: 100%;
+    border: 0;
+    border-radius: var(--gz-r-well);
+    padding: 0.4375rem 0.625rem;
+    background-color: var(--gz-well);
+    box-shadow: var(--gz-sink);
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+    color: var(--gz-text);
+    transition: box-shadow 160ms var(--gz-snap);
   }
 
   .gz-input::placeholder {
     color: var(--gz-faint);
-    font-style: italic;
     opacity: 1;
   }
 
   .gz-input:focus,
   .gz-input:focus-visible {
-    outline: 2px solid var(--gz-accent);
-    outline-offset: 2px;
-    border-color: var(--gz-text);
-    border-radius: 0;
-    box-shadow: none;
+    outline: none;
+    border-radius: var(--gz-r-well);
+    box-shadow:
+      var(--gz-sink),
+      0 0 0 2px var(--gz-accent);
   }
 
   .gz-input:disabled {
     opacity: 0.55;
   }
 
-  /* Byrne's double rule round a plate: the box's own 1px ink border and an
-     outline 3px outside it. The outer rule lies outside the box, so leave
-     it 4px of room (margin or padding on the parent). */
-  .gz-frame-double {
-    border: 1px solid var(--gz-text);
-    outline: 1px solid var(--gz-text);
-    outline-offset: 3px;
+  /* ------------------------------------------------------------------ */
+  /* Lamps and switches                                                  */
+  /* ------------------------------------------------------------------ */
+
+  /* A signal lamp. Dark until `data-on`; then it glows. */
+  .gz-led {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.35), transparent 55%),
+      color-mix(in oklab, var(--gz-ink) 28%, var(--gz-well));
+    box-shadow:
+      inset 0 1px 1px rgb(var(--gz-shade-rgb) / 0.4),
+      0 1px 0 var(--gz-spec-soft);
+    forced-color-adjust: none;
+    transition:
+      background-color 200ms var(--gz-snap),
+      box-shadow 200ms var(--gz-snap);
   }
 
-  .gz-frame-double:focus-visible {
-    outline: 2px solid var(--gz-accent);
-    outline-offset: 3px;
+  .gz-led[data-on='true'],
+  .gz-led-on {
+    background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.7), transparent 55%),
+      var(--gz-signal);
+    box-shadow: var(--gz-lamp);
   }
 
-  /* The same double rule as a horizontal division between sections. */
-  .gz-rule-double {
-    border-bottom: 4px double var(--gz-text);
+  /*
+   * A slide switch. Put it on a button with aria-pressed or role="switch":
+   *
+   *   <button class="gz-switch" aria-pressed="true">
+   *     <span class="gz-switch-track" aria-hidden="true"></span> Directed
+   *   </button>
+   *
+   * The cap squashes a little when held and snaps across with a spring.
+   */
+  .gz-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gz-muted);
+    cursor: pointer;
+    user-select: none;
+    transition: color 160ms var(--gz-snap);
   }
 
-  .gz-rule-double-top {
-    border-top: 4px double var(--gz-text);
+  .gz-switch[aria-pressed='true'],
+  .gz-switch[aria-checked='true'] {
+    color: var(--gz-text);
   }
 
-  /* Byrne's glyphs, his symbols for words: a triangle, a bar and a disc in
-     the three inks. data-ink picks the ink (red, blue or yellow; ink by
-     default). Yellow and every disc are ringed in ink, as on the home page. */
+  .gz-switch-track {
+    position: relative;
+    flex-shrink: 0;
+    width: 2.125rem;
+    height: 1.1875rem;
+    border-radius: 999px;
+    background-color: var(--gz-well);
+    box-shadow: var(--gz-sink);
+    transition: background-color 220ms var(--gz-snap);
+  }
+
+  .gz-switch-track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 0.9375rem;
+    height: 0.9375rem;
+    border-radius: 999px;
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow:
+      inset 0 1px 0 var(--gz-spec),
+      0 0 0 1px var(--gz-key-edge),
+      0 1px 2px rgb(var(--gz-shade-rgb) / 0.35);
+    transform-origin: left center;
+    transition: transform 380ms var(--gz-spring);
+  }
+
+  .gz-switch:active .gz-switch-track::after {
+    transform: scaleX(1.22);
+  }
+
+  .gz-switch[aria-pressed='true'] .gz-switch-track,
+  .gz-switch[aria-checked='true'] .gz-switch-track {
+    background-color: var(--gz-signal);
+  }
+
+  .gz-switch[aria-pressed='true'] .gz-switch-track::after,
+  .gz-switch[aria-checked='true'] .gz-switch-track::after {
+    transform: translateX(0.9375rem);
+  }
+
+  .gz-switch[aria-pressed='true']:active .gz-switch-track::after,
+  .gz-switch[aria-checked='true']:active .gz-switch-track::after {
+    transform-origin: right center;
+    transform: translateX(0.9375rem) scaleX(1.22);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Figure glyphs                                                       */
+  /* ------------------------------------------------------------------ */
+
+  /* The shapes that key a row to what is lit on the canvas: a triangle for
+     a cycle, a bar for edges, a disc for vertices. data-ink picks the ink
+     (red is the signal, yellow its pale tint, blue the slate). */
   .gz-glyph-tri,
   .gz-glyph-bar,
   .gz-glyph-disc {
     --gz-glyph: var(--gz-text);
     display: inline-block;
     flex-shrink: 0;
-    width: 0.8rem;
-    height: 0.8rem;
+    width: 0.625rem;
+    height: 0.625rem;
     vertical-align: -0.05em;
     background: var(--gz-glyph);
     forced-color-adjust: none;
   }
 
   .gz-glyph-tri {
-    clip-path: polygon(50% 2%, 100% 96%, 0 96%);
+    clip-path: polygon(50% 4%, 100% 96%, 0 96%);
   }
 
   .gz-glyph-bar {
-    width: 0.9rem;
-    height: 0.3rem;
+    width: 0.75rem;
+    height: 0.25rem;
+    border-radius: 1px;
     vertical-align: 0.2em;
   }
 
   .gz-glyph-disc {
     border-radius: 999px;
-    box-shadow: inset 0 0 0 1.25px var(--gz-text);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--gz-ink) 55%, transparent);
   }
 
   .gz-glyph-bar[data-ink='yellow'] {
-    box-shadow: inset 0 0 0 1px var(--gz-text);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--gz-ink) 55%, transparent);
   }
 
-  /* A yellow triangle cannot take a ring through clip-path, so it is drawn
-     as an ink triangle with the yellow one inset inside it. */
+  /* A pale triangle cannot take a ring through clip-path, so it is drawn as
+     a dark triangle with the pale one inset inside it. */
   .gz-glyph-tri[data-ink='yellow'] {
-    background: var(--gz-text);
+    background: color-mix(in oklab, var(--gz-ink) 60%, transparent);
     position: relative;
   }
 
@@ -445,7 +791,7 @@
     position: absolute;
     inset: 0;
     background: var(--gz-yellow);
-    clip-path: polygon(50% 17%, 89% 90%, 11% 90%);
+    clip-path: polygon(50% 19%, 87% 89%, 13% 89%);
   }
 
   [data-ink='red'].gz-glyph-tri,
@@ -465,12 +811,6 @@
     --gz-glyph: var(--gz-yellow);
   }
 
-  /* The paper's grain, for the app background and the canvas plate. */
-  .gz-paper {
-    background-color: var(--gz-bg);
-    background-image: var(--gz-grain);
-  }
-
   .gz-scroll {
     scrollbar-gutter: stable;
     overflow-y: auto;
@@ -478,10 +818,15 @@
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Motion                                                              */
+/* ------------------------------------------------------------------ */
+
+/* A row or note arriving: it comes up into place and settles. */
 @keyframes gz-fade-up {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -489,28 +834,63 @@
   }
 }
 
+/* Glass arriving: it comes forward from just behind where it lands. */
 @keyframes gz-pop {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    transform: scale(0.94) translateY(4px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* A part being seated on the chassis at load. */
+@keyframes gz-seat {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gz-veil {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
 .gz-anim-in {
-  animation: gz-fade-up 140ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  animation: gz-fade-up 320ms var(--gz-spring-big) both;
 }
 
 .gz-anim-pop {
-  animation: gz-pop 130ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  animation: gz-pop 300ms var(--gz-spring-big) both;
+  transform-origin: 50% 0;
+}
+
+/* Staggered seating: set --gz-i (0, 1, 2 …) on each part. */
+.gz-anim-seat {
+  animation: gz-seat 620ms var(--gz-spring-big) both;
+  animation-delay: calc(var(--gz-i, 0) * 55ms);
+}
+
+.gz-anim-veil {
+  animation: gz-veil 220ms var(--gz-snap) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .gz-anim-in,
-  .gz-anim-pop {
+  .gz-anim-pop,
+  .gz-anim-seat,
+  .gz-anim-veil {
     animation: none;
   }
   * {

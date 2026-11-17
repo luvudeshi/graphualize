@@ -1,18 +1,19 @@
-import { useMemo, type CSSProperties, type ReactNode } from 'react'
+import { useMemo, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import { EXAMPLES } from '../graph/examples'
 import { openEditor } from '../app/router'
 import { GraphThumbnail } from './GraphThumbnail'
+import { prefersReducedMotion } from '../utils/platform'
 
 /**
- * The built-in examples as Plate II: a page of numbered figures, each drawn
- * from its own document rather than from a stored picture, so a figure can
- * never disagree with what opens.
+ * The built-in examples as a tray of tiles, each with its graph drawn on a
+ * small screen from its own document rather than from a stored picture, so a
+ * tile can never disagree with what opens.
  *
- * Set on a twelve-column module, symmetrically, as a plate in a book is: the
- * featured figure in the middle, four small ones either side of it over two
- * rows, and the rest centred on the row beneath. In document order, so the
- * figures are read, and tabbed through, as they are numbered. On a phone it
- * is two columns, with the featured figure across both.
+ * Set on a twelve-column module, symmetrically: the featured tile in the
+ * middle, four small ones either side of it over two rows, and the rest
+ * centred on the row beneath. In document order, so the tiles are read, and
+ * tabbed through, in the order they are laid out. On a phone it is two
+ * columns, with the featured tile across both.
  */
 const FEATURED = 'petersen'
 /** How many small figures come before the featured one, on its left. */
@@ -47,6 +48,31 @@ const mathName = (name: string): ReactNode[] =>
     return parts.length === 1 ? part : <span key={i}>{part}</span>
   })
 
+/** How far a tile leans towards the pointer, in degrees, at its edge. */
+const TILT = 5
+
+/**
+ * A tile leans a few degrees towards the pointer, as a key rocks under a
+ * finger off its centre. Only for a mouse (a touch would leave it leaning)
+ * and never under reduced motion. The lean is two custom properties; home.css
+ * turns them into the transform.
+ */
+const lean = (event: PointerEvent<HTMLUListElement>) => {
+  if (event.pointerType !== 'mouse' || prefersReducedMotion()) return
+  const tile = (event.target as Element).closest<HTMLElement>('.gz-home-fig')
+  if (!tile) return
+  const box = tile.getBoundingClientRect()
+  const x = (event.clientX - box.left) / box.width - 0.5
+  const y = (event.clientY - box.top) / box.height - 0.5
+  tile.style.setProperty('--gz-ry', `${(x * 2 * TILT).toFixed(2)}deg`)
+  tile.style.setProperty('--gz-rx', `${(-y * 2 * TILT).toFixed(2)}deg`)
+}
+
+const level = (event: PointerEvent<HTMLElement>) => {
+  event.currentTarget.style.removeProperty('--gz-rx')
+  event.currentTarget.style.removeProperty('--gz-ry')
+}
+
 export const ExampleGallery = () => {
   const entries = useMemo(() => {
     const all = EXAMPLES.map((example) => ({ example, doc: example.build() }))
@@ -61,12 +87,7 @@ export const ExampleGallery = () => {
 
   return (
     <div className="gz-home-figs">
-      <div className="gz-home-figs-head">
-        <span className="gz-demo-plate">Plate II.</span>
-        <span className="gz-home-figs-title">The examples</span>
-        <span className="gz-home-figs-aside">Each figure opens in the workbench.</span>
-      </div>
-      <ul className="gz-home-plate">
+      <ul className="gz-home-plate" onPointerMove={lean}>
         {entries.map(({ example, doc }, index) => {
           const big = example.id === FEATURED
           const vertices = doc.vertices.length
@@ -91,6 +112,7 @@ export const ExampleGallery = () => {
                 title={big ? undefined : example.blurb}
                 className="gz-home-fig"
                 data-big={big || undefined}
+                onPointerLeave={level}
               >
                 <span className="gz-home-fig-art">
                   <GraphThumbnail
@@ -102,9 +124,6 @@ export const ExampleGallery = () => {
                   />
                 </span>
                 <span className="gz-home-fig-caption">
-                  <span className="gz-home-fig-no" aria-hidden="true">
-                    Fig. {index + 1}.
-                  </span>
                   <span className="gz-home-fig-name">{mathName(example.name)}</span>
                   {big && (
                     <span id={blurbId} className="gz-home-fig-blurb">

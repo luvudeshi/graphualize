@@ -1,52 +1,60 @@
 /*
- * The workbench canvas, set as a plate from Byrne's Euclid like Plate I on
- * the home page: grained paper under the figure, numbers on slips of paper
- * ruled in ink, and the empty plate lettered in italic Garamond with the
- * quick commands written as a mathematician would write them.
+ * What is drawn on the workbench's screen besides the figure: the faint
+ * dot matrix behind it, the tags that carry weights and distances, and the
+ * empty screen's prompt with its row of quick-command keys.
  *
- * Every class is prefixed `gz-wb-` and every colour is a token, so the night
- * edition (the .dark tokens in index.css) needs no rules of its own. The
+ * Every class is prefixed `gz-wb-` and every colour is a token, so the dark
+ * chassis (the .dark tokens in index.css) needs no rules of its own. The
  * figure itself is drawn by Cytoscape from src/canvas/theme.ts and style.ts.
  */
 
 @layer components {
-  /* The plate: paper with its grain. Cytoscape draws on a transparent
-     canvas above it. */
+  /* The screen's surface. Cytoscape draws on a transparent canvas above it;
+     the dot matrix is fixed to the glass, like a graticule, and does not
+     pan with the figure. */
   .gz-wb-canvas {
     background-color: var(--gz-canvas);
-    background-image: var(--gz-grain);
+    background-image: radial-gradient(
+      circle,
+      color-mix(in oklab, var(--gz-ink) 13%, transparent) 0.75px,
+      transparent 1.25px
+    );
+    background-size: 20px 20px;
+    background-position: 10px 10px;
   }
 
-  /* A weight on its edge: the same slip, centred on the line and set above
-     every line so no crossing edge strikes through the figure. */
+  /* A distance or visiting order beside a point, or a weight on its edge: a
+     small tag standing on the screen, read in the mono like every number. */
+  .gz-wb-badge {
+    padding: 0.125rem 0.3125rem;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: var(--gz-r-nib);
+    background-color: var(--gz-face-hi);
+    box-shadow:
+      inset 0 1px 0 var(--gz-spec),
+      0 1px 2px rgb(var(--gz-shade-rgb) / 0.18);
+    color: var(--gz-text);
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.15;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
   .gz-wb-weight[data-dimmed] {
-    border-color: var(--gz-muted);
+    box-shadow: none;
     color: var(--gz-muted);
   }
 
-  /* A distance or visiting order beside a point: a small paper tag with an
-     ink hairline, in lining figures. */
-  .gz-wb-badge {
-    padding: 0.125rem 0.3125rem 0.0625rem;
-    border: 1px solid var(--gz-text);
-    border-radius: 0;
-    background: var(--gz-canvas);
-    color: var(--gz-text);
-    font-family: var(--gz-serif);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    line-height: 1.05;
-    white-space: nowrap;
-    font-variant-numeric: lining-nums tabular-nums;
-  }
-
   /* ---------------------------------------------------------------- */
-  /* The empty plate                                                   */
+  /* The empty screen                                                  */
   /* ---------------------------------------------------------------- */
 
-  /* The empty plate is clipped to the canvas and queried for its size, so a
-     short plate (a phone with the inspector open) gets a compact layout
-     rather than spilling over the header and the inspector. */
+  /* Clipped to the screen and queried for its size, so a short screen (a
+     phone with the inspector open) gets a compact layout rather than
+     spilling over the header and the inspector. */
   .gz-wb-empty-wrap {
     overflow: hidden;
     container-type: size;
@@ -62,12 +70,11 @@
     padding: 0 1.25rem;
     text-align: center;
     color: var(--gz-text);
-    font-family: var(--gz-serif);
   }
 
   .gz-wb-empty-figure {
     display: block;
-    width: 5.5rem;
+    width: 4.5rem;
     height: auto;
     margin: 0 auto 1.25rem;
     overflow: visible;
@@ -75,155 +82,168 @@
 
   .gz-wb-empty-figure [data-ink='red'] {
     stroke: var(--gz-red);
-    fill: var(--gz-red);
   }
 
   .gz-wb-empty-figure [data-ink='blue'] {
     stroke: var(--gz-blue);
-    fill: var(--gz-blue);
   }
 
   .gz-wb-empty-figure [data-ink='yellow'] {
-    stroke: var(--gz-yellow);
-    fill: var(--gz-yellow);
+    stroke: var(--gz-yellow-line);
   }
 
   .gz-wb-empty-figure line {
-    stroke-width: 5;
-    stroke-linecap: butt;
+    stroke-width: 3;
+    stroke-linecap: round;
   }
 
   .gz-wb-empty-figure circle {
-    fill: var(--gz-canvas);
+    fill: var(--gz-face-hi);
     stroke: var(--gz-text);
     stroke-width: 1.5;
   }
 
-  /* "Post. I." with a short red rule after it, like the home page's
-     "Prop. I." */
-  .gz-wb-empty-marker {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.625rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .gz-wb-empty-marker::before,
-  .gz-wb-empty-marker::after {
-    content: '';
-    width: 2.25rem;
-    border-top: 1px solid var(--gz-red-text);
-  }
-
   .gz-wb-empty-prompt {
-    font-size: 1.3125rem;
-    font-style: italic;
-    line-height: 1.4;
+    font-size: 1.0625rem;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: -0.005em;
     text-wrap: balance;
   }
 
+  /* "vertex tool", set in the sentence as the key it presses. */
   .gz-wb-empty-tool {
-    font-style: italic;
-    text-decoration: underline;
-    text-decoration-color: var(--gz-blue);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 0.2em;
-    transition: background-color 140ms ease;
+    display: inline-block;
+    margin: 0 0.125rem;
+    padding: 0.0625rem 0.5rem 0.125rem;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: var(--gz-r-key);
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow: var(--gz-raise-1);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.4;
+    transition:
+      transform 180ms var(--gz-spring),
+      box-shadow 180ms var(--gz-snap);
   }
 
   .gz-wb-empty-tool:hover {
-    background: color-mix(in oklab, var(--gz-blue) 14%, transparent);
+    transform: translateY(-1px);
+    box-shadow: var(--gz-raise-1-hover);
   }
 
-  /* "or generate one K₅ C₈ Petersen …", set in a line like the home page's
-     "or open …": each command underlined in one of the three inks. */
+  .gz-wb-empty-tool:active {
+    transform: translateY(1px);
+    box-shadow: var(--gz-press);
+    transition-duration: 70ms;
+    transition-timing-function: var(--gz-travel);
+  }
+
+  /* "or generate one": a row of keys, each lettered with the command it
+     types. */
   .gz-wb-quick {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     justify-content: center;
-    gap: 0.375rem 1rem;
+    gap: 0.4375rem;
     margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--gz-border);
-    font-size: 1.1875rem;
   }
 
   .gz-wb-quick-intro {
     flex-basis: 100%;
-    font-style: italic;
+    margin-bottom: 0.25rem;
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.6875rem;
     color: var(--gz-muted);
   }
 
   .gz-wb-cmd {
-    padding: 0 0.125rem;
-    border-bottom: 3px solid var(--gz-cmd);
-    line-height: 1.3;
+    position: relative;
+    min-width: 2.5rem;
+    padding: 0.375rem 0.625rem 0.4375rem;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: var(--gz-r-key);
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow: var(--gz-raise-1);
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
     white-space: nowrap;
-    font-variant-numeric: lining-nums;
-    transition: background-color 140ms ease;
+    font-variant-numeric: tabular-nums;
+    transition:
+      transform 180ms var(--gz-spring),
+      box-shadow 180ms var(--gz-snap),
+      color 180ms var(--gz-snap);
   }
 
   .gz-wb-cmd:hover {
-    background: color-mix(in oklab, var(--gz-cmd) 18%, transparent);
+    transform: translateY(-1px);
+    box-shadow: var(--gz-raise-1-hover);
+    color: var(--gz-accent-text);
+  }
+
+  .gz-wb-cmd:active {
+    transform: translateY(1px);
+    box-shadow: var(--gz-press);
+    transition-duration: 70ms;
+    transition-timing-function: var(--gz-travel);
   }
 
   .gz-wb-cmd i {
-    font-style: italic;
+    font-style: normal;
   }
 
   .gz-wb-cmd sub {
     margin-left: 0.04em;
-    font-size: 0.66em;
-    font-style: normal;
+    font-size: 0.72em;
   }
 
   .gz-wb-empty-hint {
-    margin-top: 1.5rem;
-    font-size: 0.9375rem;
-    font-style: italic;
+    margin-top: 1.375rem;
+    font-size: 0.8125rem;
     color: var(--gz-muted);
   }
 
   .gz-wb-kbd {
     display: inline-block;
-    margin: 0 0.125rem;
-    padding: 0 0.375rem;
-    border: 1px solid var(--gz-text);
-    border-radius: 0;
+    margin: 0 0.1875rem;
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid var(--gz-key-edge);
+    border-radius: var(--gz-r-nib);
+    background-image: linear-gradient(180deg, var(--gz-key-top), var(--gz-key-bottom));
+    box-shadow: var(--gz-raise-1);
     color: var(--gz-text);
-    font-family: var(--gz-serif);
-    font-size: 0.875rem;
-    font-style: normal;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-family: var(--font-mono);
+    font-stretch: 85%;
+    font-size: 0.6875rem;
+    font-weight: 500;
     line-height: 1.4;
   }
 
-  .gz-wb-empty :focus-visible {
-    border-radius: 0;
-    outline: 2px solid var(--gz-accent);
-    outline-offset: 2px;
-  }
-
-  /* A short plate: the figure, the marker and the palette hint give way so
-     the prompt and the quick commands fit. */
+  /* A short screen: the figure and the palette hint give way so the prompt
+     and the quick commands fit. */
   @container (max-height: 28rem) {
     .gz-wb-empty-figure,
-    .gz-wb-empty-marker,
     .gz-wb-empty-hint {
       display: none;
     }
 
     .gz-wb-empty-prompt {
-      font-size: 1.0625rem;
+      font-size: 0.9375rem;
     }
 
     .gz-wb-quick {
-      gap: 0.25rem 0.75rem;
-      margin-top: 0.625rem;
-      padding-top: 0.5rem;
-      font-size: 1rem;
+      gap: 0.3125rem;
+      margin-top: 0.75rem;
+    }
+
+    .gz-wb-cmd {
+      padding: 0.25rem 0.5rem 0.3125rem;
     }
   }
 
@@ -234,7 +254,7 @@
     }
   }
 
-  /* On a narrow screen the "Hide properties" float sits on the plate's
+  /* On a narrow screen the "Hide properties" key sits on the screen's
      bottom right; keep the centred block clear of it. */
   @media (max-width: 47.99rem) {
     .gz-wb-empty {

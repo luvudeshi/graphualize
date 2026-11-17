@@ -2,8 +2,8 @@ import { memo, useMemo } from 'react'
 import { notebook, GLYPH, GLYPH_GAP, roughMeasure, type Lettering, type Measure, type Note, type Plot, type Subject } from './notes'
 import type { Glyph, Ink } from './byrne'
 
-/** The notes' italic, at the size home.css sets them in. */
-const noteFont = (compact: boolean) => `italic 500 ${compact ? 15.5 : 17}px "EB Garamond"`
+/** The notes' face, at the size home.css sets them in. */
+const noteFont = (compact: boolean) => `500 ${compact ? 12 : 13}px "Outfit"`
 
 /**
  * Measures the notes' lettering in the face it is set in. jsdom has no
